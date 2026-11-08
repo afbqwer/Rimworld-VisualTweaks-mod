@@ -78,9 +78,8 @@ namespace VisualTweaks
             }
 
             Rect body = new Rect(inRect);
-            body.yMax -= FooterHeight;
-
-            DrawFooter(inRect);
+            //body.yMax -= FooterHeight;
+            //DrawFooter(inRect);
 
             if (tabs.Count == 0)
             {
@@ -186,6 +185,7 @@ namespace VisualTweaks
             {
                 VisualTweaksSettings.Reset();
             }
+
         }
 
         private void DrawTabBody(Rect outRect)
