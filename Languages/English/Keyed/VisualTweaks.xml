@@ -71,7 +71,7 @@
   <VisualTweaks_Gas_AnimationTipVanilla>How fast the gas pattern drifts with the wind. 0 = pattern stands still (the gas itself still drifts with the wind); 1 = default speed.</VisualTweaks_Gas_AnimationTipVanilla>
   <VisualTweaks_Gas_Presets>Appearance presets</VisualTweaks_Gas_Presets>
   <VisualTweaks_Gas_PresetSoft>Soft</VisualTweaks_Gas_PresetSoft>
-  <VisualTweaks_Gas_PresetSharp>Sharp</VisualTweaks_Gas_PresetSharp>
+  <VisualTweaks_Gas_PresetSharp>Grid</VisualTweaks_Gas_PresetSharp>
   <VisualTweaks_Gas_Scale>Clump size</VisualTweaks_Gas_Scale>
   <VisualTweaks_Gas_ScaleTip>Smaller values give finer, more broken-up smoke; larger values look like big dense clouds.</VisualTweaks_Gas_ScaleTip>
   <VisualTweaks_Gas_Blur>Blur</VisualTweaks_Gas_Blur>

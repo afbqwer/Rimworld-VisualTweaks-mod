@@ -71,7 +71,7 @@
   <VisualTweaks_Gas_AnimationTipVanilla>气体纹路随风飘动的快慢。0 = 纹路静止（气体本身仍会随风飘动）；1 = 默认速度。</VisualTweaks_Gas_AnimationTipVanilla>
   <VisualTweaks_Gas_Presets>外观预设</VisualTweaks_Gas_Presets>
   <VisualTweaks_Gas_PresetSoft>模糊</VisualTweaks_Gas_PresetSoft>
-  <VisualTweaks_Gas_PresetSharp>锐利</VisualTweaks_Gas_PresetSharp>
+  <VisualTweaks_Gas_PresetSharp>网格</VisualTweaks_Gas_PresetSharp>
   <VisualTweaks_Gas_Scale>团块大小</VisualTweaks_Gas_Scale>
   <VisualTweaks_Gas_ScaleTip>数值越小，烟团越细碎；越大越像大块浓云。</VisualTweaks_Gas_ScaleTip>
   <VisualTweaks_Gas_Blur>模糊</VisualTweaks_Gas_Blur>
