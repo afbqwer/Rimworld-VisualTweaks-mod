@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <!-- Settings window -->
+  <VisualTweaks_SettingsCategory>More Shader Visuals</VisualTweaks_SettingsCategory>
+  <VisualTweaks_Reset>Reset to defaults</VisualTweaks_Reset>
+  <VisualTweaks_Version>Version {0}</VisualTweaks_Version>
+
+  <!-- Tabs -->
+  <VisualTweaks_Tab_Wind>Streamlines</VisualTweaks_Tab_Wind>
+  <VisualTweaks_Tab_Gas>Gas</VisualTweaks_Tab_Gas>
+  <VisualTweaks_Tab_Ripple>Shockwave</VisualTweaks_Tab_Ripple>
+  <VisualTweaks_Tab_Heat>Heat haze</VisualTweaks_Tab_Heat>
+  <VisualTweaks_Tab_Cold>Cold mist</VisualTweaks_Tab_Cold>
+
+  <!-- Streamlines (AO only) -->
+  <VisualTweaks_Wind_GroupRender>Rendering</VisualTweaks_Wind_GroupRender>
+  <VisualTweaks_Wind_GroupStyle>Style</VisualTweaks_Wind_GroupStyle>
+  <VisualTweaks_Wind_GroupLook>Appearance</VisualTweaks_Wind_GroupLook>
+  <VisualTweaks_Wind_GroupMotion>Motion and updates</VisualTweaks_Wind_GroupMotion>
+
+  <VisualTweaks_Wind_ReplaceRenderer>Use the new streamline renderer</VisualTweaks_Wind_ReplaceRenderer>
+  <VisualTweaks_Wind_ReplaceRendererTip>Turn this off to go back to Atmosphere Overhaul's original streamlines and compare.</VisualTweaks_Wind_ReplaceRendererTip>
+  <VisualTweaks_Wind_AOButtonHint>Atmosphere Overhaul's own streamline button still shows and hides the layer.</VisualTweaks_Wind_AOButtonHint>
+  <VisualTweaks_Wind_StyleParticle>Particle trails</VisualTweaks_Wind_StyleParticle>
+  <VisualTweaks_Wind_StyleComet>Comet streamlines</VisualTweaks_Wind_StyleComet>
+  <VisualTweaks_Wind_StyleFine>Fine streamlines</VisualTweaks_Wind_StyleFine>
+  <VisualTweaks_Wind_ShowGuideLine>Show faint baseline</VisualTweaks_Wind_ShowGuideLine>
+  <VisualTweaks_Wind_ShowGuideLineTip>Only applies to comet and fine streamlines; particle trails have no baseline.</VisualTweaks_Wind_ShowGuideLineTip>
+  <VisualTweaks_Wind_SmoothField>Smooth the wind field</VisualTweaks_Wind_SmoothField>
+  <VisualTweaks_Wind_SmoothFieldTip>Removes the kinks where streamlines cross cell edges, for a cleaner flow. Affects only comet and fine streamlines; particle trails are unchanged. Turn it off to see AO's raw field.</VisualTweaks_Wind_SmoothFieldTip>
+  <VisualTweaks_Wind_Density>Density</VisualTweaks_Wind_Density>
+  <VisualTweaks_Wind_DensityTip>How many streamlines or particles appear on screen at once.</VisualTweaks_Wind_DensityTip>
+  <VisualTweaks_Wind_StreakLength>Streamline length</VisualTweaks_Wind_StreakLength>
+  <VisualTweaks_Wind_SpeedLengthInfluence>Trail length follows wind speed</VisualTweaks_Wind_SpeedLengthInfluence>
+  <VisualTweaks_Wind_SpeedLengthInfluenceTip>Particle trails only. 1 = stronger wind makes longer trails; lower values bring slow-wind trails closer to the fast-wind length; 0 = all trails the same length. Comet and fine streamlines use "Streamline length" instead.</VisualTweaks_Wind_SpeedLengthInfluenceTip>
+  <VisualTweaks_Wind_LowWindThreshold>Hide trails in calm air</VisualTweaks_Wind_LowWindThreshold>
+  <VisualTweaks_Wind_LowWindThresholdTip>Particle trails only. Particles slower than this fade out gently instead of popping; higher values keep particles only where the wind is strong. 0 = never hide.</VisualTweaks_Wind_LowWindThresholdTip>
+  <VisualTweaks_Wind_LineWidth>Line width</VisualTweaks_Wind_LineWidth>
+  <VisualTweaks_Wind_Opacity>Opacity</VisualTweaks_Wind_Opacity>
+  <VisualTweaks_Wind_ColoredParticles>Colored particle trails</VisualTweaks_Wind_ColoredParticles>
+  <VisualTweaks_Wind_ColoredParticlesTip>When off, all particles are white.</VisualTweaks_Wind_ColoredParticlesTip>
+  <VisualTweaks_Wind_AnimationSpeed>Animation speed</VisualTweaks_Wind_AnimationSpeed>
+  <VisualTweaks_Wind_SixtyFps>60 FPS mode</VisualTweaks_Wind_SixtyFps>
+  <VisualTweaks_Wind_SixtyFpsTip>Keeps streamline motion in step with your screen, for smoother movement. Turning it off saves a little performance, but the motion may look like it pauses every other frame on high-refresh displays.</VisualTweaks_Wind_SixtyFpsTip>
+  <VisualTweaks_Wind_PauseWhenPaused>Pause streamlines when the game is paused</VisualTweaks_Wind_PauseWhenPaused>
+  <VisualTweaks_Wind_PauseWhenPausedTip>Stops streamline and particle motion while the game is paused; panning or zooming during a pause still fills in particles.</VisualTweaks_Wind_PauseWhenPausedTip>
+  <VisualTweaks_Wind_ScaleSpeedWithGameSpeed>Animation speed follows game speed (max 4x)</VisualTweaks_Wind_ScaleSpeedWithGameSpeed>
+  <VisualTweaks_Wind_ScaleSpeedWithGameSpeedTip>Streamlines and particles speed up with game speed, up to 4x. Pause behavior is controlled separately by the item above.</VisualTweaks_Wind_ScaleSpeedWithGameSpeedTip>
+  <VisualTweaks_Wind_GpuParticles>GPU particle trails (experimental)</VisualTweaks_Wind_GpuParticles>
+  <VisualTweaks_Wind_GpuParticlesTip>Lets the graphics card build the particle trails, taking load off the processor. Looks the same as the normal mode; if your graphics card or driver can't handle it, the game switches back automatically. Uncheck to compare performance.</VisualTweaks_Wind_GpuParticlesTip>
+
+  <!-- Gas / mist -->
+  <VisualTweaks_Gas_GroupSwitch>Rendering replacement</VisualTweaks_Gas_GroupSwitch>
+  <VisualTweaks_Gas_GroupMotion>Motion and smoothing</VisualTweaks_Gas_GroupMotion>
+  <VisualTweaks_Gas_GroupLook>Appearance</VisualTweaks_Gas_GroupLook>
+  <VisualTweaks_Gas_GroupDebug>Diagnostics</VisualTweaks_Gas_GroupDebug>
+
+  <VisualTweaks_Gas_ReplaceAOSprites>Use the new gas rendering (AO)</VisualTweaks_Gas_ReplaceAOSprites>
+  <VisualTweaks_Gas_ReplaceVanillaSprites>Use the new gas rendering (vanilla)</VisualTweaks_Gas_ReplaceVanillaSprites>
+  <VisualTweaks_Gas_ReplaceTipWithAO>Replaces mist and the four vanilla gases (blind smoke, tox gas, rot stink, deadlife dust) with a softer, continuous cloud look. Turn it off to restore the original rendering for comparison.</VisualTweaks_Gas_ReplaceTipWithAO>
+  <VisualTweaks_Gas_ReplaceTipVanilla>Replaces the four vanilla gases (blind smoke, tox gas, rot stink, deadlife dust) with a softer, continuous cloud look. Turn it off to restore the original rendering for comparison.</VisualTweaks_Gas_ReplaceTipVanilla>
+  <VisualTweaks_Gas_ShaderMissing>The custom shader failed to load, so this option has no effect (see the log for details).</VisualTweaks_Gas_ShaderMissing>
+  <VisualTweaks_Gas_LocalFlow>Gas drifts with the local wind (recommended)</VisualTweaks_Gas_LocalFlow>
+  <VisualTweaks_Gas_LocalFlowTip>When on, the gas drift pattern follows the nearby wind for a more natural flow; the gust from an explosion is smoothed out so it never jitters back and forth. Turn it off to drift with the global wind instead, for comparison.</VisualTweaks_Gas_LocalFlowTip>
+  <VisualTweaks_Gas_Smooth>Soft transitions</VisualTweaks_Gas_Smooth>
+  <VisualTweaks_Gas_SmoothTip>Makes gas appear, fade and change density smoothly instead of stepping. When off, the gas reacts faster but may show slight stepping.</VisualTweaks_Gas_SmoothTip>
+  <VisualTweaks_Gas_SmoothTau>Smoothing amount</VisualTweaks_Gas_SmoothTau>
+  <VisualTweaks_Gas_SmoothTauTip>Lower values react faster, higher values are softer. It only smooths large density changes, so small adjustments are usually enough.</VisualTweaks_Gas_SmoothTauTip>
+  <VisualTweaks_Gas_Animation>Flow speed</VisualTweaks_Gas_Animation>
+  <VisualTweaks_Gas_AnimationTipWithAO>How fast the gas pattern moves and changes. 0 = pattern stands still (the gas itself still drifts with the wind); 1 = default speed.</VisualTweaks_Gas_AnimationTipWithAO>
+  <VisualTweaks_Gas_AnimationTipVanilla>How fast the gas pattern drifts with the wind. 0 = pattern stands still (the gas itself still drifts with the wind); 1 = default speed.</VisualTweaks_Gas_AnimationTipVanilla>
+  <VisualTweaks_Gas_Presets>Appearance presets</VisualTweaks_Gas_Presets>
+  <VisualTweaks_Gas_PresetSoft>Soft</VisualTweaks_Gas_PresetSoft>
+  <VisualTweaks_Gas_PresetSharp>Sharp</VisualTweaks_Gas_PresetSharp>
+  <VisualTweaks_Gas_Scale>Clump size</VisualTweaks_Gas_Scale>
+  <VisualTweaks_Gas_ScaleTip>Smaller values give finer, more broken-up smoke; larger values look like big dense clouds.</VisualTweaks_Gas_ScaleTip>
+  <VisualTweaks_Gas_Blur>Blur</VisualTweaks_Gas_Blur>
+  <VisualTweaks_Gas_BlurTip>Softens the gas edges, including thin gas. 0 = edges follow the cells; higher values blur the edges more. More blur weakens sharpness.</VisualTweaks_Gas_BlurTip>
+  <VisualTweaks_Gas_Sharpen>Sharpness</VisualTweaks_Gas_Sharpen>
+  <VisualTweaks_Gas_SharpenTip>Makes the gas edges crisper and the outline clearer. 0 = the original soft transition; 1 = visibly harder edges. It cancels out against Blur, so more blur means less effect.</VisualTweaks_Gas_SharpenTip>
+  <VisualTweaks_Gas_Faint>Faint gas visibility</VisualTweaks_Gas_Faint>
+  <VisualTweaks_Gas_FaintTip>How visible thin gas is. Higher values make faint smoke more obvious; 0 = only thick gas shows; 1 = default.</VisualTweaks_Gas_FaintTip>
+  <VisualTweaks_Gas_Opacity>Concentration</VisualTweaks_Gas_Opacity>
+  <VisualTweaks_Gas_OpacityTip>Overall density. Higher values look like heavy smoke rather than thin mist.</VisualTweaks_Gas_OpacityTip>
+  <VisualTweaks_Gas_Cloudy>Cloudy look</VisualTweaks_Gas_Cloudy>
+  <VisualTweaks_Gas_CloudyTip>Adds a clumpy texture over the smooth mist for a smoke feel closer to vanilla. Off gives pure smooth mist.</VisualTweaks_Gas_CloudyTip>
+  <VisualTweaks_Gas_TraceWindows>Log window recentre events (diagnostic)</VisualTweaks_Gas_TraceWindows>
+  <VisualTweaks_Gas_TraceWindowsTip>Only for troubleshooting. Leave it off during normal play; when on, it keeps writing to the log and hurts performance.</VisualTweaks_Gas_TraceWindowsTip>
+
+  <!-- Explosion shockwave -->
+  <VisualTweaks_Ripple_GroupSwitch>Master switch</VisualTweaks_Ripple_GroupSwitch>
+  <VisualTweaks_Ripple_GroupLook>Appearance</VisualTweaks_Ripple_GroupLook>
+
+  <VisualTweaks_Ripple_Enable>Draw refraction shockwave</VisualTweaks_Ripple_Enable>
+  <VisualTweaks_Ripple_EnableTip>Adds an expanding ring of compressed air to every visual explosion: it gently bends the ground and the explosion's own fireball, then fades out near the edge of the blast. Size, strength and duration follow the explosion's radius; the sliders below set the overall look.</VisualTweaks_Ripple_EnableTip>
+  <VisualTweaks_Ripple_ShaderMissing>The shockwave shader failed to load, so this option has no effect (see the log for details).</VisualTweaks_Ripple_ShaderMissing>
+  <VisualTweaks_Ripple_Intensity>Intensity</VisualTweaks_Ripple_Intensity>
+  <VisualTweaks_Ripple_IntensityTip>How strong the shockwave looks, controlling how much the scene bends plus a faint bright crest. Bigger explosions get extra strength from the "bigger blasts are stronger" option.</VisualTweaks_Ripple_IntensityTip>
+  <VisualTweaks_Ripple_RadiusScale>Shockwave size vs blast radius</VisualTweaks_Ripple_RadiusScale>
+  <VisualTweaks_Ripple_RadiusScaleTip>Multiplies the explosion radius to get the largest shockwave size. 1 = it reaches the damage radius; above 1 it spreads beyond the blast.</VisualTweaks_Ripple_RadiusScaleTip>
+  <VisualTweaks_Ripple_RadiusInfluence>Bigger blasts are stronger</VisualTweaks_Ripple_RadiusInfluence>
+  <VisualTweaks_Ripple_RadiusInfluenceTip>0 = every explosion has the same strength; 1 = the bigger the blast, the stronger the shockwave. The default 0.35 makes large blasts more impressive without overpowering small ones.</VisualTweaks_Ripple_RadiusInfluenceTip>
+  <VisualTweaks_Ripple_Duration>Base duration</VisualTweaks_Ripple_Duration>
+  <VisualTweaks_Ripple_DurationTip>How long the shockwave lasts. The default is 0.5 s, adjustable from about 0.05 s to 2 s. Larger explosions last up to about 1.5 times longer; the effect also finishes sooner when the game is running fast.</VisualTweaks_Ripple_DurationTip>
+
+  <!-- Heat haze -->
+  <VisualTweaks_Heat_GroupSwitch>Master switch</VisualTweaks_Heat_GroupSwitch>
+  <VisualTweaks_Heat_GroupLook>Appearance</VisualTweaks_Heat_GroupLook>
+
+  <VisualTweaks_Heat_Enable>Draw high-temperature air shimmer</VisualTweaks_Heat_Enable>
+  <VisualTweaks_Heat_EnableTip>Makes the view shimmer where the air is hot: hot rooms, fires, geothermal vents and heat-wave weather all trigger it. The hotter it gets, the stronger the distortion; ordinary warm weather stays subtle, while a fire or a heat wave clearly bends the scene.</VisualTweaks_Heat_EnableTip>
+  <VisualTweaks_Heat_ShaderMissing>The heat-haze shader failed to load, so this option has no effect (see the log for details).</VisualTweaks_Heat_ShaderMissing>
+  <VisualTweaks_Heat_StartTemp>Shimmer starts at (°C)</VisualTweaks_Heat_StartTemp>
+  <VisualTweaks_Heat_StartTempTip>Places at or below this temperature do not shimmer. The default 35 °C keeps ordinary comfortable rooms and temperate weather clear.</VisualTweaks_Heat_StartTempTip>
+  <VisualTweaks_Heat_FullTemp>Full strength at (°C)</VisualTweaks_Heat_FullTemp>
+  <VisualTweaks_Heat_FullTempTip>At or above this temperature the shimmer is at full strength, with a smooth transition in between. It is capped at 240 °C, so hotter air does not get any stronger.</VisualTweaks_Heat_FullTempTip>
+  <VisualTweaks_Heat_Intensity>Intensity</VisualTweaks_Heat_Intensity>
+  <VisualTweaks_Heat_IntensityTip>How strong the distortion is. 1 is the recommended starting point; 0 still draws it, but with no visible movement.</VisualTweaks_Heat_IntensityTip>
+  <VisualTweaks_Heat_Amplitude>Maximum displacement (px)</VisualTweaks_Heat_Amplitude>
+  <VisualTweaks_Heat_AmplitudeTip>How far the view shifts at full heat, in pixels. Keep it small: 2–4 px reads as hot air, while large values look like a warped lens.</VisualTweaks_Heat_AmplitudeTip>
+  <VisualTweaks_Heat_Scale>Ripple size</VisualTweaks_Heat_Scale>
+  <VisualTweaks_Heat_ScaleTip>Smaller values give fine, restless ripples; larger values give broad, slow waves. Around 1 roughly matches the size of a cell.</VisualTweaks_Heat_ScaleTip>
+  <VisualTweaks_Heat_Speed>Animation speed</VisualTweaks_Heat_Speed>
+  <VisualTweaks_Heat_SpeedTip>How fast the shimmer rises and changes. The lowest setting is only slower, never completely still.</VisualTweaks_Heat_SpeedTip>
+  <VisualTweaks_Heat_FireBoost>Extra shimmer near heat sources</VisualTweaks_Heat_FireBoost>
+  <VisualTweaks_Heat_FireBoostTip>Extra shimmer added directly around fires, campfires, heaters, torches and heat vents. Room temperature already includes indoor heat, so this mainly makes outdoor sources visible immediately. 0 turns the extra effect off.</VisualTweaks_Heat_FireBoostTip>
+
+  <!-- Low-temperature room mist -->
+  <VisualTweaks_Cold_GroupSwitch>Master switch</VisualTweaks_Cold_GroupSwitch>
+  <VisualTweaks_Cold_GroupLook>Appearance</VisualTweaks_Cold_GroupLook>
+
+  <VisualTweaks_Cold_Enable>Draw low-temperature room mist</VisualTweaks_Cold_Enable>
+  <VisualTweaks_Cold_EnableTip>Floats slow vapour in cold indoor air: freezers, ice-sheet bases, and any room kept cool by coolers. The haze curls and thickens in place instead of drifting across the map. It only appears inside real rooms and never outdoors; open rooms missing more than a quarter of their roof count as outdoors and are skipped too. Vanilla's vacuum fog and Atmosphere Overhaul's mist are both unaffected.</VisualTweaks_Cold_EnableTip>
+  <VisualTweaks_Cold_ShaderMissing>The cold-mist shader failed to load, so this option has no effect (see the log for details).</VisualTweaks_Cold_ShaderMissing>
+  <VisualTweaks_Cold_StartTemp>Mist starts at (°C)</VisualTweaks_Cold_StartTemp>
+  <VisualTweaks_Cold_StartTempTip>Rooms at or above this temperature stay completely clear. The default 0 °C keeps ordinary comfortable rooms and temperate bases clean, so only real freezers show any haze.</VisualTweaks_Cold_StartTempTip>
+  <VisualTweaks_Cold_FullTemp>Thickest mist at (°C)</VisualTweaks_Cold_FullTemp>
+  <VisualTweaks_Cold_FullTempTip>Rooms at or below this temperature get the thickest haze, with a smooth transition in between. The default -75 °C leaves an ordinary freezer (around -18 °C) at roughly a quarter strength and reserves full strength for deep ice-sheet cold rooms.</VisualTweaks_Cold_FullTempTip>
+  <VisualTweaks_Cold_Opacity>Opacity</VisualTweaks_Cold_Opacity>
+  <VisualTweaks_Cold_OpacityTip>Maximum opacity where the haze is thickest. The default 0.1 is a thin veil; it is easy to overdo, and above 0.3 it visibly smears the floor and the items on it.</VisualTweaks_Cold_OpacityTip>
+  <VisualTweaks_Cold_Coverage>Coverage</VisualTweaks_Cold_Coverage>
+  <VisualTweaks_Cold_CoverageTip>How much of a cold room is covered by mist. 0 leaves it basically clear; higher values cover more; 1 fills the whole room. If you can barely see the effect, raise this before raising opacity.</VisualTweaks_Cold_CoverageTip>
+  <VisualTweaks_Cold_Scale>Haze size</VisualTweaks_Cold_Scale>
+  <VisualTweaks_Cold_ScaleTip>Size of the vapour patches. Lower values give fine, restless wisps; higher values give broad banks that read as ground fog. Around 1 roughly matches the size of a cell.</VisualTweaks_Cold_ScaleTip>
+  <VisualTweaks_Cold_Speed>Float speed</VisualTweaks_Cold_Speed>
+  <VisualTweaks_Cold_SpeedTip>How fast the vapour curls, thickens and dissolves in place. The haze never slides across the screen as a whole; higher values make it churn more visibly.</VisualTweaks_Cold_SpeedTip>
+
+  <!-- Vacuum leak airflow (Odyssey) -->
+  <VisualTweaks_Tab_Leak>Vacuum leak</VisualTweaks_Tab_Leak>
+  <VisualTweaks_Leak_GroupSwitch>Master switch</VisualTweaks_Leak_GroupSwitch>
+  <VisualTweaks_Leak_GroupLook>Appearance</VisualTweaks_Leak_GroupLook>
+  <VisualTweaks_Leak_GroupDebug>Debug</VisualTweaks_Leak_GroupDebug>
+
+  <VisualTweaks_Leak_Enable>Draw leak airflow</VisualTweaks_Leak_Enable>
+  <VisualTweaks_Leak_EnableTip>On Odyssey vacuum maps, shows air escaping: a pale stream flows toward every open door, running vent or unpowered vacuum barrier that leads to a drier room, and hull demolition adds a short burst blowing out into space. The stream strength follows the real pressure difference and the air left in the room, and it fades out as vanilla's vacuum fog takes over; vanilla's fog itself is untouched.</VisualTweaks_Leak_EnableTip>
+  <VisualTweaks_Leak_ShaderMissing>The vacuum-leak shader failed to load, so this option has no effect (see the log for details).</VisualTweaks_Leak_ShaderMissing>
+  <VisualTweaks_Leak_Intensity>Intensity</VisualTweaks_Leak_Intensity>
+  <VisualTweaks_Leak_IntensityTip>How visible the airflow is overall. The default 1 is the recommended strength; lower is fainter, higher is more obvious. Each opening's strength still depends on the pressure difference; this only sets how visible the result is.</VisualTweaks_Leak_IntensityTip>
+  <VisualTweaks_Leak_Speed>Flow speed</VisualTweaks_Leak_Speed>
+  <VisualTweaks_Leak_SpeedTip>How fast the streaks scroll along the flow. It changes only the motion, not strength, width or duration. It still freezes when paused, and dragging the slider never makes the pattern jump.</VisualTweaks_Leak_SpeedTip>
+  <VisualTweaks_Leak_DurationScale>Duration scale</VisualTweaks_Leak_DurationScale>
+  <VisualTweaks_Leak_DurationScaleTip>How long one-off effects such as wall bursts and ceiling suction last. It changes only the duration, not strength, width or scroll speed. Door and vent streams follow the room's actual vacuum, so they are unaffected.</VisualTweaks_Leak_DurationScaleTip>
+  <VisualTweaks_Leak_Distortion>Refraction</VisualTweaks_Leak_Distortion>
+  <VisualTweaks_Leak_DistortionTip>Gently bends the scene behind the airflow, so the stream reads as moving air instead of a flat overlay. Off skips the bending entirely; a strength of 0 looks the same.</VisualTweaks_Leak_DistortionTip>
+  <VisualTweaks_Leak_DistortionStrength>Refraction strength</VisualTweaks_Leak_DistortionStrength>
+  <VisualTweaks_Leak_DistortionStrengthTip>Maximum bend in screen pixels where the stream is fully visible. Fainter parts of the stream bend less.</VisualTweaks_Leak_DistortionStrengthTip>
+  <VisualTweaks_Leak_Trace>Log opening intensities (dev mode)</VisualTweaks_Leak_Trace>
+  <VisualTweaks_Leak_TraceTip>Only for developer troubleshooting. When on, it writes a lot of log lines, so keep it off during normal play.</VisualTweaks_Leak_TraceTip>
+</LanguageData>

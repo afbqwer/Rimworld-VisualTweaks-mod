@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!--
+    Low-temperature room mist.
+
+    Same queue as the heat haze: 3174 sits after the normal map visuals and before
+    fog of war (3175), so darkness and fog of war cover the mist exactly like they
+    cover terrain and neither has to be handled in the shader.
+
+    There is no <sceneGrab> block on purpose. Mist is a translucent cloud blended
+    over the scene, so it needs no copy of the framebuffer, and the mask can sit at
+    sampler binding 1.
+  -->
+  <ShaderDef>
+    <defName>VisualTweaksColdMist</defName>
+    <shaderProgram>
+      <vertexShaderFileName>VisualTweaksColdMist.vert.glsl</vertexShaderFileName>
+      <fragmentShaderFileName>VisualTweaksColdMist.frag.glsl</fragmentShaderFileName>
+      <useTexture>false</useTexture>
+      <flipTextureST>false</flipTextureST>
+      <transparent>true</transparent>
+      <depthTest>false</depthTest>
+      <depthWrite>false</depthWrite>
+      <cullMode>None</cullMode>
+      <blendMode>Alpha</blendMode>
+      <renderQueue>3174</renderQueue>
+      <textureWrapOverrides>
+        <li>
+          <key>_ColdMask</key>
+          <value>Clamp</value>
+        </li>
+      </textureWrapOverrides>
+    </shaderProgram>
+  </ShaderDef>
+</Defs>

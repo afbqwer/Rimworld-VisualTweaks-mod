@@ -1,0 +1,29 @@
+# Build output
+Source/bin/
+Source/obj/
+Source/**/bin/
+Source/**/obj/
+
+# IDE / user-specific files
+.vs/
+*.user
+*.suo
+*.dll
+*.png
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Shader compiler output (glslangValidator writes these next to the source)
+*.spv
+
+# markdown
+*.md
+
+Tools

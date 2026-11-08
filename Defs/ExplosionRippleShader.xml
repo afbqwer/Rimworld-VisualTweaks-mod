@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!--
+    Screen-space refraction shockwave for explosions.
+
+    The scene grab is taken at 3178, after fog of war (3175) and before darkness
+    (3180). The quad itself is drawn at the same queue and only covers the blast
+    radius, so this is not a full-screen post-process pass.
+  -->
+  <ShaderDef>
+    <defName>VisualTweaksExplosionRipple</defName>
+    <shaderProgram>
+      <vertexShaderFileName>VisualTweaksExplosionRipple.vert.glsl</vertexShaderFileName>
+      <fragmentShaderFileName>VisualTweaksExplosionRipple.frag.glsl</fragmentShaderFileName>
+      <useTexture>false</useTexture>
+      <flipTextureST>false</flipTextureST>
+      <transparent>true</transparent>
+      <depthTest>true</depthTest>
+      <depthWrite>false</depthWrite>
+      <cullMode>None</cullMode>
+      <blendMode>Alpha</blendMode>
+      <renderQueue>3178</renderQueue>
+      <sceneGrab>
+        <name>VisualTweaksExplosionRipple</name>
+        <queue>3178</queue>
+      </sceneGrab>
+    </shaderProgram>
+  </ShaderDef>
+</Defs>

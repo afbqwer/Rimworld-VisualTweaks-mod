@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>More Shader Visuals</name>
+  <author>assssssqwww</author>
+  <packageId>assssssqwww.visualtweaks</packageId>
+  <url>https://github.com/afbqwer/Rimworld-VisualTweaks-mod</url>
+  <supportedVersions>
+    <li>1.7</li>
+  </supportedVersions>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+    </li>
+  </modDependencies>
+  <loadAfter>
+    <li>brrainz.harmony</li>
+    <li>acutus.AtmosphereOverhaul.release</li>
+  </loadAfter>
+  <description>
+[b]更多光影视效[/b]
+为游戏加入更多光影（shader）效果。所有效果都由自定义着色器绘制，对性能影响极小，可在设置中逐项开关和微调。
+
+[hr][/hr]
+[b]包含的效果[/b]
+[list]
+[*][b]2d气体遮罩[/b]：把气体从一格一格的旋转贴图换成连续流动的云雾。可调整为模糊或Grid风格。
+[*][b]爆炸冲击波[/b]：爆炸时多一圈向外扩散的空气冲击波。
+[*][b]高温热浪[/b]：炎热的房间、火焰、火把会让画面轻微扭曲，温度越高越明显。
+[*][b]低温寒气[/b]：寒冷室内会泛起缓慢翻滚的寒气。
+[*][b]真空漏气[/b]（需 Odyssey DLC）：门、墙体、屋顶漏气时，会有气流涌向缺口。
+[*][b]风场流线粒子[/b]（需 Atmosphere Overhaul）：替换原本的风场流线粒子显示。
+[/list]
+
+[hr][/hr]
+[b]存档影响与兼容性[/b]
+可中途加入存档或安全移除出存档。只影响视觉效果。兼容绝大部分mod。
+
+[b]性能[/b]
+绘制通过着色器在gpu进行，除非使用性能较差的集成显卡，否则几乎不会对fps/tps产生影响。
+在实机测试中，
+注：【2d气体遮罩】替换了原版的气体绘制，当气体较少时，性能低于原版气体绘制；当气体较多时，性能高于原版气体绘制。
+
+  </description>
+</ModMetaData>

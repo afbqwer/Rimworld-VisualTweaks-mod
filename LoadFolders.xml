@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<loadFolders>
+  <v1.7>
+    <!-- 根目录：基础库、shader、Defs，原版即可使用 -->
+    <li>/</li>
+    <!-- AO 兼容层：只有 Atmosphere Overhaul 激活时才挂载，其程序集才会被加载 -->
+    <li IfModActive="acutus.AtmosphereOverhaul.release">AO</li>
+  </v1.7>
+</loadFolders>

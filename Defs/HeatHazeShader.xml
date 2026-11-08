@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!--
+    High-temperature air shimmer.
+
+    Queue 3174 sits after the normal map visuals and before fog of war (3175),
+    so fog and darkness cover the effect exactly like they cover terrain. The
+    scene grab uses the same queue, which makes the grab contain everything the
+    shimmer is allowed to distort. The name is unique so it cannot collide with
+    another mod's "Distortion" grab.
+  -->
+  <ShaderDef>
+    <defName>VisualTweaksHeatHaze</defName>
+    <shaderProgram>
+      <vertexShaderFileName>VisualTweaksHeatHaze.vert.glsl</vertexShaderFileName>
+      <fragmentShaderFileName>VisualTweaksHeatHaze.frag.glsl</fragmentShaderFileName>
+      <useTexture>false</useTexture>
+      <flipTextureST>false</flipTextureST>
+      <transparent>true</transparent>
+      <depthTest>false</depthTest>
+      <depthWrite>false</depthWrite>
+      <cullMode>None</cullMode>
+      <blendMode>Alpha</blendMode>
+      <renderQueue>3174</renderQueue>
+      <sceneGrab>
+        <name>VisualTweaksHeatHaze</name>
+        <queue>3174</queue>
+      </sceneGrab>
+      <textureWrapOverrides>
+        <li>
+          <key>_HeatMask</key>
+          <value>Clamp</value>
+        </li>
+      </textureWrapOverrides>
+    </shaderProgram>
+  </ShaderDef>
+</Defs>

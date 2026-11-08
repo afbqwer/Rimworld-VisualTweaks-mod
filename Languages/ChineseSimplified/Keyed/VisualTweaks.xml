@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <!-- 设置窗口 -->
+  <VisualTweaks_SettingsCategory>更多光影视效</VisualTweaks_SettingsCategory>
+  <VisualTweaks_Reset>恢复默认</VisualTweaks_Reset>
+  <VisualTweaks_Version>版本 {0}</VisualTweaks_Version>
+
+  <!-- 分页 -->
+  <VisualTweaks_Tab_Wind>流线</VisualTweaks_Tab_Wind>
+  <VisualTweaks_Tab_Gas>气体</VisualTweaks_Tab_Gas>
+  <VisualTweaks_Tab_Ripple>冲击波</VisualTweaks_Tab_Ripple>
+  <VisualTweaks_Tab_Heat>热浪</VisualTweaks_Tab_Heat>
+  <VisualTweaks_Tab_Cold>寒气</VisualTweaks_Tab_Cold>
+
+  <!-- 流线（仅 AO） -->
+  <VisualTweaks_Wind_GroupRender>渲染</VisualTweaks_Wind_GroupRender>
+  <VisualTweaks_Wind_GroupStyle>风格</VisualTweaks_Wind_GroupStyle>
+  <VisualTweaks_Wind_GroupLook>外观</VisualTweaks_Wind_GroupLook>
+  <VisualTweaks_Wind_GroupMotion>动画与更新</VisualTweaks_Wind_GroupMotion>
+
+  <VisualTweaks_Wind_ReplaceRenderer>使用新的流线渲染</VisualTweaks_Wind_ReplaceRenderer>
+  <VisualTweaks_Wind_ReplaceRendererTip>取消勾选会换回 Atmosphere Overhaul 原本的流线效果，方便对比。</VisualTweaks_Wind_ReplaceRendererTip>
+  <VisualTweaks_Wind_AOButtonHint>Atmosphere Overhaul 自带的流线按钮仍然控制显示与隐藏。</VisualTweaks_Wind_AOButtonHint>
+  <VisualTweaks_Wind_StyleParticle>粒子拖尾</VisualTweaks_Wind_StyleParticle>
+  <VisualTweaks_Wind_StyleComet>彗星流线</VisualTweaks_Wind_StyleComet>
+  <VisualTweaks_Wind_StyleFine>细流线</VisualTweaks_Wind_StyleFine>
+  <VisualTweaks_Wind_ShowGuideLine>显示淡底线</VisualTweaks_Wind_ShowGuideLine>
+  <VisualTweaks_Wind_ShowGuideLineTip>只对彗星流线和细流线生效，粒子拖尾没有淡底线。</VisualTweaks_Wind_ShowGuideLineTip>
+  <VisualTweaks_Wind_SmoothField>平滑风场</VisualTweaks_Wind_SmoothField>
+  <VisualTweaks_Wind_SmoothFieldTip>消除流线在格子边缘的扭折，让线条更顺。只影响彗星流线和细流线，粒子拖尾不受影响。关闭可以看到 AO 原始风场的样子。</VisualTweaks_Wind_SmoothFieldTip>
+  <VisualTweaks_Wind_Density>密度</VisualTweaks_Wind_Density>
+  <VisualTweaks_Wind_DensityTip>屏幕上同时出现的流线或粒子数量。</VisualTweaks_Wind_DensityTip>
+  <VisualTweaks_Wind_StreakLength>流线长度</VisualTweaks_Wind_StreakLength>
+  <VisualTweaks_Wind_SpeedLengthInfluence>拖尾长度随风速变化</VisualTweaks_Wind_SpeedLengthInfluence>
+  <VisualTweaks_Wind_SpeedLengthInfluenceTip>只对粒子拖尾生效。1 = 风越大拖尾越长；数值越低，慢风处的拖尾越接近快风处的长度；0 = 所有拖尾一样长。彗星流线和细流线的长度由上面的「流线长度」决定。</VisualTweaks_Wind_SpeedLengthInfluenceTip>
+  <VisualTweaks_Wind_LowWindThreshold>微风隐藏阈值</VisualTweaks_Wind_LowWindThreshold>
+  <VisualTweaks_Wind_LowWindThresholdTip>只对粒子拖尾生效。风速低于此值的粒子会渐渐淡出，不会突然消失；数值越高，只有风大的地方还留有粒子。0 = 不隐藏。</VisualTweaks_Wind_LowWindThresholdTip>
+  <VisualTweaks_Wind_LineWidth>线宽</VisualTweaks_Wind_LineWidth>
+  <VisualTweaks_Wind_Opacity>不透明度</VisualTweaks_Wind_Opacity>
+  <VisualTweaks_Wind_ColoredParticles>彩色粒子拖尾</VisualTweaks_Wind_ColoredParticles>
+  <VisualTweaks_Wind_ColoredParticlesTip>关闭后粒子统一显示为白色。</VisualTweaks_Wind_ColoredParticlesTip>
+  <VisualTweaks_Wind_AnimationSpeed>动画速度</VisualTweaks_Wind_AnimationSpeed>
+  <VisualTweaks_Wind_SixtyFps>60 帧模式</VisualTweaks_Wind_SixtyFps>
+  <VisualTweaks_Wind_SixtyFpsTip>开启后流线运动与屏幕刷新同步，看起来更顺滑。关闭会稍微省一点性能，但在高刷新率屏幕上流线可能显得一停一顿。</VisualTweaks_Wind_SixtyFpsTip>
+  <VisualTweaks_Wind_PauseWhenPaused>暂停时流线也暂停</VisualTweaks_Wind_PauseWhenPaused>
+  <VisualTweaks_Wind_PauseWhenPausedTip>游戏暂停时停止流线和粒子动画；暂停期间移动或缩放视野仍会补齐粒子。</VisualTweaks_Wind_PauseWhenPausedTip>
+  <VisualTweaks_Wind_ScaleSpeedWithGameSpeed>动画速度跟随游戏速度（最高 4×）</VisualTweaks_Wind_ScaleSpeedWithGameSpeed>
+  <VisualTweaks_Wind_ScaleSpeedWithGameSpeedTip>游戏加速时流线和粒子也随之加快，最高 4 倍。暂停时是否停止由上一项单独控制。</VisualTweaks_Wind_ScaleSpeedWithGameSpeedTip>
+  <VisualTweaks_Wind_GpuParticles>GPU 粒子拖尾（实验）</VisualTweaks_Wind_GpuParticles>
+  <VisualTweaks_Wind_GpuParticlesTip>把粒子拖尾的计算交给显卡，减轻处理器负担。外观与普通模式一致；如果显卡或驱动不支持，会自动换回普通模式。取消勾选可以对比性能。</VisualTweaks_Wind_GpuParticlesTip>
+
+  <!-- 气体 / 雾 -->
+  <VisualTweaks_Gas_GroupSwitch>渲染替换</VisualTweaks_Gas_GroupSwitch>
+  <VisualTweaks_Gas_GroupMotion>流动与平滑</VisualTweaks_Gas_GroupMotion>
+  <VisualTweaks_Gas_GroupLook>外观</VisualTweaks_Gas_GroupLook>
+  <VisualTweaks_Gas_GroupDebug>诊断</VisualTweaks_Gas_GroupDebug>
+
+  <VisualTweaks_Gas_ReplaceAOSprites>使用新的气体渲染（AO）</VisualTweaks_Gas_ReplaceAOSprites>
+  <VisualTweaks_Gas_ReplaceVanillaSprites>使用新的气体渲染（原版）</VisualTweaks_Gas_ReplaceVanillaSprites>
+  <VisualTweaks_Gas_ReplaceTipWithAO>把雾和四种原版气体（致盲烟、毒气、腐臭、死灵尘）换成更自然、连续的云雾效果。取消勾选会恢复原本的渲染，方便对比。</VisualTweaks_Gas_ReplaceTipWithAO>
+  <VisualTweaks_Gas_ReplaceTipVanilla>把四种原版气体（致盲烟、毒气、腐臭、死灵尘）换成更自然、连续的云雾效果。取消勾选会恢复原本的渲染，方便对比。</VisualTweaks_Gas_ReplaceTipVanilla>
+  <VisualTweaks_Gas_ShaderMissing>自定义着色器未加载，这一项不会生效（详情见日志）。</VisualTweaks_Gas_ShaderMissing>
+  <VisualTweaks_Gas_LocalFlow>气体随局部风飘动（推荐）</VisualTweaks_Gas_LocalFlow>
+  <VisualTweaks_Gas_LocalFlowTip>勾选后气体随附近的风向一起飘，更贴合真实气流；爆炸的冲击风会被平滑处理，不会来回抖动。取消勾选则只随全局风向平移，便于对比。</VisualTweaks_Gas_LocalFlowTip>
+  <VisualTweaks_Gas_Smooth>平滑过渡</VisualTweaks_Gas_Smooth>
+  <VisualTweaks_Gas_SmoothTip>让气体的出现、消散和浓度变化更加柔和，不再一下一下地跳变。关闭后反应更快，但可能看出轻微的顿挫。</VisualTweaks_Gas_SmoothTip>
+  <VisualTweaks_Gas_SmoothTau>平滑程度</VisualTweaks_Gas_SmoothTau>
+  <VisualTweaks_Gas_SmoothTauTip>数值越小越跟手，越大越柔和。只负责抹平浓度的大幅变化，平时小幅调整即可。</VisualTweaks_Gas_SmoothTauTip>
+  <VisualTweaks_Gas_Animation>流动速度</VisualTweaks_Gas_Animation>
+  <VisualTweaks_Gas_AnimationTipWithAO>气体纹路的变化快慢。0 = 纹路静止（气体本身仍会随风飘动）；1 = 默认速度。</VisualTweaks_Gas_AnimationTipWithAO>
+  <VisualTweaks_Gas_AnimationTipVanilla>气体纹路随风飘动的快慢。0 = 纹路静止（气体本身仍会随风飘动）；1 = 默认速度。</VisualTweaks_Gas_AnimationTipVanilla>
+  <VisualTweaks_Gas_Presets>外观预设</VisualTweaks_Gas_Presets>
+  <VisualTweaks_Gas_PresetSoft>模糊</VisualTweaks_Gas_PresetSoft>
+  <VisualTweaks_Gas_PresetSharp>锐利</VisualTweaks_Gas_PresetSharp>
+  <VisualTweaks_Gas_Scale>团块大小</VisualTweaks_Gas_Scale>
+  <VisualTweaks_Gas_ScaleTip>数值越小，烟团越细碎；越大越像大块浓云。</VisualTweaks_Gas_ScaleTip>
+  <VisualTweaks_Gas_Blur>模糊</VisualTweaks_Gas_Blur>
+  <VisualTweaks_Gas_BlurTip>柔化气体边缘，稀薄气体同样有效。0 = 边缘跟随格子；数值越高边缘越朦胧。模糊越高，锐利度的作用越小。</VisualTweaks_Gas_BlurTip>
+  <VisualTweaks_Gas_Sharpen>锐利度</VisualTweaks_Gas_Sharpen>
+  <VisualTweaks_Gas_SharpenTip>让气体边界更硬朗、轮廓更清楚。0 = 原本的柔和过渡；1 = 边缘明显变硬。与「模糊」互相抵消，模糊越高效果越弱。</VisualTweaks_Gas_SharpenTip>
+  <VisualTweaks_Gas_Faint>稀薄气体可见度</VisualTweaks_Gas_Faint>
+  <VisualTweaks_Gas_FaintTip>低浓度气体的亮度下限。数值越高，稀薄的烟越明显；0 = 只显示较浓的气体；1 = 默认。</VisualTweaks_Gas_FaintTip>
+  <VisualTweaks_Gas_Opacity>浓度</VisualTweaks_Gas_Opacity>
+  <VisualTweaks_Gas_OpacityTip>整体浓淡。越高越像厚重的烟，而不是薄雾。</VisualTweaks_Gas_OpacityTip>
+  <VisualTweaks_Gas_Cloudy>云纹外观</VisualTweaks_Gas_Cloudy>
+  <VisualTweaks_Gas_CloudyTip>给平滑的雾加上一层团块纹理，更接近原版的烟雾质感。关闭则是纯平滑雾。</VisualTweaks_Gas_CloudyTip>
+  <VisualTweaks_Gas_TraceWindows>输出窗口重定位日志（诊断用）</VisualTweaks_Gas_TraceWindows>
+  <VisualTweaks_Gas_TraceWindowsTip>仅供排查问题时使用，正常游戏请保持关闭；开启后会持续写入日志，影响性能。</VisualTweaks_Gas_TraceWindowsTip>
+
+  <!-- 爆炸冲击波 -->
+  <VisualTweaks_Ripple_GroupSwitch>总开关</VisualTweaks_Ripple_GroupSwitch>
+  <VisualTweaks_Ripple_GroupLook>外观</VisualTweaks_Ripple_GroupLook>
+
+  <VisualTweaks_Ripple_Enable>绘制折射冲击波</VisualTweaks_Ripple_Enable>
+  <VisualTweaks_Ripple_EnableTip>为所有带视觉效果的爆炸增加一圈向外扩散的空气冲击波：它会把地面和爆炸自身的火球微微扭曲，并在爆炸范围边缘淡出。大小、强度和持续时间跟随爆炸半径；下方滑条控制整体外观。</VisualTweaks_Ripple_EnableTip>
+  <VisualTweaks_Ripple_ShaderMissing>冲击波着色器未加载，这一项不会生效（详情见日志）。</VisualTweaks_Ripple_ShaderMissing>
+  <VisualTweaks_Ripple_Intensity>强度</VisualTweaks_Ripple_Intensity>
+  <VisualTweaks_Ripple_IntensityTip>冲击波的强弱，控制画面扭曲的幅度以及波峰上的微弱亮边。爆炸越大，还会按「大爆炸更强」这一项额外增强。</VisualTweaks_Ripple_IntensityTip>
+  <VisualTweaks_Ripple_RadiusScale>冲击波范围 / 爆炸半径</VisualTweaks_Ripple_RadiusScale>
+  <VisualTweaks_Ripple_RadiusScaleTip>爆炸半径乘以这个倍率，就是冲击波扩散的最大范围。1 = 正好到达伤害范围；大于 1 会扩散到爆炸范围之外。</VisualTweaks_Ripple_RadiusScaleTip>
+  <VisualTweaks_Ripple_RadiusInfluence>大爆炸更强</VisualTweaks_Ripple_RadiusInfluence>
+  <VisualTweaks_Ripple_RadiusInfluenceTip>0 = 所有爆炸强度相同；1 = 爆炸越大冲击波越强。默认 0.35，让大爆炸更有冲击力，同时不会盖过小爆炸。</VisualTweaks_Ripple_RadiusInfluenceTip>
+  <VisualTweaks_Ripple_Duration>基础持续时间</VisualTweaks_Ripple_Duration>
+  <VisualTweaks_Ripple_DurationTip>冲击波的基础存活时间，默认 0.5 秒，范围约 0.05 秒到 2 秒。爆炸越大持续越久，最多约 1.5 倍；游戏加速时也会相应更快结束。</VisualTweaks_Ripple_DurationTip>
+
+  <!-- 高温空气热浪 -->
+  <VisualTweaks_Heat_GroupSwitch>总开关</VisualTweaks_Heat_GroupSwitch>
+  <VisualTweaks_Heat_GroupLook>外观</VisualTweaks_Heat_GroupLook>
+
+  <VisualTweaks_Heat_Enable>绘制高温空气热浪</VisualTweaks_Heat_Enable>
+  <VisualTweaks_Heat_EnableTip>空气很热的地方会让画面产生微微的热扭曲：炎热的房间、火焰、地热口和热浪天气都会触发。温度越高扭曲越明显；普通温暖天气只有很轻微的效果，火堆或热浪则会明显扭曲场景。</VisualTweaks_Heat_EnableTip>
+  <VisualTweaks_Heat_ShaderMissing>热浪着色器未加载，这一项不会生效（详情见日志）。</VisualTweaks_Heat_ShaderMissing>
+  <VisualTweaks_Heat_StartTemp>开始出现热浪的温度（°C）</VisualTweaks_Heat_StartTemp>
+  <VisualTweaks_Heat_StartTempTip>温度不高于此值的地方不会扭曲。默认 35 °C，普通舒适的房间和温带天气保持干净。</VisualTweaks_Heat_StartTempTip>
+  <VisualTweaks_Heat_FullTemp>达到最强热浪的温度（°C）</VisualTweaks_Heat_FullTemp>
+  <VisualTweaks_Heat_FullTempTip>温度达到此值时扭曲最强，两者之间平滑过渡。最高按 240 °C 计算，超过的部分不再增强。</VisualTweaks_Heat_FullTempTip>
+  <VisualTweaks_Heat_Intensity>强度</VisualTweaks_Heat_Intensity>
+  <VisualTweaks_Heat_IntensityTip>扭曲的强弱。1 是推荐的起点；0 仍然会绘制，但看不到明显变化。</VisualTweaks_Heat_IntensityTip>
+  <VisualTweaks_Heat_Amplitude>最大扭曲幅度（像素）</VisualTweaks_Heat_Amplitude>
+  <VisualTweaks_Heat_AmplitudeTip>最热时画面偏移的最大距离。建议保持较小，2～4 像素像热空气，数值过大就像镜头被扭曲。</VisualTweaks_Heat_AmplitudeTip>
+  <VisualTweaks_Heat_Scale>波纹大小</VisualTweaks_Heat_Scale>
+  <VisualTweaks_Heat_ScaleTip>数值越小，波纹越细碎；越大，波浪越宽越慢。1 左右接近一格的大小。</VisualTweaks_Heat_ScaleTip>
+  <VisualTweaks_Heat_Speed>动画速度</VisualTweaks_Heat_Speed>
+  <VisualTweaks_Heat_SpeedTip>热浪升腾和变化的快慢。最低只是变慢，不会完全静止。</VisualTweaks_Heat_SpeedTip>
+  <VisualTweaks_Heat_FireBoost>热源附近的额外热浪</VisualTweaks_Heat_FireBoost>
+  <VisualTweaks_Heat_FireBoostTip>在火焰、篝火、加热器、火把和地热口周围额外叠加的热浪。房间温度本身已经包含室内热源，这一项主要用于让室外热源立刻显现。0 = 关闭额外效果。</VisualTweaks_Heat_FireBoostTip>
+
+  <!-- 低温房间寒气 -->
+  <VisualTweaks_Cold_GroupSwitch>总开关</VisualTweaks_Cold_GroupSwitch>
+  <VisualTweaks_Cold_GroupLook>外观</VisualTweaks_Cold_GroupLook>
+
+  <VisualTweaks_Cold_Enable>绘制低温房间寒气</VisualTweaks_Cold_Enable>
+  <VisualTweaks_Cold_EnableTip>在寒冷的室内叠加缓慢翻滚的寒气：冷库、冰盖基地，以及任何被制冷片压到低温的房间。雾气在原地聚散变形，不会整体飘过画面。只在真正的房间内显示，室外一格都不画；屋顶缺口超过四分之一的开敞房间按室外处理，同样不画。原版真空雾和 Atmosphere Overhaul 的雾气都不受影响。</VisualTweaks_Cold_EnableTip>
+  <VisualTweaks_Cold_ShaderMissing>寒气着色器未加载，这一项不会生效（详情见日志）。</VisualTweaks_Cold_ShaderMissing>
+  <VisualTweaks_Cold_StartTemp>开始出现寒气的温度（°C）</VisualTweaks_Cold_StartTemp>
+  <VisualTweaks_Cold_StartTempTip>房间温度不低于此值时完全没有雾气。默认 0 °C：普通舒适房间和温带基地保持干净，只有真正的冷库才会冒寒气。</VisualTweaks_Cold_StartTempTip>
+  <VisualTweaks_Cold_FullTemp>寒气最浓的温度（°C）</VisualTweaks_Cold_FullTemp>
+  <VisualTweaks_Cold_FullTempTip>房间温度不高于此值时雾气最浓，两者之间平滑过渡。默认 -75 °C：普通冷库（约 -18 °C）只有约四分之一强度，冰盖深冷房间才会满强度。</VisualTweaks_Cold_FullTempTip>
+  <VisualTweaks_Cold_Opacity>不透明度</VisualTweaks_Cold_Opacity>
+  <VisualTweaks_Cold_OpacityTip>雾气最浓处的最大不透明度。默认 0.1 只是薄薄一层；这个值很容易过头，超过 0.3 会明显糊住地面和物品。</VisualTweaks_Cold_OpacityTip>
+  <VisualTweaks_Cold_Coverage>覆盖面积</VisualTweaks_Cold_Coverage>
+  <VisualTweaks_Cold_CoverageTip>寒冷房间里有多少面积会被雾气盖住。0 = 基本干净；数值越大覆盖越多，1 = 整间房都被填满。觉得看不见时优先调这一项，而不是不透明度。</VisualTweaks_Cold_CoverageTip>
+  <VisualTweaks_Cold_Scale>雾团大小</VisualTweaks_Cold_Scale>
+  <VisualTweaks_Cold_ScaleTip>雾气团块的尺寸。数值越小，雾团越细碎、越像飘动的哈气；越大，雾团越宽、越像贴地的浓雾。1 左右约等于一格的大小。</VisualTweaks_Cold_ScaleTip>
+  <VisualTweaks_Cold_Speed>浮动速度</VisualTweaks_Cold_Speed>
+  <VisualTweaks_Cold_SpeedTip>雾气在原地翻滚、聚散和变形的快慢。寒气不会整体飘过画面，只在原地浓淡变化；数值越大翻涌越明显。</VisualTweaks_Cold_SpeedTip>
+
+  <!-- 真空漏气气流（Odyssey） -->
+  <VisualTweaks_Tab_Leak>真空漏气</VisualTweaks_Tab_Leak>
+  <VisualTweaks_Leak_GroupSwitch>总开关</VisualTweaks_Leak_GroupSwitch>
+  <VisualTweaks_Leak_GroupLook>外观</VisualTweaks_Leak_GroupLook>
+  <VisualTweaks_Leak_GroupDebug>调试</VisualTweaks_Leak_GroupDebug>
+
+  <VisualTweaks_Leak_Enable>绘制漏气气流</VisualTweaks_Leak_Enable>
+  <VisualTweaks_Leak_EnableTip>在 Odyssey 的真空中显示空气流失：通向更干燥房间的开着的门、通电的通风口或断电的真空屏障，都会有一束淡淡的气流流向缺口；船壳被拆毁时还会向太空喷出一股短促的爆发。气流强度跟随实际压差和房间剩余空气，会在原版真空雾接管时自然淡出，原版雾本身不受影响。</VisualTweaks_Leak_EnableTip>
+  <VisualTweaks_Leak_ShaderMissing>漏气着色器未加载，这一项不会生效（详情见日志）。</VisualTweaks_Leak_ShaderMissing>
+  <VisualTweaks_Leak_Intensity>强度</VisualTweaks_Leak_Intensity>
+  <VisualTweaks_Leak_IntensityTip>气流的整体明显程度。默认 1 是推荐强度；越低越淡，越高越显眼。每个缺口的气流强弱仍由压差决定，这一项只控制结果有多明显。</VisualTweaks_Leak_IntensityTip>
+  <VisualTweaks_Leak_Speed>流速</VisualTweaks_Leak_Speed>
+  <VisualTweaks_Leak_SpeedTip>气流条纹流动的快慢。只改变流动速度，不改变强度、宽度和持续时间；暂停时同样冻结，拖动滑条也不会让条纹跳变。</VisualTweaks_Leak_SpeedTip>
+  <VisualTweaks_Leak_DurationScale>持续时间倍率</VisualTweaks_Leak_DurationScale>
+  <VisualTweaks_Leak_DurationScaleTip>墙体破口和天花板吸入这类一次性效果持续多久。只改变持续时间，不改变强度、宽度和流速。门和通风口的气流由房间实际真空度驱动，不受这一项影响。</VisualTweaks_Leak_DurationScaleTip>
+  <VisualTweaks_Leak_Distortion>扭曲效果</VisualTweaks_Leak_Distortion>
+  <VisualTweaks_Leak_DistortionTip>让气流背后的画面轻微折射，看起来像流动的空气，而不是一层平面贴图。关闭后不再扭曲；强度为 0 时效果相同。</VisualTweaks_Leak_DistortionTip>
+  <VisualTweaks_Leak_DistortionStrength>扭曲强度</VisualTweaks_Leak_DistortionStrength>
+  <VisualTweaks_Leak_DistortionStrengthTip>气流最明显处的最大扭曲幅度（像素）。气流越淡，扭曲也越弱。</VisualTweaks_Leak_DistortionStrengthTip>
+  <VisualTweaks_Leak_Trace>记录缺口强度日志（开发者模式）</VisualTweaks_Leak_Trace>
+  <VisualTweaks_Leak_TraceTip>仅供开发者排查问题时使用。开启后会持续写入大量日志，正常游戏请保持关闭。</VisualTweaks_Leak_TraceTip>
+</LanguageData>

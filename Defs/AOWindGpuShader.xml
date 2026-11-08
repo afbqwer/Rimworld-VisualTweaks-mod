@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!--
+    GPU ribbon expansion for the wind particle style. Draws under the fog/overlay
+    queue exactly like the CPU particle layer (DashRenderQueue 2991).
+  -->
+  <ShaderDef>
+    <defName>VisualTweaksAOWindGpu</defName>
+    <shaderProgram>
+      <vertexShaderFileName>VisualTweaksAOWindGpu.vert.glsl</vertexShaderFileName>
+      <fragmentShaderFileName>VisualTweaksAOWindGpu.frag.glsl</fragmentShaderFileName>
+      <useTexture>true</useTexture>
+      <flipTextureST>false</flipTextureST>
+      <transparent>true</transparent>
+      <depthTest>true</depthTest>
+      <depthWrite>false</depthWrite>
+      <cullMode>None</cullMode>
+      <blendMode>Alpha</blendMode>
+      <renderQueue>2991</renderQueue>
+      <textureWrapOverrides>
+        <li>
+          <key>_MainTex</key>
+          <value>Clamp</value>
+        </li>
+      </textureWrapOverrides>
+    </shaderProgram>
+  </ShaderDef>
+</Defs>

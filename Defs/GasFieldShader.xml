@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!--
+    Single view-sized quad that shades the gas/mist density field in the fragment
+    stage. Queue 2990 keeps it below RimWorld's transparent overlay/fog materials,
+    so fog of war and darkness cover it the same way they cover terrain.
+  -->
+  <ShaderDef>
+    <defName>VisualTweaksGasField</defName>
+    <shaderProgram>
+      <vertexShaderFileName>VisualTweaksGasField.vert.glsl</vertexShaderFileName>
+      <fragmentShaderFileName>VisualTweaksGasField.frag.glsl</fragmentShaderFileName>
+      <useTexture>false</useTexture>
+      <flipTextureST>false</flipTextureST>
+      <transparent>true</transparent>
+      <depthTest>true</depthTest>
+      <depthWrite>false</depthWrite>
+      <cullMode>None</cullMode>
+      <blendMode>Alpha</blendMode>
+      <renderQueue>2990</renderQueue>
+      <textureWrapOverrides>
+        <li>
+          <key>_GasTexCur</key>
+          <value>Clamp</value>
+        </li>
+        <li>
+          <key>_GasTexPrev</key>
+          <value>Clamp</value>
+        </li>
+        <li>
+          <key>_MistTexCur</key>
+          <value>Clamp</value>
+        </li>
+        <li>
+          <key>_MistTexPrev</key>
+          <value>Clamp</value>
+        </li>
+        <li>
+          <key>_GasTexWideCur</key>
+          <value>Clamp</value>
+        </li>
+        <li>
+          <key>_GasTexWidePrev</key>
+          <value>Clamp</value>
+        </li>
+        <li>
+          <key>_WindTex</key>
+          <value>Clamp</value>
+        </li>
+      </textureWrapOverrides>
+    </shaderProgram>
+  </ShaderDef>
+</Defs>
