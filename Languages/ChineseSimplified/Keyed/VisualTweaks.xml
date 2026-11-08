@@ -55,8 +55,8 @@
   <VisualTweaks_Gas_GroupLook>外观</VisualTweaks_Gas_GroupLook>
   <VisualTweaks_Gas_GroupDebug>诊断</VisualTweaks_Gas_GroupDebug>
 
-  <VisualTweaks_Gas_ReplaceAOSprites>使用新的气体渲染（AO）</VisualTweaks_Gas_ReplaceAOSprites>
-  <VisualTweaks_Gas_ReplaceVanillaSprites>使用新的气体渲染（原版）</VisualTweaks_Gas_ReplaceVanillaSprites>
+  <VisualTweaks_Gas_ReplaceAOSprites>使用新的气体渲染（替换AO）</VisualTweaks_Gas_ReplaceAOSprites>
+  <VisualTweaks_Gas_ReplaceVanillaSprites>使用新的气体渲染（替换原版）</VisualTweaks_Gas_ReplaceVanillaSprites>
   <VisualTweaks_Gas_ReplaceTipWithAO>把雾和四种原版气体（致盲烟、毒气、腐臭、死灵尘）换成更自然、连续的云雾效果。取消勾选会恢复原本的渲染，方便对比。</VisualTweaks_Gas_ReplaceTipWithAO>
   <VisualTweaks_Gas_ReplaceTipVanilla>把四种原版气体（致盲烟、毒气、腐臭、死灵尘）换成更自然、连续的云雾效果。取消勾选会恢复原本的渲染，方便对比。</VisualTweaks_Gas_ReplaceTipVanilla>
   <VisualTweaks_Gas_ShaderMissing>自定义着色器未加载，这一项不会生效（详情见日志）。</VisualTweaks_Gas_ShaderMissing>

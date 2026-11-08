@@ -39,7 +39,7 @@ layout(std430, set = 2, binding = 3) readonly buffer _LeakParams
 //   _Params.z  refraction enabled (0 or 1)
 //   _Params.w  refraction amplitude in pixels at full coverage
 //
-// The scene grab is declared in VacuumLeakShader.xml and captured at the same
+// The scene grab is declared in VisualTweaksShaders.xml and captured at the same
 // queue, so it holds everything the stream may bend but never the stream. The
 // output composites the refracted frame with the pale stream colour using the
 // same weight an alpha blend would have used, and writes alpha 1: the displaced

@@ -20,7 +20,7 @@
 // screen. The amplitude is expressed in screen pixels, which keeps the effect
 // readable at every zoom level.
 //
-// The scene grab is declared in HeatHazeShader.xml:
+// The scene grab is declared in VisualTweaksShaders.xml:
 //   <sceneGrab><name>VisualTweaksHeatHaze</name><queue>3174</queue></sceneGrab>
 // Queue 3174 sits after the normal map visuals and before fog of war (3175), so
 // fog and darkness cover the shimmer exactly like they cover terrain.

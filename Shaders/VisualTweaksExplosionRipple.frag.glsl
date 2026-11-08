@@ -23,7 +23,7 @@ layout(std430, set = 2, binding = 3) readonly buffer _RippleParams
 // painted ring. This follows the GraphicsLib / Starsector ripple profile: the
 // displacement peaks on the wave front and falls away to zero on both sides.
 //
-// The scene grab is declared in ExplosionRippleShader.xml:
+// The scene grab is declared in VisualTweaksShaders.xml:
 //   <sceneGrab><name>VisualTweaksExplosionRipple</name>...</sceneGrab>
 // which binds the frame colour to _GrabVisualTweaksExplosionRipple. The grab is
 // taken at queue 3178, after motes and explosion flashes (3151) and before the

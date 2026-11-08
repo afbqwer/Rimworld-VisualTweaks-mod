@@ -55,8 +55,8 @@
   <VisualTweaks_Gas_GroupLook>Appearance</VisualTweaks_Gas_GroupLook>
   <VisualTweaks_Gas_GroupDebug>Diagnostics</VisualTweaks_Gas_GroupDebug>
 
-  <VisualTweaks_Gas_ReplaceAOSprites>Use the new gas rendering (AO)</VisualTweaks_Gas_ReplaceAOSprites>
-  <VisualTweaks_Gas_ReplaceVanillaSprites>Use the new gas rendering (vanilla)</VisualTweaks_Gas_ReplaceVanillaSprites>
+  <VisualTweaks_Gas_ReplaceAOSprites>Use the new gas rendering (replace AO)</VisualTweaks_Gas_ReplaceAOSprites>
+  <VisualTweaks_Gas_ReplaceVanillaSprites>Use the new gas rendering (replace vanilla)</VisualTweaks_Gas_ReplaceVanillaSprites>
   <VisualTweaks_Gas_ReplaceTipWithAO>Replaces mist and the four vanilla gases (blind smoke, tox gas, rot stink, deadlife dust) with a softer, continuous cloud look. Turn it off to restore the original rendering for comparison.</VisualTweaks_Gas_ReplaceTipWithAO>
   <VisualTweaks_Gas_ReplaceTipVanilla>Replaces the four vanilla gases (blind smoke, tox gas, rot stink, deadlife dust) with a softer, continuous cloud look. Turn it off to restore the original rendering for comparison.</VisualTweaks_Gas_ReplaceTipVanilla>
   <VisualTweaks_Gas_ShaderMissing>The custom shader failed to load, so this option has no effect (see the log for details).</VisualTweaks_Gas_ShaderMissing>
