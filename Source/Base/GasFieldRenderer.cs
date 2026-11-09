@@ -361,6 +361,18 @@ namespace VisualTweaks
         private float lastRefresh = float.NegativeInfinity;
         private float fadeStart = float.NegativeInfinity;
 
+        // Smoothed presentation time of one frame, in seconds. The cross-fade is only
+        // allowed when the frame rate leaves it at least three frames per publish period
+        // (see Draw), and that comparison sits on an exact boundary at the most common
+        // frame rate there is: a 60 Hz vsync gives 16.67 ms and the boundary at 12x-15x game
+        // speed is 50 ms / 3 = 16.67 ms. Real frame times hover either side of their mean, so
+        // a raw delta would flip the decision frame to frame and turn the fade on and off at
+        // half the publish rate — a flicker in place of the jump it was meant to remove.
+        // One exponential step per frame (about 15 frames to settle) makes the decision
+        // stable while still following a genuine frame-rate change within a quarter second.
+        private float frameSecondsSmoothed;
+        private const float FrameTimeSmoothing = 0.15f;
+
         // Ambient drift history, in noise units. The offset is a path integral of the
         // wind, not wind * absolute time: the latter teleported the whole pattern
         // whenever the wind vector changed (weather transitions, AO's ambient wind),
@@ -535,6 +547,43 @@ namespace VisualTweaks
                 ? 1f
                 : Mathf.Clamp01((realtime - fadeStart) / refreshPeriod);
 
+            // A cross-fade is a filter over time: it only does anything when several frames
+            // are presented between two publishes. fade is restarted at every publish, so
+            // the highest value it ever reaches is (period - frame) / period — with three
+            // frames per period it stops at 0.67 and the field never catches up with the
+            // texture that was just uploaded.
+            //
+            // Below three frames per period the fade therefore stops being a smoother and
+            // starts being a lag: every frame is drawn mostly from the *previous* texture.
+            // That matters here specifically because the previous texture was baked from the
+            // window the camera had before this frame's move. It is sampled through its own
+            // mapping (_Params7/_Params8) and does cover the old rectangle correctly, but a
+            // frame that both publishes and moves the window — which is exactly what a pan or
+            // a zoom at a low frame rate is — draws the whole field from it, so on screen the
+            // gas is still back where the camera was: one frame of "the layer teleported to
+            // where it was before the move, then snapped back". At 60 fps that frame lasts
+            // 16 ms and is invisible, which is why only a low frame rate reports it.
+            //
+            // With no room for the fade, show the texture that was just uploaded instead.
+            // This costs nothing there: the frame rate *is* the publish rate, so there is no
+            // smoothing to lose.
+            //
+            // Unscaled and smoothed: the question is how long this frame stays on screen, and
+            // the answer must not flip frame to frame when the frame time straddles the
+            // boundary (see frameSecondsSmoothed).
+            float frameSeconds = Time.unscaledDeltaTime;
+            frameSecondsSmoothed = frameSecondsSmoothed <= 0f
+                ? frameSeconds
+                : frameSecondsSmoothed
+                    + (frameSeconds - frameSecondsSmoothed) * FrameTimeSmoothing;
+
+            bool fadeFits =
+                frameSecondsSmoothed > 0f && frameSecondsSmoothed * 3f < refreshPeriod;
+            if (!fadeFits)
+            {
+                fade = 1f;
+            }
+
             if (gasClean && mistClean && fade >= 1f)
             {
                 // Both channels are empty and the fade-out is over: skip the mesh update,
@@ -549,8 +598,25 @@ namespace VisualTweaks
                 return;
             }
 
+            // Print the state the frame is actually drawn from, once per camera move: which
+            // window each pair claims to hold, and whether the fade was allowed to run.
+            if (VisualTweaksSettings.gasFieldTraceWindows && rectMoved)
+            {
+                Log.Message(
+                    "[Visual Tweaks] frame"
+                    + $" dt={frameSeconds:F4}/{frameSecondsSmoothed:F4} period={refreshPeriod:F3}"
+                    + $" fade={fade:F2} fits={fadeFits} timerDue={timerDue}"
+                    + $" | window ({rectMinX},{rectMinZ}) {winW}x{winH} cap {width}x{height}"
+                    + $" | gas ({gasTrack.MinX},{gasTrack.MinZ}) {gasTrack.WinW}x{gasTrack.WinH}"
+                    + $" prev ({gasTrack.PrevMinX},{gasTrack.PrevMinZ})"
+                    + $" | mist prev ({mistTrack.PrevMinX},{mistTrack.PrevMinZ})");
+            }
+
             // Cross-fade per frame: without it the 10 Hz publish would hold the same
-            // image for several frames even when the values are smoothed.
+            // image for several frames even when the values are smoothed. It only runs while
+            // the frame rate leaves room for it (see fadeFits above); the branch below is the
+            // guard that it is at least *possible*, i.e. that each live texture still answers
+            // for the window it is being drawn with.
             //
             // The previous texture keeps its own mapping, and the ring outside its baked
             // band is cleared to zero on upload, so a cell it never covered fades in from
@@ -2563,7 +2629,9 @@ namespace VisualTweaks
         /// On a real upload <paramref name="previousIsFresh"/> reports that the previous
         /// half was pointed at the newly written texture instead of the old one, which
         /// turns the next cross-fade into a no-op. That happens on the first upload of a
-        /// pair and whenever the old window no longer contains the view.
+        /// pair, whenever the window origin moved, and whenever the old window no longer
+        /// contains the view — the three cases where the two endpoints would not share one
+        /// uv mapping.
         ///
         /// The two buffers are swapped rather than copied, so the next bake writes into the
         /// one that still holds this upload — which is exactly what the compare needs.
@@ -2600,30 +2668,49 @@ namespace VisualTweaks
             else
             {
                 write = current == textureA ? textureB : textureA;
-                if (PrevCoversView(track))
+
+                // A cross-fade is only sound between two textures baked from the *same*
+                // window origin. Equal origins means the whole uv mapping is identical, so
+                // mixing the two is mixing two pictures of the same place; a different
+                // origin means the shader would have to carry two mappings (_Params6 and
+                // _Params7/_Params8) that have to stay in exact lockstep with which texture
+                // is bound where — and when they do not, the whole field is drawn at the
+                // previous window's offset, i.e. exactly where it sat before the camera
+                // moved, and it fades back out as `fade` climbs. Pinning the origin removes
+                // that whole class of defect instead of chasing the mapping, at the price of
+                // one hard step per publish while the window is moving — the content in the
+                // overlap is the same picture anyway, so there is nothing to fade.
+                bool sameOrigin = track.Valid
+                    && track.MinX == rectMinX
+                    && track.MinZ == rectMinZ;
+
+                if (sameOrigin && PrevCoversView(track))
                 {
-                    // Always the old texture: the shader samples it through _Params7, which
-                    // carries the window it was baked from, so the two endpoints agree.
+                    // Always the old texture: same origin, so _Params6 already describes it.
                     previous = current;
                 }
                 else
                 {
-                    // The previous window does not contain the view, so part of what this
-                    // quad draws was never baked into it. Sampling it anyway — even through
-                    // its own uv — reads the cleared ring, or with Clamp its edge texels,
-                    // and the newly exposed strip blends in from the wrong picture for one
-                    // refresh interval. The bake just filled the whole window, so cut:
-                    // previous and current point at the same texture for this publish.
+                    // Either the window moved or the previous window does not contain the
+                    // view, so part of what this quad draws was never baked into it. Sampling
+                    // it anyway — even through its own uv — reads the cleared ring, or with
+                    // Clamp its edge texels, and the newly exposed strip blends in from the
+                    // wrong picture for one refresh interval. The bake just filled the whole
+                    // window, so cut: previous and current point at the same texture for this
+                    // publish, which makes the fade a no-op.
                     previous = write;
                     previousIsFresh = true;
 
                     if (VisualTweaksSettings.gasFieldTraceWindows)
                     {
                         Log.Message(
-                            "[Visual Tweaks] previous window ("
+                            "[Visual Tweaks] cross-fade cut: previous window ("
                             + track.MinX + "," + track.MinZ + ") " + track.WinW + "x" + track.WinH
-                            + " does not cover view (" + viewMinX + "," + viewMinZ + ")-("
-                            + viewMaxX + "," + viewMaxZ + "); cross-fade skipped.");
+                            + (sameOrigin
+                                ? " does not cover the view"
+                                : " sits at another origin than the live window")
+                            + ", view (" + viewMinX + "," + viewMinZ + ")-("
+                            + viewMaxX + "," + viewMaxZ + ").");
                     }
                 }
             }
@@ -2689,11 +2776,12 @@ namespace VisualTweaks
         /// <summary>
         /// Whether the window the previous texture was baked from contains the whole view.
         ///
-        /// The previous half is sampled through _Params7/_Params8, so a moved window is
-        /// normally fine: each texture carries its own origin. What it cannot survive is a
-        /// view that reaches outside that window — there is no data there, and Clamp turns
-        /// uv &lt; 0 into the window's own left edge column. A one-frame camera move larger
-        /// than PanSlack (a long first frame, a teleport, a fast zoom) therefore used to
+        /// The caller has already established that the previous texture sits at the same
+        /// origin as the live one, so this is purely a size test: the fade is only meaningful
+        /// when the old window still answers for every cell the quad draws. What it cannot
+        /// survive is a view that reaches outside that window — there is no data there, and
+        /// Clamp turns uv &lt; 0 into the window's own left edge column. A one-frame camera
+        /// move larger than PanSlack (a long first frame, a teleport, a fast zoom) would
         /// smear the old edge across the newly exposed area until the fade reached 1. The
         /// shader masks those samples to zero as well; this test decides whether the fade
         /// is worth starting at all.
