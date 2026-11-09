@@ -361,18 +361,6 @@ namespace VisualTweaks
         private float lastRefresh = float.NegativeInfinity;
         private float fadeStart = float.NegativeInfinity;
 
-        // Smoothed presentation time of one frame, in seconds. The cross-fade is only
-        // allowed when the frame rate leaves it at least three frames per publish period
-        // (see Draw), and that comparison sits on an exact boundary at the most common
-        // frame rate there is: a 60 Hz vsync gives 16.67 ms and the boundary at 12x-15x game
-        // speed is 50 ms / 3 = 16.67 ms. Real frame times hover either side of their mean, so
-        // a raw delta would flip the decision frame to frame and turn the fade on and off at
-        // half the publish rate — a flicker in place of the jump it was meant to remove.
-        // One exponential step per frame (about 15 frames to settle) makes the decision
-        // stable while still following a genuine frame-rate change within a quarter second.
-        private float frameSecondsSmoothed;
-        private const float FrameTimeSmoothing = 0.15f;
-
         // Ambient drift history, in noise units. The offset is a path integral of the
         // wind, not wind * absolute time: the latter teleported the whole pattern
         // whenever the wind vector changed (weather transitions, AO's ambient wind),
@@ -547,42 +535,12 @@ namespace VisualTweaks
                 ? 1f
                 : Mathf.Clamp01((realtime - fadeStart) / refreshPeriod);
 
-            // A cross-fade is a filter over time: it only does anything when several frames
-            // are presented between two publishes. fade is restarted at every publish, so
-            // the highest value it ever reaches is (period - frame) / period — with three
-            // frames per period it stops at 0.67 and the field never catches up with the
-            // texture that was just uploaded.
-            //
-            // Below three frames per period the fade therefore stops being a smoother and
-            // starts being a lag: every frame is drawn mostly from the *previous* texture.
-            // That matters here specifically because the previous texture was baked from the
-            // window the camera had before this frame's move. It is sampled through its own
-            // mapping (_Params7/_Params8) and does cover the old rectangle correctly, but a
-            // frame that both publishes and moves the window — which is exactly what a pan or
-            // a zoom at a low frame rate is — draws the whole field from it, so on screen the
-            // gas is still back where the camera was: one frame of "the layer teleported to
-            // where it was before the move, then snapped back". At 60 fps that frame lasts
-            // 16 ms and is invisible, which is why only a low frame rate reports it.
-            //
-            // With no room for the fade, show the texture that was just uploaded instead.
-            // This costs nothing there: the frame rate *is* the publish rate, so there is no
-            // smoothing to lose.
-            //
-            // Unscaled and smoothed: the question is how long this frame stays on screen, and
-            // the answer must not flip frame to frame when the frame time straddles the
-            // boundary (see frameSecondsSmoothed).
-            float frameSeconds = Time.unscaledDeltaTime;
-            frameSecondsSmoothed = frameSecondsSmoothed <= 0f
-                ? frameSeconds
-                : frameSecondsSmoothed
-                    + (frameSeconds - frameSecondsSmoothed) * FrameTimeSmoothing;
-
-            bool fadeFits =
-                frameSecondsSmoothed > 0f && frameSecondsSmoothed * 3f < refreshPeriod;
-            if (!fadeFits)
-            {
-                fade = 1f;
-            }
+            // The fade is never gated on the frame rate. It was tried and reverted: it made
+            // what is on screen depend on a measured frame time, and refreshPeriod itself is
+            // cached for half a second, so switching the game speed moved a 60 fps setup
+            // across the threshold half a second *after* the switch and cut the blend in one
+            // step — a flash of the whole field, on every speed change. Whatever the fade
+            // does, it must be a function of the publish clock alone.
 
             if (gasClean && mistClean && fade >= 1f)
             {
@@ -599,13 +557,12 @@ namespace VisualTweaks
             }
 
             // Print the state the frame is actually drawn from, once per camera move: which
-            // window each pair claims to hold, and whether the fade was allowed to run.
+            // window each pair claims to hold, and the fade it will be drawn with.
             if (VisualTweaksSettings.gasFieldTraceWindows && rectMoved)
             {
                 Log.Message(
                     "[Visual Tweaks] frame"
-                    + $" dt={frameSeconds:F4}/{frameSecondsSmoothed:F4} period={refreshPeriod:F3}"
-                    + $" fade={fade:F2} fits={fadeFits} timerDue={timerDue}"
+                    + $" period={refreshPeriod:F3} fade={fade:F2} timerDue={timerDue}"
                     + $" | window ({rectMinX},{rectMinZ}) {winW}x{winH} cap {width}x{height}"
                     + $" | gas ({gasTrack.MinX},{gasTrack.MinZ}) {gasTrack.WinW}x{gasTrack.WinH}"
                     + $" prev ({gasTrack.PrevMinX},{gasTrack.PrevMinZ})"
@@ -613,10 +570,9 @@ namespace VisualTweaks
             }
 
             // Cross-fade per frame: without it the 10 Hz publish would hold the same
-            // image for several frames even when the values are smoothed. It only runs while
-            // the frame rate leaves room for it (see fadeFits above); the branch below is the
-            // guard that it is at least *possible*, i.e. that each live texture still answers
-            // for the window it is being drawn with.
+            // image for several frames even when the values are smoothed. The branch below
+            // is the guard that it is at least *possible*, i.e. that each live texture still
+            // answers for the window it is being drawn with.
             //
             // The previous texture keeps its own mapping, and the ring outside its baked
             // band is cleared to zero on upload, so a cell it never covered fades in from
@@ -830,7 +786,24 @@ namespace VisualTweaks
                         delta = 0.25;
                     }
 
-                    shaderClock += delta * CurrentSimulationRate();
+                    float rate = CurrentSimulationRate();
+                    double advance = delta * rate;
+
+                    if (VisualTweaksSettings.gasFieldTraceWindows && advance > 0.1)
+                    {
+                        // Switching the game speed charges the *whole* elapsed interval at
+                        // the new rate: 1x -> 15x adds 14 x delta of game time that never
+                        // passed, which the flow integration turns into a couple of cells of
+                        // noise displacement — one visible shimmer of the pattern. Traced
+                        // because it is the other candidate for "the field flashes when the
+                        // speed changes", and it only fires on a hitch or a speed change.
+                        Log.Message(
+                            "[Visual Tweaks] clock jump"
+                            + $" delta={delta:F4}s rate={rate:F1} advance={advance:F3}s"
+                            + $" clock={shaderClock:F2}");
+                    }
+
+                    shaderClock += advance;
                 }
             }
 
