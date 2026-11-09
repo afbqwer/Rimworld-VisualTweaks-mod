@@ -165,6 +165,15 @@ namespace VisualTweaks
 
         public static bool heatHazeEnabled = true;
 
+        // Which temperature source the heat mask is baked from. Vanilla only knows room
+        // temperature: GenTemperature resolves a room per lookup and hands back that
+        // room's single value, so a cell-by-cell read would just repeat the room figure
+        // across its footprint at a much higher cost. AO publishes a real per-cell field,
+        // which is why this switch is only meaningful with AO — UsePerCellTemperature
+        // refuses the flag when AO is absent, so a config written with AO installed
+        // cannot silently take the expensive path after AO is removed.
+        public static bool heatHazePerCellTemp = false;
+
         public const float MinHeatStartTemp = 0f;
         public const float MaxHeatStartTemp = 100f;
         public static float heatHazeStartTemp = 35f;
@@ -250,6 +259,15 @@ namespace VisualTweaks
 
         public static bool ReplacementEnabled => replaceAORenderer;
 
+        /// <summary>
+        /// True when the heat mask should be baked from AO's per-cell field. False means
+        /// vanilla's room temperature, which is also the only option without AO: the
+        /// setting is stored as written but ignored, so re-installing AO restores the
+        /// user's choice instead of resetting it.
+        /// </summary>
+        public static bool UsePerCellTemperature =>
+            heatHazePerCellTemp && AOIntegration.PerCellTemperatureAvailable;
+
         public static bool FineStyle => style == StyleFine;
 
         public static bool ParticleStyle => style == StyleParticle;
@@ -328,6 +346,7 @@ namespace VisualTweaks
                 6f);
             Scribe_Values.Look(ref vacuumLeakTrace, "vacuumLeakTrace", false);
             Scribe_Values.Look(ref heatHazeEnabled, "heatHazeEnabled", true);
+            Scribe_Values.Look(ref heatHazePerCellTemp, "heatHazePerCellTemp", false);
             Scribe_Values.Look(ref heatHazeStartTemp, "heatHazeStartTemp", 35f);
             Scribe_Values.Look(ref heatHazeFullTemp, "heatHazeFullTemp", 80f);
             Scribe_Values.Look(ref heatHazeIntensity, "heatHazeIntensity", 1f);
@@ -520,6 +539,7 @@ namespace VisualTweaks
             vacuumLeakDistortionStrength = 6f;
             vacuumLeakTrace = false;
             heatHazeEnabled = true;
+            heatHazePerCellTemp = false;
             heatHazeStartTemp = 35f;
             heatHazeFullTemp = 80f;
             heatHazeIntensity = 1f;

@@ -21,11 +21,12 @@ namespace VisualTweaks
     /// is reclaimed after a sustained zoom-in, so normal play uploads tens of KB instead
     /// of a fixed 1 MB texture.
     ///
-    /// Temperatures come from one of two sources. AO publishes a real per-cell field and
-    /// is read per cell. Vanilla has no per-cell field at all — it resolves a room per
-    /// lookup — so that path walks the rooms and writes each one across its footprint.
-    /// Both produce the same mask; the room walk just does not pay for a region lookup on
-    /// every cell.
+    /// Temperatures come from one of two sources, and which one is a user setting rather
+    /// than a property of the install. With per-cell sampling on (only offered when AO is
+    /// present) AO's field is read cell by cell. Otherwise the room walk runs: vanilla has
+    /// no per-cell field at all — it resolves a room per lookup and returns that room's
+    /// single temperature — so walking the rooms and writing each one across its footprint
+    /// produces the same mask without paying for a region lookup on every cell.
     /// </summary>
     internal sealed class HeatHazeRenderer : IDisposable
     {
@@ -114,11 +115,17 @@ namespace VisualTweaks
 
         // Window whose cells are currently baked into maskPixels. Used to scroll the
         // mask when the camera pans and to bake only the newly exposed strips. Only the
-        // per-cell path (AO) uses this; the room walk always rewrites the whole window.
+        // per-cell path uses this; the room walk always rewrites the whole window.
         private int bakedMinX = int.MinValue;
         private int bakedMinZ = int.MinValue;
         private int bakedW = -1;
         private int bakedH = -1;
+
+        // Which source produced the cells currently in the mask. A source switch makes the
+        // cached rect useless: the room walk leaves per-room plateaus across the window, and
+        // scrolling those into the per-cell path would keep them in view until the camera
+        // moved again.
+        private bool bakedPerCellMode;
 
         private int winMinX;
         private int winMinZ;
@@ -170,10 +177,16 @@ namespace VisualTweaks
             // bakes once instead of waiting for the next cadence.
             bool resumed = wasPaused && !paused;
             wasPaused = paused;
+
+            // A source switch must show up immediately: the user just clicked it in the
+            // settings window, and the old mask describes an entirely different quantity.
+            bool modeChanged = VisualTweaksSettings.UsePerCellTemperature != bakedPerCellMode;
+
             bool bakeDue = windowChanged
                 || resumed
+                || modeChanged
                 || realtime - lastBake >= bakeInterval;
-            if (paused && !windowChanged)
+            if (paused && !windowChanged && !modeChanged)
             {
                 bakeDue = false;
             }
@@ -507,12 +520,24 @@ namespace VisualTweaks
             float normScale = 255f / VisualTweaksSettings.HeatTempNormMax;
             float outdoorTemp = map.mapTemperature.OutdoorTemp;
 
-            // Two sources, chosen by what is actually authoritative. With AO the field is
-            // per cell and has to be read per cell. Without it there is no per-cell data at
-            // all: vanilla resolves a room per call and returns that room's single
-            // temperature, so the room walk below produces the same mask for a fraction of
-            // the cost.
-            int maxTempByte = AOIntegration.PerCellTemperatureAvailable
+            // Two sources, chosen by the user. With per-cell sampling the AO field is read
+            // one cell at a time. Without it there is no per-cell data to read at all:
+            // vanilla resolves a room per call and returns that room's single temperature,
+            // so the room walk below produces the same mask for a fraction of the cost.
+            bool perCell = VisualTweaksSettings.UsePerCellTemperature;
+            if (perCell != bakedPerCellMode)
+            {
+                bakedPerCellMode = perCell;
+
+                // Drop the cached rect: the cells in the buffer came from the other
+                // source. The room walk ignores it (it always rewrites the whole window),
+                // but the per-cell scroll path would otherwise treat room plateaus as a
+                // valid starting point.
+                bakedW = -1;
+                bakedH = -1;
+            }
+
+            int maxTempByte = perCell
                 ? BakePerCellField(map, normScale, outdoorTemp)
                 : BakeRooms(map, normScale, outdoorTemp);
 
@@ -560,7 +585,8 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Bakes from AO's per-cell temperature field. Keeps the cells that are still in
+        /// Bakes from AO's per-cell temperature field, when the user turned per-cell
+        /// sampling on. Keeps the cells that are still in
         /// view and re-reads only the strips a pan exposed; a size change, a teleport or the
         /// first bake after a capacity growth falls back to the full window.
         /// </summary>
@@ -655,8 +681,9 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Fills the window from vanilla room temperatures: one value per room, written
-        /// across its footprint, instead of one GenTemperature call per cell. Open cells
+        /// Fills the window from room temperatures: one value per room, written across its
+        /// footprint, instead of one GenTemperature call per cell. This is the default and
+        /// the only source without AO. Open cells
         /// keep the ambient temperature, which is exactly what vanilla returns for a cell
         /// without a room; wall and door cells have no room either and now read ambient
         /// too, where the per-cell path averaged their neighbours. That is a one-cell
@@ -1120,6 +1147,7 @@ namespace VisualTweaks
             bakedMinZ = int.MinValue;
             bakedW = -1;
             bakedH = -1;
+            bakedPerCellMode = false;
             quadWidth = -1;
             quadHeight = -1;
             quadMinX = int.MinValue;

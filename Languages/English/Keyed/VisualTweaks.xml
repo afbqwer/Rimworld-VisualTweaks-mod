@@ -111,6 +111,8 @@
 
   <VisualTweaks_Heat_Enable>Draw high-temperature air shimmer</VisualTweaks_Heat_Enable>
   <VisualTweaks_Heat_EnableTip>Makes the view shimmer where the air is hot: hot rooms, fires, geothermal vents and heat-wave weather all trigger it. The hotter it gets, the stronger the distortion; ordinary warm weather stays subtle, while a fire or a heat wave clearly bends the scene.</VisualTweaks_Heat_EnableTip>
+  <VisualTweaks_Heat_PerCellTemp>Judge temperature per cell</VisualTweaks_Heat_PerCellTemp>
+  <VisualTweaks_Heat_PerCellTempTip>Off uses vanilla room temperature: every cell in a room shares one value, so the shimmer covers the room as a flat block with a hard edge at each wall. On samples Atmosphere Overhaul's per-cell field instead, so the shimmer follows the actual heat around fires, vents and walls, and a single room can have hot and cool spots. Per-cell sampling reads every cell, which costs more than the room walk, most visibly when zoomed far out.</VisualTweaks_Heat_PerCellTempTip>
   <VisualTweaks_Heat_ShaderMissing>The heat-haze shader failed to load, so this option has no effect (see the log for details).</VisualTweaks_Heat_ShaderMissing>
   <VisualTweaks_Heat_StartTemp>Shimmer starts at (°C)</VisualTweaks_Heat_StartTemp>
   <VisualTweaks_Heat_StartTempTip>Places at or below this temperature do not shimmer. The default 35 °C keeps ordinary comfortable rooms and temperate weather clear.</VisualTweaks_Heat_StartTempTip>

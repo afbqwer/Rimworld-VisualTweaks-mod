@@ -552,6 +552,19 @@ namespace VisualTweaks
                 ref VisualTweaksSettings.heatHazeEnabled,
                 "VisualTweaks_Heat_EnableTip".Translate());
 
+            // Per-cell sampling needs AO: vanilla resolves temperature per room, so a
+            // cell-by-cell read would hand back the same value across the room at a much
+            // higher cost. The row is hidden rather than disabled, matching the wind tab —
+            // as a companion mod there is nothing the user could do about a missing AO, so
+            // a greyed control plus an explanation is just noise.
+            if (AOIntegration.PerCellTemperatureAvailable)
+            {
+                listing.CheckboxLabeled(
+                    "VisualTweaks_Heat_PerCellTemp".Translate(),
+                    ref VisualTweaksSettings.heatHazePerCellTemp,
+                    "VisualTweaks_Heat_PerCellTempTip".Translate());
+            }
+
             if (!HeatHazeBridge.ShaderReady)
             {
                 SettingsLayout.Warning(listing, "VisualTweaks_Heat_ShaderMissing".Translate());
