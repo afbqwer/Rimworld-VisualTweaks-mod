@@ -21,6 +21,7 @@ namespace VisualTweaks
     public sealed class OverlayMapComponent : MapComponent, IDisposable
     {
         private readonly GasFieldLayer gasField;
+        private readonly DeadlifeDustLayer deadlifeDust;
         private readonly ColdMistLayer coldMist;
         private readonly HeatHazeLayer heatHaze;
         private readonly ExplosionRippleLayer explosions;
@@ -48,6 +49,7 @@ namespace VisualTweaks
         public OverlayMapComponent(Map map) : base(map)
         {
             gasField = new GasFieldLayer();
+            deadlifeDust = new DeadlifeDustLayer();
             coldMist = new ColdMistLayer();
             heatHaze = new HeatHazeLayer();
             explosions = new ExplosionRippleLayer();
@@ -144,6 +146,10 @@ namespace VisualTweaks
             // against the defs.
             DrawLayer(gasField, in frame);
 
+            // Same queue band (the dust pass uses vanilla's 3000), so this reads in the order
+            // the two passes actually blend: field first, sprites on top.
+            DrawLayer(deadlifeDust, in frame);
+
             if (wind == null)
             {
                 wind = AOIntegration.CreateWindLayer?.Invoke();
@@ -222,6 +228,7 @@ namespace VisualTweaks
             VacuumBreaches.ClearFor(map.uniqueID);
 
             gasField.Dispose();
+            deadlifeDust.Dispose();
             coldMist.Dispose();
             heatHaze.Dispose();
             explosions.Dispose();

@@ -24,10 +24,10 @@ layout(location = 0) out vec4 outColor;
 
 layout(set = 2, binding = 0) uniform MaterialUniforms
 {
-    vec4 _SmokeColor; // @default = vec4(0.78, 0.78, 0.74, 1.0)
-    vec4 _ToxColor;   // @default = vec4(0.66, 0.82, 0.36, 1.0)
-    vec4 _RotColor;   // @default = vec4(0.55, 0.66, 0.42, 1.0)
-    vec4 _DustColor;  // @default = vec4(0.68, 0.60, 0.82, 1.0)
+    vec4 _SmokeColor; // @default = vec4(0.784, 0.784, 0.784, 1.0)  // vanilla 200,200,200
+    vec4 _ToxColor;   // @default = vec4(0.706, 0.839, 0.094, 1.0)  // vanilla 180,214,24
+    vec4 _RotColor;   // @default = vec4(0.839, 0.353, 0.094, 1.0)  // vanilla 214,90,24
+    vec4 _DustColor;  // @default = vec4(0.02, 0.08, 0.32, 1.0)    // vanilla 0.01,0.05,0.2, lifted
     vec4 _MistColor;  // @default = vec4(0.87, 0.91, 0.96, 1.0)
     vec4 _Params;     // @default = vec4(1.0, 2.6, 1.0, 0.0)  // fade t, optical gain, opacity, shader clock (unused here)
     vec4 _Params2;    // @default = vec4(1.0, 1.0, 0.0, 0.0)  // texture w, texture h, ambient drift velocity x/y (noise units per second)
@@ -36,7 +36,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
     vec4 _Params6;    // @default = vec4(1.0, 1.0, 0.0, 0.0)   // vWorld -> uv, current texture
     vec4 _Params7;    // @default = vec4(1.0, 1.0, 0.0, 0.0)   // vWorld -> uv, previous gas
     vec4 _Params8;    // @default = vec4(1.0, 1.0, 0.0, 0.0)   // vWorld -> uv, previous mist
-    vec4 _Params9;    // @default = vec4(1.0, 1.0, 0.0, 0.0)   // noise mode, animation, seconds since noise bake, unused
+    vec4 _Params9;    // @default = vec4(1.0, 1.0, 0.0, 1.0)   // noise mode, animation, seconds since noise bake, draw deadlife dust
     vec4 _Params10;   // @default = vec4(1.0, 1.0, 0.0, 0.0)   // vWorld -> uv, flow grid
     vec4 _Params11;   // @default = vec4(0.0, 0.0, 0.0, 0.0)   // ambient drift: xy = accumulated displacement (noise units)
 } u;
@@ -263,6 +263,15 @@ void main()
     // thins out over the same distance the blur spreads it.
     wide *= smoothstep(vec4(0.02), vec4(0.40), wide) * halo;
     gas = softMax(gas, wide, 0.12);
+
+    // Deadlife dust can be handed back to vanilla's sprite layer, which keeps its grainy
+    // texture and its per-cell silhouette. The field then drops the channel completely:
+    // zeroing it here covers the wide halo too, and makes a dust-only cell reach the
+    // discard below instead of painting a second, smoother copy of the same cloud.
+    if (u._Params9.w < 0.5)
+    {
+        gas.a = 0.0;
+    }
 
     float mistDensity = mist.x * mist.y;
     float gasSum = gas.r + gas.g + gas.b + gas.a;

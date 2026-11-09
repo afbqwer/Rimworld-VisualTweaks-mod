@@ -484,6 +484,10 @@ namespace VisualTweaks
                 "VisualTweaks_Gas_Cloudy".Translate(),
                 ref VisualTweaksSettings.gasFieldCloudy,
                 "VisualTweaks_Gas_CloudyTip".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_Gas_ReplaceDeadlife".Translate(),
+                ref VisualTweaksSettings.gasFieldReplaceDeadlife,
+                "VisualTweaks_Gas_ReplaceDeadlifeTip".Translate());
 
             SettingsLayout.Header(listing, "VisualTweaks_Gas_GroupDebug".Translate());
             listing.CheckboxLabeled(

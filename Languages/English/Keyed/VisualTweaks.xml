@@ -84,6 +84,8 @@
   <VisualTweaks_Gas_OpacityTip>Overall density. Higher values look like heavy smoke rather than thin mist.</VisualTweaks_Gas_OpacityTip>
   <VisualTweaks_Gas_Cloudy>Cloudy look</VisualTweaks_Gas_Cloudy>
   <VisualTweaks_Gas_CloudyTip>Adds a clumpy texture over the smooth mist for a smoke feel closer to vanilla. Off gives pure smooth mist.</VisualTweaks_Gas_CloudyTip>
+  <VisualTweaks_Gas_ReplaceDeadlife>Replace deadlife dust</VisualTweaks_Gas_ReplaceDeadlife>
+  <VisualTweaks_Gas_ReplaceDeadlifeTip>On: deadlife dust is shaded by the smooth gas field like every other gas, as a navy cloud. Off: the field drops the dust channel and the dust is drawn per cell with vanilla's own sprite texture, keeping its grainy look.</VisualTweaks_Gas_ReplaceDeadlifeTip>
   <VisualTweaks_Gas_TraceWindows>Log window recentre events (diagnostic)</VisualTweaks_Gas_TraceWindows>
   <VisualTweaks_Gas_TraceWindowsTip>Only for troubleshooting. Leave it off during normal play; when on, it keeps writing to the log and hurts performance.</VisualTweaks_Gas_TraceWindowsTip>
 

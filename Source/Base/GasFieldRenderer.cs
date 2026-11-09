@@ -612,7 +612,7 @@ namespace VisualTweaks
                     mistTrack.Valid ? mistTrack.PrevMinZ : rectMinZ));
             // Noise motion mode: x = 0 ambient / 1 local flow, y = animation strength,
             // z = time already elapsed since the last noise bake (the shader extends the
-            // published velocity by this much), w = unused.
+            // published velocity by this much), w = draw the deadlife dust channel.
             double sincePublish = shaderClock - noisePublishTime;
             if (!(sincePublish > 0.0))
             {
@@ -629,7 +629,7 @@ namespace VisualTweaks
                     GasFieldBridge.EffectiveNoiseMode,
                     VisualTweaksSettings.gasFieldAnimation,
                     (float)sincePublish,
-                    0f));
+                    VisualTweaksSettings.gasFieldReplaceDeadlife ? 1f : 0f));
             // The flow texture spans the whole map at FlowCellSize cells per texel, so its
             // vWorld -> uv mapping is fixed: neither panning nor zooming changes it.
             material.SetVector(
@@ -1104,10 +1104,21 @@ namespace VisualTweaks
                 renderQueue = RenderQueue,
             };
 
-            material.SetVector("_SmokeColor", new Vector4(0.78f, 0.78f, 0.74f, 1f));
-            material.SetVector("_ToxColor", new Vector4(0.66f, 0.82f, 0.36f, 1f));
-            material.SetVector("_RotColor", new Vector4(0.55f, 0.66f, 0.42f, 1f));
-            material.SetVector("_DustColor", new Vector4(0.68f, 0.60f, 0.82f, 1f));
+            // Per-gas tints, matching the constants baked into vanilla's
+            // Map/GasRotating.frag.glsl (smoke 200,200,200 / tox 180,214,24 / rot
+            // 214,90,24 / deadlife 0.01,0.05,0.2). Vanilla never exposes those as data —
+            // GasGrid only carries densities — so there is nothing to read at runtime and
+            // the values have to be copied by hand. Keep the @default block in
+            // VisualTweaksGasField.frag.glsl in sync, or a later edit will only half-apply.
+            material.SetVector("_SmokeColor", new Vector4(0.784f, 0.784f, 0.784f, 1f));
+            material.SetVector("_ToxColor", new Vector4(0.706f, 0.839f, 0.094f, 1f));
+            material.SetVector("_RotColor", new Vector4(0.839f, 0.353f, 0.094f, 1f));
+            // Vanilla multiplies its near-black deadlife tint by a sparse dust texture, so
+            // it only ever covers a few texels per cell. This shader has no sprite behind
+            // it: the tint lands on a smooth full-cell field, where 0.01,0.05,0.2 would
+            // read as a hole punched in the map. Same hue and channel ratio, lifted so the
+            // dust stays a dark navy cloud instead of a silhouette.
+            material.SetVector("_DustColor", new Vector4(0.02f, 0.08f, 0.32f, 1f));
             material.SetVector("_MistColor", new Vector4(0.87f, 0.91f, 0.96f, 1f));
         }
 
@@ -2097,6 +2108,13 @@ namespace VisualTweaks
                 return true;
             }
 
+            // When the dust channel is handed back to vanilla's sprite layer, a window that
+            // holds nothing but dust has to read as empty: otherwise the field keeps baking
+            // and uploading a quad whose every fragment discards. Dust is the top byte, so
+            // masking it out is the whole test. The vectorised scan is kept for the normal
+            // case; the masked one only runs while the setting is off.
+            bool drawDust = VisualTweaksSettings.gasFieldReplaceDeadlife;
+
             for (int z = 0; z < winH; z++)
             {
                 int offset = (rectMinZ + z) * mapWidth + rectMinX;
@@ -2105,9 +2123,22 @@ namespace VisualTweaks
                     return true;
                 }
 
-                if (density.AsSpan(offset, winW).IndexOfAnyExcept(0u) >= 0)
+                if (drawDust)
                 {
-                    return true;
+                    if (density.AsSpan(offset, winW).IndexOfAnyExcept(0u) >= 0)
+                    {
+                        return true;
+                    }
+
+                    continue;
+                }
+
+                for (int x = 0; x < winW; x++)
+                {
+                    if ((density[offset + x] & 0x00FFFFFFu) != 0u)
+                    {
+                        return true;
+                    }
                 }
             }
 

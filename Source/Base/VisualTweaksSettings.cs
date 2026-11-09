@@ -89,6 +89,12 @@ namespace VisualTweaks
         public static float gasFieldFaint = 1f;
         public static bool gasFieldCloudy = true;
 
+        // Deadlife dust is the one gas whose look *is* its sprite: a sparse dust texture
+        // rather than a smooth volume. With this on, the field shades it like the other
+        // three (a navy cloud). With it off, the field drops the dust channel and a
+        // separate layer redraws it with vanilla's own material and texture.
+        public static bool gasFieldReplaceDeadlife = true;
+
         // Explosion shockwave. The per-blast radius and lifetime are derived from the
         // Explosion instance; these sliders only set the global look and the strength
         // scaling, so small and large blasts still differ on screen.
@@ -284,6 +290,10 @@ namespace VisualTweaks
             Scribe_Values.Look(ref gasFieldSharpen, "gasFieldSharpen", 0f);
             Scribe_Values.Look(ref gasFieldFaint, "gasFieldFaint", 1f);
             Scribe_Values.Look(ref gasFieldCloudy, "gasFieldCloudy", true);
+            Scribe_Values.Look(
+                ref gasFieldReplaceDeadlife,
+                "gasFieldReplaceDeadlife",
+                true);
             Scribe_Values.Look(
                 ref explosionRippleEnabled,
                 "explosionRippleEnabled",
@@ -496,6 +506,7 @@ namespace VisualTweaks
             gasFieldSharpen = 0f;
             gasFieldFaint = 1f;
             gasFieldCloudy = true;
+            gasFieldReplaceDeadlife = true;
             explosionRippleEnabled = true;
             explosionRippleIntensity = 1f;
             explosionRippleRadiusScale = 1f;
