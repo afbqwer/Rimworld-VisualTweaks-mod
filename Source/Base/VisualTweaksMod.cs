@@ -490,7 +490,8 @@ namespace VisualTweaks
                 "VisualTweaks_Gas_ReplaceDeadlifeTip".Translate());
 
             SettingsLayout.Header(listing, "VisualTweaks_Gas_GroupDebug".Translate());
-            listing.CheckboxLabeled(
+            SettingsLayout.DevModeCheckbox(
+                listing,
                 "VisualTweaks_Gas_TraceWindows".Translate(),
                 ref VisualTweaksSettings.gasFieldTraceWindows,
                 "VisualTweaks_Gas_TraceWindowsTip".Translate());
@@ -762,7 +763,8 @@ namespace VisualTweaks
             }
 
             SettingsLayout.Header(listing, "VisualTweaks_Leak_GroupDebug".Translate());
-            listing.CheckboxLabeled(
+            SettingsLayout.DevModeCheckbox(
+                listing,
                 "VisualTweaks_Leak_Trace".Translate(),
                 ref VisualTweaksSettings.vacuumLeakTrace,
                 "VisualTweaks_Leak_TraceTip".Translate());

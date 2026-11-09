@@ -125,12 +125,10 @@ namespace VisualTweaks
             propertyBlock.SetFloat(ShaderPropertyIDs.AgeSecsPausable, RealTime.UnpausedRealTime);
             Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0, null, 0, propertyBlock);
 
-            if (!loggedDraw)
-            {
-                loggedDraw = true;
-                Log.Message("[Visual Tweaks] Deadlife dust drawn with the vanilla sprite layer ("
+            VisualTweaksLog.TraceOnce(
+                ref loggedDraw,
+                "Deadlife dust drawn with the vanilla sprite layer ("
                     + vertexCount / 4 + " cells).");
-            }
         }
 
         [MemberNotNull(nameof(mesh), nameof(material))]

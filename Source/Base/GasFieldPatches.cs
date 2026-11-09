@@ -59,7 +59,7 @@ namespace VisualTweaks
                 };
 
                 harmony.Patch(target, prefix: prefixMethod);
-                Log.Message("[Visual Tweaks] Patched " + type.Name + "." + methodName + ".");
+                VisualTweaksLog.Info("Patched " + type.Name + "." + methodName + ".");
             }
             catch (Exception ex)
             {
@@ -79,11 +79,9 @@ namespace VisualTweaks
             // are cleared here instead and the field pass draws them.
             __instance.subMeshes.Clear();
 
-            if (!loggedVanillaGas)
-            {
-                loggedVanillaGas = true;
-                Log.Message("[Visual Tweaks] gas section sprites suppressed.");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref loggedVanillaGas,
+                "gas section sprites suppressed.");
 
             return false;
         }

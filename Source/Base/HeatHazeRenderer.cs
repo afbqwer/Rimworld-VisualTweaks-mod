@@ -241,12 +241,9 @@ namespace VisualTweaks
 
             Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0);
 
-            if (!loggedDraw)
-            {
-                loggedDraw = true;
-                Log.Message("[Visual Tweaks] Heat haze drawing " + winW + "x" + winH
-                    + " temperature mask.");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref loggedDraw,
+                "Heat haze drawing " + winW + "x" + winH + " temperature mask.");
         }
 
         private bool HasVisibleHeat()

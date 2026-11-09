@@ -421,28 +421,22 @@ namespace VisualTweaks
                 };
                 ports.Add(cell, port);
 
-                if (Prefs.DevMode)
-                {
-                    Log.Message(string.Concat(
-                        "[Visual Tweaks] leak port new at ", cell.ToString(),
-                        ": room ", wet.CellCount.ToString(), " cells, vWet ",
-                        vWet.ToString("F2"), " -> vDry ", vDry.ToString("F2"),
-                        ", target ", target.ToString("F2")));
-                }
+                VisualTweaksLog.LeakTrace(string.Concat(
+                    "leak port new at ", cell.ToString(),
+                    ": room ", wet.CellCount.ToString(), " cells, vWet ",
+                    vWet.ToString("F2"), " -> vDry ", vDry.ToString("F2"),
+                    ", target ", target.ToString("F2")));
             }
 
             port.Target = target;
             port.Seen = true;
             UpdateGeometry(port, map, wet, edifice);
 
-            if (Prefs.DevMode && VisualTweaksSettings.vacuumLeakTrace)
-            {
-                Log.Message(string.Concat(
-                    "[Visual Tweaks] leak port ", cell.ToString(),
-                    ": gap ", port.GapCells.ToString(), " cells",
-                    ", target ", target.ToString("F3"),
-                    ", smoothed ", port.Smoothed.ToString("F3")));
-            }
+            VisualTweaksLog.LeakTrace(string.Concat(
+                "leak port ", cell.ToString(),
+                ": gap ", port.GapCells.ToString(), " cells",
+                ", target ", target.ToString("F3"),
+                ", smoothed ", port.Smoothed.ToString("F3")));
 
             return true;
         }

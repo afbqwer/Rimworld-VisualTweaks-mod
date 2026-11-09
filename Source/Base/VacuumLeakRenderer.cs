@@ -110,11 +110,9 @@ namespace VisualTweaks
                 instanceMatrices,
                 instancedProperties);
 
-            if (!loggedDraw)
-            {
-                loggedDraw = true;
-                Log.Message("[Visual Tweaks] Vacuum leak drawing (" + count + " instances).");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref loggedDraw,
+                "Vacuum leak drawing (" + count + " instances).");
         }
 
         [MemberNotNull(nameof(material))]

@@ -522,12 +522,12 @@ namespace VisualTweaks
                 // No hard cut any more: the previous texture is sampled through its own
                 // mapping (_Params7), so a moved window cross-fades correctly instead of
                 // smearing the old region into the new one.
-                if (VisualTweaksSettings.gasFieldTraceWindows
+                if (VisualTweaksLog.GasTraceEnabled
                     && realtime - lastWindowTrace > 0.15f)
                 {
                     lastWindowTrace = realtime;
-                    Log.Message(
-                        "[Visual Tweaks] window "
+                    VisualTweaksLog.GasTrace(
+                        "window "
                         + $"({rectMinX},{rectMinZ}) {winW}x{winH} of cap {width}x{height}, "
                         + $"view ({view.minX},{view.minZ})-({view.maxX},{view.maxZ})");
                 }
@@ -562,10 +562,10 @@ namespace VisualTweaks
 
             // Print the state the frame is actually drawn from, once per camera move: which
             // window each pair claims to hold, and the fade it will be drawn with.
-            if (VisualTweaksSettings.gasFieldTraceWindows && rectMoved)
+            if (VisualTweaksLog.GasTraceEnabled && rectMoved)
             {
-                Log.Message(
-                    "[Visual Tweaks] frame"
+                VisualTweaksLog.GasTrace(
+                    "frame"
                     + $" period={refreshPeriod:F3} fade={fade:F2} timerDue={timerDue}"
                     + $" | window ({rectMinX},{rectMinZ}) {winW}x{winH} cap {width}x{height}"
                     + $" | gas ({gasTrack.MinX},{gasTrack.MinZ}) {gasTrack.WinW}x{gasTrack.WinH}"
@@ -706,12 +706,9 @@ namespace VisualTweaks
 
             Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0);
 
-            if (!loggedDraw)
-            {
-                loggedDraw = true;
-                Log.Message("[Visual Tweaks] Gas field renderer drawing "
-                    + width + "x" + height + " density field.");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref loggedDraw,
+                "Gas field renderer drawing " + width + "x" + height + " density field.");
         }
 
         /// <summary>
@@ -797,7 +794,7 @@ namespace VisualTweaks
                     // 0.25 s of game time, so an absolute threshold would log every frame and
                     // turn the diagnostic into the problem; two and a half times the previous
                     // frame's advance is what a speed change or a hitch looks like.
-                    if (VisualTweaksSettings.gasFieldTraceWindows
+                    if (VisualTweaksLog.GasTraceEnabled
                         && advance > 0.1
                         && advance > lastClockAdvance * 2.5)
                     {
@@ -807,8 +804,8 @@ namespace VisualTweaks
                         // noise displacement — one visible shimmer of the pattern. Traced
                         // because it is the other candidate for "the field flashes when the
                         // speed changes", and it only fires on a hitch or a speed change.
-                        Log.Message(
-                            "[Visual Tweaks] clock jump"
+                        VisualTweaksLog.GasTrace(
+                            "clock jump"
                             + $" delta={delta:F4}s rate={rate:F1} advance={advance:F3}s"
                             + $" previous={lastClockAdvance:F3}s clock={shaderClock:F2}");
                     }
@@ -2087,7 +2084,7 @@ namespace VisualTweaks
         /// </summary>
         private void LogGasSignature(GasGrid gasGrid)
         {
-            if (!VisualTweaksSettings.gasFieldTraceWindows
+            if (!VisualTweaksLog.GasTraceEnabled
                 || traceRealtime - lastSignatureLog < 0.5f)
             {
                 return;
@@ -2129,8 +2126,8 @@ namespace VisualTweaks
                 return;
             }
 
-            Log.Message(
-                "[Visual Tweaks] sig win (" + rectMinX + "," + rectMinZ + ") " + winW + "x" + winH
+            VisualTweaksLog.GasTrace(
+                "sig win (" + rectMinX + "," + rectMinZ + ") " + winW + "x" + winH
                 + " nz=" + nz
                 + $" eq0={100f * eq0 / nz:F1}% eq+x={100f * eqxp / nz:F1}% eq-x={100f * eqxm / nz:F1}%"
                 + $" eq+z={100f * eqzp / nz:F1}% eq-z={100f * eqzm / nz:F1}%"
@@ -2685,10 +2682,10 @@ namespace VisualTweaks
                     previous = write;
                     previousIsFresh = true;
 
-                    if (VisualTweaksSettings.gasFieldTraceWindows)
+                    if (VisualTweaksLog.GasTraceEnabled)
                     {
-                        Log.Message(
-                            "[Visual Tweaks] cross-fade cut: previous window ("
+                        VisualTweaksLog.GasTrace(
+                            "cross-fade cut: previous window ("
                             + track.MinX + "," + track.MinZ + ") " + track.WinW + "x" + track.WinH
                             + (sameOrigin
                                 ? " does not cover the view"

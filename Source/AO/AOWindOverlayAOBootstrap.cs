@@ -37,7 +37,7 @@ namespace VisualTweaks
                 AOWindPatches.Apply(harmony);
                 AOGasFieldAOPatches.Apply(harmony);
 
-                Log.Message("[Visual Tweaks] AO compatibility initialized.");
+                VisualTweaksLog.Info("AO compatibility initialized.");
             }
             catch (Exception ex)
             {

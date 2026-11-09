@@ -178,12 +178,9 @@ namespace VisualTweaks
 
             Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0);
 
-            if (!loggedDraw)
-            {
-                loggedDraw = true;
-                Log.Message("[Visual Tweaks] Cold mist drawing " + winW + "x" + winH
-                    + " room-temperature window.");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref loggedDraw,
+                "Cold mist drawing " + winW + "x" + winH + " room-temperature window.");
         }
 
         /// <summary>Maps a Celsius value onto the mask's 0..1 range.</summary>

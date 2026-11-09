@@ -55,7 +55,7 @@ namespace VisualTweaks
             try
             {
                 harmony.Patch(target, prefix: new HarmonyMethod(prefix));
-                Log.Message("[Visual Tweaks] Patched " + type.Name + "." + methodName + ".");
+                VisualTweaksLog.Info("Patched " + type.Name + "." + methodName + ".");
             }
             catch (Exception ex)
             {
@@ -70,11 +70,9 @@ namespace VisualTweaks
                 return true;
             }
 
-            if (!loggedMist)
-            {
-                loggedMist = true;
-                Log.Message("[Visual Tweaks] AO water mist sprites suppressed.");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref loggedMist,
+                "AO water mist sprites suppressed.");
 
             return false;
         }
@@ -86,11 +84,9 @@ namespace VisualTweaks
                 return true;
             }
 
-            if (!loggedPatchMist)
-            {
-                loggedPatchMist = true;
-                Log.Message("[Visual Tweaks] AO temporal patch mist sprites suppressed.");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref loggedPatchMist,
+                "AO temporal patch mist sprites suppressed.");
 
             return false;
         }

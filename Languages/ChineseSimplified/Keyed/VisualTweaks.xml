@@ -86,8 +86,8 @@
   <VisualTweaks_Gas_CloudyTip>给平滑的雾加上一层团块纹理，更接近原版的烟雾质感。关闭则是纯平滑雾。</VisualTweaks_Gas_CloudyTip>
   <VisualTweaks_Gas_ReplaceDeadlife>替换死灵尘渲染</VisualTweaks_Gas_ReplaceDeadlife>
   <VisualTweaks_Gas_ReplaceDeadlifeTip>开启时死灵尘和其他气体一样由平滑气体场绘制，呈深蓝色云。关闭后气体场不再绘制死灵尘，改用原版尘粒贴图逐格绘制，保留原本的颗粒质感。</VisualTweaks_Gas_ReplaceDeadlifeTip>
-  <VisualTweaks_Gas_TraceWindows>输出窗口重定位日志（诊断用）</VisualTweaks_Gas_TraceWindows>
-  <VisualTweaks_Gas_TraceWindowsTip>仅供排查问题时使用，正常游戏请保持关闭；开启后会持续写入日志，影响性能。</VisualTweaks_Gas_TraceWindowsTip>
+  <VisualTweaks_Gas_TraceWindows>输出窗口重定位日志（开发者模式）</VisualTweaks_Gas_TraceWindows>
+  <VisualTweaks_Gas_TraceWindowsTip>仅在开发者模式下生效。供排查问题时使用，正常游戏请保持关闭；开启后会持续写入日志，影响性能。</VisualTweaks_Gas_TraceWindowsTip>
 
   <!-- 爆炸冲击波 -->
   <VisualTweaks_Ripple_GroupSwitch>总开关</VisualTweaks_Ripple_GroupSwitch>

@@ -140,11 +140,7 @@ namespace VisualTweaks
                 DrawInstanced(count, material);
             }
 
-            if (!loggedDraw)
-            {
-                loggedDraw = true;
-                Log.Message("[Visual Tweaks] Explosion shockwave drawing.");
-            }
+            VisualTweaksLog.TraceOnce(ref loggedDraw, "Explosion shockwave drawing.");
         }
 
         private void DrawIndividually(int count, Material material)
@@ -187,12 +183,9 @@ namespace VisualTweaks
                 instanceMatrices,
                 instancedProperties);
 
-            if (!loggedInstanced)
-            {
-                loggedInstanced = true;
-                Log.Message("[Visual Tweaks] Explosion shockwave instanced batch active ("
-                    + count + " waves).");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref loggedInstanced,
+                "Explosion shockwave instanced batch active (" + count + " waves).");
         }
 
         private static bool OutsideView(CellRect view, ExplosionRippleInstance ripple)

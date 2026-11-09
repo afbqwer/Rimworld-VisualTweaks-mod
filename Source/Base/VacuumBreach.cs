@@ -374,15 +374,12 @@ namespace VisualTweaks
 
             RecomputeCeiling(breach);
 
-            if (Prefs.DevMode)
-            {
-                Log.Message(string.Concat(
-                    "[Visual Tweaks] ceiling hole: ", breach.Cells.Count.ToString(),
-                    " cell(s), room ", breach.RoomCells.ToString(), " cells @ vacuum ",
-                    breach.VacuumBefore.ToString("F2"), ", radius ",
-                    breach.HoleRadius.ToString("F2"), ", ",
-                    breach.DurationSeconds.ToString("F2"), "s"));
-            }
+            VisualTweaksLog.LeakTrace(string.Concat(
+                "ceiling hole: ", breach.Cells.Count.ToString(),
+                " cell(s), room ", breach.RoomCells.ToString(), " cells @ vacuum ",
+                breach.VacuumBefore.ToString("F2"), ", radius ",
+                breach.HoleRadius.ToString("F2"), ", ",
+                breach.DurationSeconds.ToString("F2"), "s"));
         }
 
         private static void Register(Map map, Room room, CellRect rect)
@@ -449,14 +446,11 @@ namespace VisualTweaks
             breach.LastTick = tick;
             RecomputeWall(breach, map, room);
 
-            if (Prefs.DevMode)
-            {
-                Log.Message(string.Concat(
-                    "[Visual Tweaks] breach: ", breach.Cells.Count.ToString(), " cell(s), ",
-                    "room ", breach.RoomCells.ToString(), " cells @ vacuum ",
-                    breach.VacuumBefore.ToString("F2"), ", width ", breach.Width.ToString(),
-                    ", ", breach.DurationSeconds.ToString("F2"), "s"));
-            }
+            VisualTweaksLog.LeakTrace(string.Concat(
+                "breach: ", breach.Cells.Count.ToString(), " cell(s), ",
+                "room ", breach.RoomCells.ToString(), " cells @ vacuum ",
+                breach.VacuumBefore.ToString("F2"), ", width ", breach.Width.ToString(),
+                ", ", breach.DurationSeconds.ToString("F2"), "s"));
         }
 
         /// <summary>
@@ -503,14 +497,11 @@ namespace VisualTweaks
                 UpdateCenter(candidate);
                 RecomputeWallExtent(candidate);
 
-                if (Prefs.DevMode)
-                {
-                    Log.Message(string.Concat(
-                        "[Visual Tweaks] breach extended: ",
-                        candidate.Cells.Count.ToString(), " cell(s), width ",
-                        candidate.Width.ToString(), ", ",
-                        candidate.DurationSeconds.ToString("F2"), "s"));
-                }
+                VisualTweaksLog.LeakTrace(string.Concat(
+                    "breach extended: ",
+                    candidate.Cells.Count.ToString(), " cell(s), width ",
+                    candidate.Width.ToString(), ", ",
+                    candidate.DurationSeconds.ToString("F2"), "s"));
 
                 return;
             }

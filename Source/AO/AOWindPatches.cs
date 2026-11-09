@@ -60,7 +60,7 @@ namespace VisualTweaks
             try
             {
                 harmony.Patch(target, prefix: new HarmonyMethod(prefix));
-                Log.Message("[Visual Tweaks] Patched " + type.Name + "." + methodName + ".");
+                VisualTweaksLog.Info("Patched " + type.Name + "." + methodName + ".");
             }
             catch (Exception ex)
             {
@@ -75,11 +75,9 @@ namespace VisualTweaks
                 return true;
             }
 
-            if (!drawWindStreamlinesLogged)
-            {
-                drawWindStreamlinesLogged = true;
-                Log.Message("[Visual Tweaks] AO DrawWindStreamlines suppressed.");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref drawWindStreamlinesLogged,
+                "AO DrawWindStreamlines suppressed.");
 
             return false;
         }
@@ -91,11 +89,9 @@ namespace VisualTweaks
                 return true;
             }
 
-            if (!stepParticlesLogged)
-            {
-                stepParticlesLogged = true;
-                Log.Message("[Visual Tweaks] AO StepParticles suppressed (fallback active).");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref stepParticlesLogged,
+                "AO StepParticles suppressed (fallback active).");
 
             return false;
         }
@@ -107,11 +103,9 @@ namespace VisualTweaks
                 return true;
             }
 
-            if (!drawParticlesLogged)
-            {
-                drawParticlesLogged = true;
-                Log.Message("[Visual Tweaks] AO DrawParticles suppressed (fallback active).");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref drawParticlesLogged,
+                "AO DrawParticles suppressed (fallback active).");
 
             return false;
         }
@@ -123,11 +117,9 @@ namespace VisualTweaks
                 return true;
             }
 
-            if (!drawParticleLogged)
-            {
-                drawParticleLogged = true;
-                Log.Message("[Visual Tweaks] AO DrawParticle suppressed (fallback active).");
-            }
+            VisualTweaksLog.TraceOnce(
+                ref drawParticleLogged,
+                "AO DrawParticle suppressed (fallback active).");
 
             return false;
         }

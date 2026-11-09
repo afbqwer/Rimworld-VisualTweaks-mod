@@ -1005,10 +1005,11 @@ namespace VisualTweaks
                 BuildParticleGeometry(altitude, halfWidth, cellPx);
             }
 
-            if (!particleLogged && particles.Count > 0)
+            if (particles.Count > 0)
             {
-                particleLogged = true;
-                Log.Message("[Visual Tweaks] Particle trails: " + particles.Count + " particles.");
+                VisualTweaksLog.TraceOnce(
+                    ref particleLogged,
+                    "Particle trails: " + particles.Count + " particles.");
             }
         }
 
@@ -1545,11 +1546,12 @@ namespace VisualTweaks
 
             UploadMeshes(baseAltitude);
 
-            if (!buildLogged && lastLineCount > 0)
+            if (lastLineCount > 0)
             {
-                buildLogged = true;
-                Log.Message("[Visual Tweaks] Built " + lastLineCount + " streamlines, "
-                    + lastSegmentCount + " segments, " + lastDashCount + " dashes.");
+                VisualTweaksLog.TraceOnce(
+                    ref buildLogged,
+                    "Built " + lastLineCount + " streamlines, "
+                        + lastSegmentCount + " segments, " + lastDashCount + " dashes.");
             }
         }
 
@@ -2120,7 +2122,8 @@ namespace VisualTweaks
             gpuProperties.SetBuffer("_AOParticles", gpuParticleBuffer);
 
             gpuReady = true;
-            Log.Message("[Visual Tweaks] GPU ribbons: shader ready, "
+            VisualTweaksLog.Info(
+                "GPU ribbons: shader ready, "
                 + (GpuParticleCapacity * GpuVerticesPerParticle) + " static vertices.");
             return true;
         }
@@ -2228,13 +2231,11 @@ namespace VisualTweaks
                 gpuMaterial.color = new Color(1f, 1f, 1f, opacityScale);
             }
 
-            if (!gpuLoggedDraw)
-            {
-                gpuLoggedDraw = true;
-                Log.Message("[Visual Tweaks] GPU ribbons active: " + record + " particles, "
+            VisualTweaksLog.TraceOnce(
+                ref gpuLoggedDraw,
+                "GPU ribbons active: " + record + " particles, "
                     + (record * GpuVerticesPerParticle) + " vertices, "
                     + ((record * GpuFloatsPerParticle * 4) / 1024) + " KB/rebuild.");
-            }
         }
 
         /// <summary>
@@ -2977,13 +2978,11 @@ namespace VisualTweaks
 
             // One line at startup. If the fog ever stops covering this layer, this number
             // is the reason: our queue has to sit below the fog's.
-            if (!layerLogged)
-            {
-                layerLogged = true;
-                Log.Message("[Visual Tweaks] queue " + BaseRenderQueue
+            VisualTweaksLog.TraceOnce(
+                ref layerLogged,
+                "queue " + BaseRenderQueue
                     + ", fog queue " + (MatBases.FogOfWar != null ? MatBases.FogOfWar.renderQueue : -1)
                     + ", fog altitude " + Altitudes.AltitudeFor(AltitudeLayer.FogOfWar));
-            }
 
             for (int i = 0; i < BucketCount; i++)
             {

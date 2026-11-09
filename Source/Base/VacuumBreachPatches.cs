@@ -45,7 +45,7 @@ namespace VisualTweaks
                 try
                 {
                     harmony.Patch(target, prefix: new HarmonyMethod(prefix));
-                    Log.Message("[Visual Tweaks] Patched Thing.Destroy (vacuum breach capture).");
+                    VisualTweaksLog.Info("Patched Thing.Destroy (vacuum breach capture).");
                 }
                 catch (Exception ex)
                 {
@@ -75,7 +75,7 @@ namespace VisualTweaks
             try
             {
                 harmony.Patch(target, prefix: new HarmonyMethod(prefix));
-                Log.Message("[Visual Tweaks] Patched RoofGrid.SetRoof (ceiling breach capture).");
+                VisualTweaksLog.Info("Patched RoofGrid.SetRoof (ceiling breach capture).");
             }
             catch (Exception ex)
             {

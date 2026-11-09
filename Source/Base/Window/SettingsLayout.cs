@@ -201,6 +201,23 @@ namespace VisualTweaks
             return clicked;
         }
 
+        /// <summary>
+        /// Checkbox for a switch that only takes effect in dev mode. It grays out
+        /// instead of disappearing: a diagnostic option that silently vanishes leaves
+        /// the player wondering why the log does not change after they turn it on.
+        /// </summary>
+        public static void DevModeCheckbox(
+            Listing_Standard listing,
+            string label,
+            ref bool value,
+            string tooltip)
+        {
+            bool previous = GUI.enabled;
+            GUI.enabled = previous && Prefs.DevMode;
+            listing.CheckboxLabeled(label, ref value, tooltip);
+            GUI.enabled = previous;
+        }
+
         /// <summary>Trailing air so the last control clears the scrollbar end.</summary>
         public static void Finish(Listing_Standard listing)
         {

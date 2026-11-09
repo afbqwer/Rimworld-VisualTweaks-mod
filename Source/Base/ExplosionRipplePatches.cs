@@ -30,7 +30,7 @@ namespace VisualTweaks
             try
             {
                 harmony.Patch(target, postfix: new HarmonyMethod(postfix));
-                Log.Message("[Visual Tweaks] Patched Explosion.StartExplosion.");
+                VisualTweaksLog.Info("Patched Explosion.StartExplosion.");
             }
             catch (Exception ex)
             {

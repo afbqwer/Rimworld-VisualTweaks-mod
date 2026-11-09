@@ -22,7 +22,7 @@ namespace VisualTweaks
                 ExplosionRipplePatches.Apply(harmony);
                 VacuumBreachPatches.Apply(harmony);
 
-                Log.Message("[Visual Tweaks] base initialized (gas field renderer "
+                VisualTweaksLog.Info("base initialized (gas field renderer "
                     + (GasFieldBridge.ShaderReady ? "ready" : "disabled")
                     + ", explosion shockwave "
                     + (ExplosionRippleBridge.ShaderReady ? "ready" : "disabled")
