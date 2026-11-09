@@ -298,6 +298,10 @@ namespace VisualTweaks
         private double shaderClock;
         private double lastClockReal;
 
+        // Previous frame's clock advance, in game-seconds. Only used to tell a speed change
+        // or a hitch apart from the ordinary advance (which is 0.25 s per frame at 15x).
+        private double lastClockAdvance;
+
         // Staging buffers for the flow texture. The velocity written to the shader is the
         // *realized* displacement of the last interval divided by the interval, not the
         // filtered wind velocity: in steady state they are the same, but the relaxation
@@ -789,7 +793,13 @@ namespace VisualTweaks
                     float rate = CurrentSimulationRate();
                     double advance = delta * rate;
 
-                    if (VisualTweaksSettings.gasFieldTraceWindows && advance > 0.1)
+                    // Only a *jump* is interesting. At 15x a perfectly normal frame advances
+                    // 0.25 s of game time, so an absolute threshold would log every frame and
+                    // turn the diagnostic into the problem; two and a half times the previous
+                    // frame's advance is what a speed change or a hitch looks like.
+                    if (VisualTweaksSettings.gasFieldTraceWindows
+                        && advance > 0.1
+                        && advance > lastClockAdvance * 2.5)
                     {
                         // Switching the game speed charges the *whole* elapsed interval at
                         // the new rate: 1x -> 15x adds 14 x delta of game time that never
@@ -800,9 +810,10 @@ namespace VisualTweaks
                         Log.Message(
                             "[Visual Tweaks] clock jump"
                             + $" delta={delta:F4}s rate={rate:F1} advance={advance:F3}s"
-                            + $" clock={shaderClock:F2}");
+                            + $" previous={lastClockAdvance:F3}s clock={shaderClock:F2}");
                     }
 
+                    lastClockAdvance = advance;
                     shaderClock += advance;
                 }
             }
