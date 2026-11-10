@@ -113,6 +113,8 @@
 
   <VisualTweaks_Heat_Enable>绘制高温空气热浪</VisualTweaks_Heat_Enable>
   <VisualTweaks_Heat_EnableTip>空气很热的地方会让画面产生微微的热扭曲：炎热的房间、火焰、地热口和热浪天气都会触发。温度越高扭曲越明显；普通温暖天气只有很轻微的效果，火堆或热浪则会明显扭曲场景。</VisualTweaks_Heat_EnableTip>
+  <VisualTweaks_Heat_HighFrequency>高频率更新</VisualTweaks_Heat_HighFrequency>
+  <VisualTweaks_Heat_HighFrequencyTip>关闭更省性能，热浪会晚两秒跟上温度，看起来更像空气慢慢受热。开启后火焰刚燃起就会出现热浪，但更吃性能。</VisualTweaks_Heat_HighFrequencyTip>
   <VisualTweaks_Heat_PerCellTemp>逐格温度判定</VisualTweaks_Heat_PerCellTemp>
   <VisualTweaks_Heat_PerCellTempTip>关闭时用原版的房间温度：同一房间内所有格子共用一个温度，热浪按房间范围整片铺开，房间之间是硬边。开启后改用 Atmosphere Overhaul 提供的逐格温度，热浪会跟随火源、通风口和墙体的实际热量分布，同一个房间内部也能出现冷热差异，火堆周围则是渐变的。逐格判定要逐格读取温度，开销高于房间遍历，视野拉得很远时更明显。</VisualTweaks_Heat_PerCellTempTip>
   <VisualTweaks_Heat_ShaderMissing>热浪着色器未加载，这一项不会生效（详情见日志）。</VisualTweaks_Heat_ShaderMissing>

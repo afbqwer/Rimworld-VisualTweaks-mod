@@ -558,6 +558,10 @@ namespace VisualTweaks
                 "VisualTweaks_Heat_Enable".Translate(),
                 ref VisualTweaksSettings.heatHazeEnabled,
                 "VisualTweaks_Heat_EnableTip".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_Heat_HighFrequency".Translate(),
+                ref VisualTweaksSettings.heatHazeHighFrequency,
+                "VisualTweaks_Heat_HighFrequencyTip".Translate());
 
             // Per-cell sampling needs AO: vanilla resolves temperature per room, so a
             // cell-by-cell read would hand back the same value across the room at a much

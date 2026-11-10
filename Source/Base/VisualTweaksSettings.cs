@@ -170,6 +170,13 @@ namespace VisualTweaks
 
         public static bool heatHazeEnabled = true;
 
+        // How often the temperature mask is re-baked. Low frequency (the default) re-measures
+        // every two seconds: room temperature moves over tens of seconds, and air that reacts
+        // the instant a room warms up does not read as hot air, it reads as a light switch.
+        // High frequency keeps 5 Hz for players who want the shimmer to track a fire being
+        // lit, at ten times the bake and upload cost.
+        public static bool heatHazeHighFrequency = false;
+
         // Which temperature source the heat mask is baked from. Vanilla only knows room
         // temperature: GenTemperature resolves a room per lookup and hands back that
         // room's single value, so a cell-by-cell read would just repeat the room figure
@@ -352,6 +359,7 @@ namespace VisualTweaks
                 6f);
             Scribe_Values.Look(ref vacuumLeakTrace, "vacuumLeakTrace", false);
             Scribe_Values.Look(ref heatHazeEnabled, "heatHazeEnabled", true);
+            Scribe_Values.Look(ref heatHazeHighFrequency, "heatHazeHighFrequency", false);
             Scribe_Values.Look(ref heatHazePerCellTemp, "heatHazePerCellTemp", false);
             Scribe_Values.Look(ref heatHazeStartTemp, "heatHazeStartTemp", 35f);
             Scribe_Values.Look(ref heatHazeFullTemp, "heatHazeFullTemp", 80f);
@@ -546,6 +554,7 @@ namespace VisualTweaks
             vacuumLeakDistortionStrength = 6f;
             vacuumLeakTrace = false;
             heatHazeEnabled = true;
+            heatHazeHighFrequency = false;
             heatHazePerCellTemp = false;
             heatHazeStartTemp = 35f;
             heatHazeFullTemp = 80f;

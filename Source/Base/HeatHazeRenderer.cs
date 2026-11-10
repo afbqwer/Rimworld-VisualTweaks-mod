@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using RimWorld;
 using Verse;
@@ -57,6 +58,14 @@ namespace VisualTweaks
         // anything already on its way to hot ramps in without a delay.
         private const float ColdBackoffMargin = 3f;
 
+        // Low-frequency mode, and the default. The shader animates continuously between
+        // bakes, so a slower cadence shows up as the shimmer catching up to a temperature
+        // change a couple of seconds late, not as a freeze — and late is the more believable
+        // of the two: air has to absorb the heat before it starts to rise. It replaces every
+        // interval above, the cold backoff included, so ResolveBakeInterval returns it
+        // before paying for any of the hot-window tests.
+        private const float LowFrequencyBakeInterval = 2f;
+
         // Extra cells baked on each side so the camera can pan a little without a
         // rebake, and so the bilinear filter has valid samples at the view edge.
         private const int BakeMargin = 8;
@@ -86,6 +95,14 @@ namespace VisualTweaks
         // 21 heat/s dumped into the air at one cell.
         private const float HeaterPlumeRadius = 2.1f;
         private const float HeaterPlumeStrength = 0.4f;
+
+        // The change hash samples every HashStride-th cell in both axes. It exists to decide
+        // whether a texture upload can be skipped, not to compare the mask exactly, so it only
+        // has to see changes that the eye would notice. Every heat source covers at least a
+        // 3x3 footprint and room temperatures move in whole regions, so nothing meaningful
+        // falls between the sample points, while the pass drops to a quarter of the reads and
+        // sub-cell flicker stops forcing a 96 KB upload.
+        private const int HashStride = 2;
 
         private const int RenderQueue = 3174;
 
@@ -270,9 +287,17 @@ namespace VisualTweaks
         /// found nothing within a few degrees of the start temperature and nothing in the
         /// window can heat up in the meantime (no fire, no already-burning source, cold
         /// outdoor air), the next bake cannot change the outcome.
+        ///
+        /// Low-frequency mode answers before any of that: one cadence for every situation
+        /// costs a single branch per frame and skips both dictionary lookups.
         /// </summary>
         private float ResolveBakeInterval(Map map)
         {
+            if (!VisualTweaksSettings.heatHazeHighFrequency)
+            {
+                return LowFrequencyBakeInterval;
+            }
+
             float start = VisualTweaksSettings.heatHazeStartTemp;
             bool maybeHot = lastMaxTempC >= start - ColdBackoffMargin
                 || lastMaxFire > 0.02f
@@ -705,13 +730,16 @@ namespace VisualTweaks
 
             // Every cell the room walk does not touch must read as outdoor air. Rooms are
             // filled afterwards, so this doubles as the "cell left its room" reset.
+            //
+            // Filled as 32-bit words one row at a time: the row is contiguous and every
+            // cell gets the same value, so this lowers to a memset per row instead of
+            // winW * winH individual 4-byte stores.
+            uint ambientWord = PackWord(ambient);
+            Span<uint> words = MemoryMarshal.Cast<Color32, uint>(maskPixels.AsSpan());
             for (int z = 0; z < winH; z++)
             {
                 int row = (capacityH - 1 - z) * capacityW;
-                for (int x = 0; x < winW; x++)
-                {
-                    maskPixels[row + x] = ambient;
-                }
+                words.Slice(row, winW).Fill(ambientWord);
             }
 
             int maxTempByte = ambient.r;
@@ -740,9 +768,14 @@ namespace VisualTweaks
                     continue;
                 }
 
+                // Read once: ExtentsClose recomputes by walking every region of the room,
+                // and the old code called it for the overlap test and would have needed it
+                // again for the rectangle test.
+                CellRect extents = room.ExtentsClose;
+
                 // Only rooms that overlap the window can contribute; a hot room on the far
                 // side of the map must not keep this layer alive.
-                if (!room.ExtentsClose.Overlaps(window))
+                if (!extents.Overlaps(window))
                 {
                     continue;
                 }
@@ -752,12 +785,37 @@ namespace VisualTweaks
                     maxTempByte = packed.r;
                 }
 
+                int x0 = Mathf.Max(extents.minX, winMinX);
+                int x1 = Mathf.Min(extents.maxX, winMinX + winW - 1);
+                int z0 = Mathf.Max(extents.minZ, winMinZ);
+                int z1 = Mathf.Min(extents.maxZ, winMinZ + winH - 1);
+                if (x0 > x1 || z0 > z1)
+                {
+                    continue;
+                }
+
+                // A rectangular room is exactly its extents, so whole rows can be filled.
+                // Room.Cells is a yield iterator that costs a state-machine MoveNext and an
+                // IntVec3 copy per cell; almost every built room is a rectangle, so this
+                // skips that for the common case. An L-shaped or split room has fewer cells
+                // than its footprint and falls through to the exact walk below.
+                if (room.CellCount == extents.Width * extents.Height)
+                {
+                    uint packedWord = PackWord(packed);
+                    int span = x1 - x0 + 1;
+                    for (int z = z0; z <= z1; z++)
+                    {
+                        int row = (capacityH - 1 - (z - winMinZ)) * capacityW
+                            + (x0 - winMinX);
+                        words.Slice(row, span).Fill(packedWord);
+                    }
+
+                    continue;
+                }
+
                 foreach (IntVec3 cell in room.Cells)
                 {
-                    if (cell.x < winMinX
-                        || cell.x >= winMinX + winW
-                        || cell.z < winMinZ
-                        || cell.z >= winMinZ + winH)
+                    if (cell.x < x0 || cell.x > x1 || cell.z < z0 || cell.z > z1)
                     {
                         continue;
                     }
@@ -774,6 +832,23 @@ namespace VisualTweaks
         {
             int value = Mathf.Clamp(Mathf.RoundToInt(celsius * normScale), 0, 255);
             return new Color32((byte)value, 0, 0, 255);
+        }
+
+        /// <summary>
+        /// The same cell as one 32-bit word. Color32 lays its bytes out as r, g, b, a, so on
+        /// little-endian the word reads r | g &lt;&lt; 8 | b &lt;&lt; 16 | a &lt;&lt; 24. Row fills and the
+        /// hash work on this view; the texture upload still takes the Color32 array.
+        ///
+        /// Only r and g carry data. The other two are preserved rather than assumed because
+        /// a row fill overwrites whole cells, and a cell that keeps a stale b or a would
+        /// show up in the hash as a change.
+        /// </summary>
+        private static uint PackWord(Color32 cell)
+        {
+            return (uint)cell.r
+                | ((uint)cell.g << 8)
+                | ((uint)cell.b << 16)
+                | ((uint)cell.a << 24);
         }
 
         /// <summary>
@@ -919,6 +994,11 @@ namespace VisualTweaks
         ///
         /// This replaces a cell-by-cell comparison against a copy of the last upload, which
         /// cost two extra window-sized passes and a second mask-sized array.
+        ///
+        /// The sample grid comes from HashStride above: a change confined entirely to cells
+        /// the grid skips does not upload. Nothing in this mask is that small — the thinnest
+        /// plume is three cells across and room temperature moves in whole rooms — so the
+        /// only thing the loss costs is a sub-cell flicker that would not have been visible.
         /// </summary>
         private uint HashWindow()
         {
@@ -930,13 +1010,17 @@ namespace VisualTweaks
             hash = (hash ^ (uint)capacityW) * 16777619u;
             hash = (hash ^ (uint)capacityH) * 16777619u;
 
-            for (int z = 0; z < winH; z++)
+            // One 32-bit read per sampled cell instead of a Color32 field access plus a shift
+            // and an or. The low half of the word is exactly the r | g << 8 pair the shader
+            // reads, so the mask keeps b and a out of the hash the same way it did before.
+            ReadOnlySpan<uint> words = MemoryMarshal.Cast<Color32, uint>(maskPixels.AsSpan());
+            for (int z = 0; z < winH; z += HashStride)
             {
                 int row = (capacityH - 1 - z) * capacityW;
-                for (int x = 0; x < winW; x++)
+                ReadOnlySpan<uint> line = words.Slice(row, winW);
+                for (int x = 0; x < winW; x += HashStride)
                 {
-                    Color32 cell = maskPixels[row + x];
-                    hash = (hash ^ (uint)(cell.r | (cell.g << 8))) * 16777619u;
+                    hash = (hash ^ (line[x] & 0xFFFFu)) * 16777619u;
                 }
             }
 
