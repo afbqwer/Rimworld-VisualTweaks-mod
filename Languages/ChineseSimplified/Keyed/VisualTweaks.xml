@@ -60,7 +60,7 @@
   <VisualTweaks_Gas_ReplaceTipWithAO>把雾和四种原版气体（致盲烟、毒气、腐臭、死灵尘）换成更自然、连续的云雾效果。取消勾选会恢复原本的渲染，方便对比。</VisualTweaks_Gas_ReplaceTipWithAO>
   <VisualTweaks_Gas_ReplaceTipVanilla>把四种原版气体（致盲烟、毒气、腐臭、死灵尘）换成更自然、连续的云雾效果。取消勾选会恢复原本的渲染，方便对比。</VisualTweaks_Gas_ReplaceTipVanilla>
   <VisualTweaks_Gas_ShaderMissing>自定义着色器未加载，这一项不会生效（详情见日志）。</VisualTweaks_Gas_ShaderMissing>
-  <VisualTweaks_Gas_LocalFlow>气体随局部风飘动（推荐）</VisualTweaks_Gas_LocalFlow>
+  <VisualTweaks_Gas_LocalFlow>气体随局部风飘动</VisualTweaks_Gas_LocalFlow>
   <VisualTweaks_Gas_LocalFlowTip>勾选后气体随附近的风向一起飘，更贴合真实气流；爆炸的冲击风会被平滑处理，不会来回抖动。取消勾选则只随全局风向平移，便于对比。</VisualTweaks_Gas_LocalFlowTip>
   <VisualTweaks_Gas_Smooth>平滑过渡</VisualTweaks_Gas_Smooth>
   <VisualTweaks_Gas_SmoothTip>让气体的出现、消散和浓度变化更加柔和，不再一下一下地跳变。关闭后反应更快，但可能看出轻微的顿挫。</VisualTweaks_Gas_SmoothTip>

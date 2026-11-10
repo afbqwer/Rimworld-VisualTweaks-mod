@@ -60,7 +60,7 @@
   <VisualTweaks_Gas_ReplaceTipWithAO>Replaces mist and the four vanilla gases (blind smoke, tox gas, rot stink, deadlife dust) with a softer, continuous cloud look. Turn it off to restore the original rendering for comparison.</VisualTweaks_Gas_ReplaceTipWithAO>
   <VisualTweaks_Gas_ReplaceTipVanilla>Replaces the four vanilla gases (blind smoke, tox gas, rot stink, deadlife dust) with a softer, continuous cloud look. Turn it off to restore the original rendering for comparison.</VisualTweaks_Gas_ReplaceTipVanilla>
   <VisualTweaks_Gas_ShaderMissing>The custom shader failed to load, so this option has no effect (see the log for details).</VisualTweaks_Gas_ShaderMissing>
-  <VisualTweaks_Gas_LocalFlow>Gas drifts with the local wind (recommended)</VisualTweaks_Gas_LocalFlow>
+  <VisualTweaks_Gas_LocalFlow>Gas drifts with the local wind</VisualTweaks_Gas_LocalFlow>
   <VisualTweaks_Gas_LocalFlowTip>When on, the gas drift pattern follows the nearby wind for a more natural flow; the gust from an explosion is smoothed out so it never jitters back and forth. Turn it off to drift with the global wind instead, for comparison.</VisualTweaks_Gas_LocalFlowTip>
   <VisualTweaks_Gas_Smooth>Soft transitions</VisualTweaks_Gas_Smooth>
   <VisualTweaks_Gas_SmoothTip>Makes gas appear, fade and change density smoothly instead of stepping. When off, the gas reacts faster but may show slight stepping.</VisualTweaks_Gas_SmoothTip>
