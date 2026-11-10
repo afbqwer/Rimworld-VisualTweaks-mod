@@ -115,16 +115,27 @@ namespace VisualTweaks
 
         public override void MapComponentDraw()
         {
+            // Begin at the very top of the overlay stack: an early return here means no
+            // layer draws at all this frame, which is itself a whole-layer flash.
+            GasFieldDiagnostics.BeginFrame(Time.realtimeSinceStartup);
+            GasFieldDiagnostics.Put("stack.currentMapIsThisMap", Find.CurrentMap == map);
+            GasFieldDiagnostics.Put("stack.currentMapUniqueId", Find.CurrentMap?.uniqueID ?? -1);
+            GasFieldDiagnostics.Put("stack.thisMapUniqueId", map.uniqueID);
+
             // Vanilla calls this for the current map only, but MapComponentUtility is
             // public and other mods do call it for arbitrary maps.
             if (Find.CurrentMap != map)
             {
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("overlay stack skipped: not the current map");
+                GasFieldDiagnostics.EndFrame(false, "stack-not-current-map");
                 return;
             }
 
             CameraDriver driver = Find.CameraDriver;
             if (driver == null)
             {
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("overlay stack skipped: no CameraDriver");
+                GasFieldDiagnostics.EndFrame(false, "stack-no-camera");
                 return;
             }
 

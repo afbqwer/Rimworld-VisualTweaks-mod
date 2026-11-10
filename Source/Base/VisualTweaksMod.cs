@@ -495,6 +495,12 @@ namespace VisualTweaks
                 "VisualTweaks_Gas_TraceWindows".Translate(),
                 ref VisualTweaksSettings.gasFieldTraceWindows,
                 "VisualTweaks_Gas_TraceWindowsTip".Translate());
+            // Not a DevModeCheckbox: the A/B test must be possible with dev mode off,
+            // because dev mode itself changes frame timing.
+            listing.CheckboxLabeled(
+                "VisualTweaks_Gas_Diagnostics".Translate(),
+                ref VisualTweaksSettings.gasFieldDiagnostics,
+                "VisualTweaks_Gas_DiagnosticsTip".Translate());
 
             SettingsLayout.Finish(listing);
         }

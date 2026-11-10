@@ -88,6 +88,8 @@
   <VisualTweaks_Gas_ReplaceDeadlifeTip>On: deadlife dust is shaded by the smooth gas field like every other gas, as a navy cloud. Off: the field drops the dust channel and the dust is drawn per cell with vanilla's own sprite texture, keeping its grainy look.</VisualTweaks_Gas_ReplaceDeadlifeTip>
   <VisualTweaks_Gas_TraceWindows>Log window recentre events (dev mode)</VisualTweaks_Gas_TraceWindows>
   <VisualTweaks_Gas_TraceWindowsTip>Only takes effect in dev mode. For troubleshooting only; when on, it keeps writing to the log and hurts performance.</VisualTweaks_Gas_TraceWindowsTip>
+  <VisualTweaks_Gas_Diagnostics>Gas layer flash diagnostics (temporary)</VisualTweaks_Gas_Diagnostics>
+  <VisualTweaks_Gas_DiagnosticsTip>When on, records a full gas-layer snapshot every frame to VisualTweaks_GasField_Flash.log in the system temp folder; this costs performance. To investigate a whole-layer flash while moving the camera, reproduce with it on and then compare with it off. When off, no data is collected at all. Keep it off after testing.</VisualTweaks_Gas_DiagnosticsTip>
 
   <!-- Explosion shockwave -->
   <VisualTweaks_Ripple_GroupSwitch>Master switch</VisualTweaks_Ripple_GroupSwitch>

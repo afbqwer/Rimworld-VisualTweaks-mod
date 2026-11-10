@@ -81,6 +81,11 @@ namespace VisualTweaks
         // profiler trace of a frame that re-centres and is exactly what you would be
         // profiling when looking at that frame.
         public static bool gasFieldTraceWindows = false;
+
+        // Temporary flash investigation. On by default ONLY while reproducing the
+        // "whole gas layer flashes for one frame" defect: the setting writes a full
+        // per-frame snapshot to a temp log. Flip the default to false before shipping.
+        public static bool gasFieldDiagnostics = false;
         public static float gasFieldOpacity = 1f;
         public static float gasFieldScale = 1f;
         public static float gasFieldAnimation = 1f;
@@ -301,6 +306,7 @@ namespace VisualTweaks
                 GasNoiseLocalFlow);
             Scribe_Values.Look(ref gasFieldSmoothTau, "gasFieldSmoothTau", 0.15f);
             Scribe_Values.Look(ref gasFieldTraceWindows, "gasFieldTraceWindows", false);
+            Scribe_Values.Look(ref gasFieldDiagnostics, "gasFieldDiagnostics", false);
             Scribe_Values.Look(ref gasFieldOpacity, "gasFieldOpacity", 1f);
             Scribe_Values.Look(ref gasFieldScale, "gasFieldScale", 1f);
             Scribe_Values.Look(ref gasFieldAnimation, "gasFieldAnimation", 1f);
@@ -518,6 +524,7 @@ namespace VisualTweaks
             gasFieldNoiseMode = GasNoiseLocalFlow;
             gasFieldSmoothTau = 0.15f;
             gasFieldTraceWindows = false;
+            gasFieldDiagnostics = false;
             gasFieldOpacity = 1f;
             gasFieldScale = 1f;
             gasFieldAnimation = 1f;

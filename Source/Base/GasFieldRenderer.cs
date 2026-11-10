@@ -404,6 +404,28 @@ namespace VisualTweaks
             float realtime,
             bool paused)
         {
+            GasFieldDiagnostics.BeginFrame(realtime);
+            GasFieldDiagnostics.Put("gate.active", GasFieldBridge.Active);
+            GasFieldDiagnostics.Put("gate.useGasField", VisualTweaksSettings.useGasField);
+            GasFieldDiagnostics.Put("gate.shaderReady", GasFieldBridge.ShaderReady);
+            GasFieldDiagnostics.Put("gate.screenshot",
+                Find.ScreenshotModeHandler != null && Find.ScreenshotModeHandler.Active);
+            GasFieldDiagnostics.Put("gate.gasClean", gasClean);
+            GasFieldDiagnostics.Put("gate.mistClean", mistClean);
+            GasFieldDiagnostics.Put("gate.drawGas", DebugViewSettings.drawGas);
+            GasFieldDiagnostics.Put("state.builtSmooth", builtSmooth);
+            GasFieldDiagnostics.Put("state.builtNoiseMode", builtNoiseMode);
+            GasFieldDiagnostics.Put("noise.supportsLocalWind", GasFieldBridge.SupportsLocalWind);
+            GasFieldDiagnostics.Put("noise.animation", VisualTweaksSettings.gasFieldAnimation);
+            GasFieldDiagnostics.Put("noise.flowCellsX", flowCellsX);
+            GasFieldDiagnostics.Put("noise.flowCellsZ", flowCellsZ);
+            GasFieldDiagnostics.Put("clock.refreshPeriod", refreshPeriod);
+            GasFieldDiagnostics.Put("clock.flowStepLimit", FlowStepLimit);
+            GasFieldDiagnostics.Put("clock.lastRefresh", lastRefresh);
+            GasFieldDiagnostics.Put("clock.lastTimedRefresh", lastTimedRefresh);
+            GasFieldDiagnostics.Put("fade.fadeStart", fadeStart);
+            GasFieldDiagnostics.Put("uniform.opacity", VisualTweaksSettings.gasFieldOpacity);
+
             // Refresh the publish period on the settings / game-speed cadence, not per
             // frame: the reflective read plus AO's own interval clamp is measurable at idle.
             if (publishPeriodTime < 0f
@@ -415,6 +437,17 @@ namespace VisualTweaks
 
             AdvanceShaderClock(paused);
             traceRealtime = realtime;
+
+            GasFieldDiagnostics.Put("clock.shaderClock", shaderClock);
+            GasFieldDiagnostics.Put("clock.noisePublishTime", noisePublishTime);
+            GasFieldDiagnostics.Put("clock.sincePublishRaw", shaderClock - noisePublishTime);
+            GasFieldDiagnostics.Put("clock.lastClockAdvance", lastClockAdvance);
+            GasFieldDiagnostics.Put("noise.ambientDx", ambientDx);
+            GasFieldDiagnostics.Put("noise.ambientDz", ambientDz);
+            GasFieldDiagnostics.Put("noise.ambientVelX", ambientVelX);
+            GasFieldDiagnostics.Put("noise.ambientVelZ", ambientVelZ);
+            GasFieldDiagnostics.Put("noise.baseDx", baseDx);
+            GasFieldDiagnostics.Put("noise.baseDz", baseDz);
 
             // The smoothing toggle only takes effect on the next bake, so force one
             // when it changes (the options window can be open while the game is paused).
@@ -445,6 +478,8 @@ namespace VisualTweaks
                 //
                 // Paused is excluded: while paused the publish timer never fires, so a
                 // camera move is the only thing that can notice newly spawned gas.
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("top empty-field gate: skip whole frame");
+                GasFieldDiagnostics.EndFrame(false, "empty-gate-top");
                 return;
             }
 
@@ -455,6 +490,39 @@ namespace VisualTweaks
 
             bool rectMoved = EnsureResources(map, view, out bool originMoved);
             EnsureFlowGrid();
+
+            GasFieldDiagnostics.Flag("rectMoved", rectMoved);
+            GasFieldDiagnostics.Flag("originMoved", originMoved);
+            GasFieldDiagnostics.Flag("forceUpload", forceUpload);
+            GasFieldDiagnostics.Put("window.rectMinX", rectMinX);
+            GasFieldDiagnostics.Put("window.rectMinZ", rectMinZ);
+            GasFieldDiagnostics.Put("window.winW", winW);
+            GasFieldDiagnostics.Put("window.winH", winH);
+            GasFieldDiagnostics.Put("window.width", width);
+            GasFieldDiagnostics.Put("window.height", height);
+            GasFieldDiagnostics.Put("window.viewMinX", viewMinX);
+            GasFieldDiagnostics.Put("window.viewMinZ", viewMinZ);
+            GasFieldDiagnostics.Put("window.viewMaxX", viewMaxX);
+            GasFieldDiagnostics.Put("window.viewMaxZ", viewMaxZ);
+            GasFieldDiagnostics.Put("window.knownX0", knownX0);
+            GasFieldDiagnostics.Put("window.knownX1", knownX1);
+            GasFieldDiagnostics.Put("window.knownZ0", knownZ0);
+            GasFieldDiagnostics.Put("window.knownZ1", knownZ1);
+            GasFieldDiagnostics.Put("track.gasMinX", gasTrack.MinX);
+            GasFieldDiagnostics.Put("track.gasMinZ", gasTrack.MinZ);
+            GasFieldDiagnostics.Put("track.gasPrevMinX", gasTrack.PrevMinX);
+            GasFieldDiagnostics.Put("track.gasPrevMinZ", gasTrack.PrevMinZ);
+            GasFieldDiagnostics.Put("track.gasWinW", gasTrack.WinW);
+            GasFieldDiagnostics.Put("track.gasWinH", gasTrack.WinH);
+            GasFieldDiagnostics.Put("track.gasValid", gasTrack.Valid);
+            GasFieldDiagnostics.Put("track.mistMinX", mistTrack.MinX);
+            GasFieldDiagnostics.Put("track.mistMinZ", mistTrack.MinZ);
+            GasFieldDiagnostics.Put("track.mistPrevMinX", mistTrack.PrevMinX);
+            GasFieldDiagnostics.Put("track.mistPrevMinZ", mistTrack.PrevMinZ);
+            GasFieldDiagnostics.Put("track.mistValid", mistTrack.Valid);
+            GasFieldDiagnostics.Put("track.gasCoversWindow", CoversWindow(gasTrack));
+            GasFieldDiagnostics.Put("track.mistCoversWindow", CoversWindow(mistTrack));
+            GasFieldDiagnostics.Flag("coversWindow", CoversWindow(gasTrack) || CoversWindow(mistTrack));
 
             bool scrolled = false;
 
@@ -488,6 +556,13 @@ namespace VisualTweaks
                 ClampKnown();
             }
 
+            GasFieldDiagnostics.Flag("scrolled", scrolled);
+            GasFieldDiagnostics.Put("window.scrolled", scrolled);
+            GasFieldDiagnostics.Put("window.previousMinX", previousMinX);
+            GasFieldDiagnostics.Put("window.previousMinZ", previousMinZ);
+            GasFieldDiagnostics.Put("window.previousWinW", previousWinW);
+            GasFieldDiagnostics.Put("window.previousWinH", previousWinH);
+
             if (noiseModeChanged)
             {
                 // Whichever history was active may be minutes old; the next bake starts a
@@ -508,6 +583,14 @@ namespace VisualTweaks
             {
                 lastTimedRefresh = realtime;
             }
+
+            GasFieldDiagnostics.Flag("timerDue", timerDue);
+            GasFieldDiagnostics.Flag("smoothChanged", smoothChanged);
+            GasFieldDiagnostics.Flag("noiseModeChanged", noiseModeChanged);
+            GasFieldDiagnostics.Put("clock.timerDue", timerDue);
+            GasFieldDiagnostics.Put("clock.realtimeSinceLastRefresh", realtime - lastRefresh);
+            GasFieldDiagnostics.Put("clock.realtimeSinceLastTimed", realtime - lastTimedRefresh);
+            GasFieldDiagnostics.Put("fade.fadeStart", fadeStart);
 
             if (gasCurrent == null || rectMoved || smoothChanged || noiseModeChanged || timerDue)
             {
@@ -534,7 +617,23 @@ namespace VisualTweaks
                 // between two timed publishes.
                 bool incremental = scrolled && !timerDue && !smoothChanged;
 
-                Refresh(map, realtime, incremental, timerDue);
+                GasFieldDiagnostics.Flag("incremental", incremental);
+                GasFieldDiagnostics.Flag("refreshed", true);
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("Refresh enter: rect=(" + rectMinX + "," + rectMinZ
+                    + ") " + winW + "x" + winH
+                    + " timerDue=" + timerDue + " incremental=" + incremental
+                    + " rectMoved=" + rectMoved + " forceUpload=" + forceUpload);
+
+                // Hand-restored fade guard (A/B). A timed publish that lands on a moving
+                // window must not restart the cross-fade either: it would leave the
+                // following frames fading in from the old window's picture. See the
+                // fade guard further down.
+                bool restartFade = timerDue && !rectMoved;
+                GasFieldDiagnostics.Put("refresh.restartFade", restartFade);
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("fade guard at Refresh: timerDue=" + timerDue
+                    + " rectMoved=" + rectMoved + " -> restartFade=" + restartFade);
+
+                Refresh(map, realtime, incremental, restartFade);
             }
 
             if (rectMoved)
@@ -559,6 +658,23 @@ namespace VisualTweaks
                 ? 1f
                 : Mathf.Clamp01((realtime - fadeStart) / refreshPeriod);
 
+            // Hand-restored fade guard (A/B). A cross-fade is only meaningful between two
+            // pictures of the same window: on a frame that moved it, fade < 1 draws the
+            // whole layer from the previous texture, baked at the old origin — one frame
+            // of "the layer jumped back to where the camera was, then snapped forward".
+            // The frame-rate gate was the failed fix (it flashed on every speed change);
+            // the deterministic condition is the window itself, and the overlap holds the
+            // same picture anyway, so a hard step here costs nothing.
+            float fadeBeforeGuard = fade;
+            if (rectMoved)
+            {
+                fade = 1f;
+            }
+
+            GasFieldDiagnostics.Flag("fadeGuardApplied", rectMoved);
+            GasFieldDiagnostics.Put("fade.fadeBeforeGuard", fadeBeforeGuard);
+            GasFieldDiagnostics.Put("fade.fadeAfterGuard", fade);
+
             // The fade is never gated on the frame rate. It was tried and reverted: it made
             // what is on screen depend on a measured frame time, and refreshPeriod itself is
             // cached for half a second, so switching the game speed moved a 60 fps setup
@@ -566,17 +682,32 @@ namespace VisualTweaks
             // step — a flash of the whole field, on every speed change. Whatever the fade
             // does, it must be a function of the publish clock alone.
 
+            GasFieldDiagnostics.Put("fade.fade", fade);
+            GasFieldDiagnostics.Put("gate.gasClean", gasClean);
+            GasFieldDiagnostics.Put("gate.mistClean", mistClean);
+
             if (gasClean && mistClean && fade >= 1f)
             {
                 // Both channels are empty and the fade-out is over: skip the mesh update,
                 // the uniform block and Graphics.DrawMesh. The first bake with content
                 // brings the full path back.
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("post-refresh empty gate: skip whole frame");
+                GasFieldDiagnostics.EndFrame(false, "empty-gate-after-refresh");
                 return;
             }
 
+            int quadBeforeX = quadMinX;
+            int quadBeforeZ = quadMinZ;
+            int quadBeforeW = quadWidth;
             EnsureQuad(mesh);
+            GasFieldDiagnostics.Flag("quadRebuilt",
+                quadBeforeX != quadMinX || quadBeforeZ != quadMinZ || quadBeforeW != quadWidth);
+            GasFieldDiagnostics.Put("window.quadMinX", quadMinX);
+            GasFieldDiagnostics.Put("window.quadMinZ", quadMinZ);
+
             if (width <= 0 || height <= 0)
             {
+                GasFieldDiagnostics.EndFrame(false, "invalid-size");
                 return;
             }
 
@@ -634,6 +765,25 @@ namespace VisualTweaks
             // the latter is one float for the whole application session, and after hours
             // its ulp is large enough to quantise this animation into visible micro-steps.
             float shaderTime = (float)shaderClock;
+            GasFieldDiagnostics.Put("uniform.opacity", opacity);
+            GasFieldDiagnostics.Put("uniform.scale", scale);
+            GasFieldDiagnostics.Put("uniform.detail", detail);
+            GasFieldDiagnostics.Put("uniform.shaderTime", shaderTime);
+            GasFieldDiagnostics.Put("uniform.params2Width", width);
+            GasFieldDiagnostics.Put("uniform.params2Height", height);
+            GasFieldDiagnostics.Put("uniform.params6OriginX", rectMinX);
+            GasFieldDiagnostics.Put("uniform.params6OriginZ", rectMinZ);
+            GasFieldDiagnostics.Put("uniform.params7OriginX",
+                gasTrack.Valid ? gasTrack.PrevMinX : rectMinX);
+            GasFieldDiagnostics.Put("uniform.params7OriginZ",
+                gasTrack.Valid ? gasTrack.PrevMinZ : rectMinZ);
+            GasFieldDiagnostics.Put("uniform.params8OriginX",
+                mistTrack.Valid ? mistTrack.PrevMinX : rectMinX);
+            GasFieldDiagnostics.Put("uniform.params8OriginZ",
+                mistTrack.Valid ? mistTrack.PrevMinZ : rectMinZ);
+            GasFieldDiagnostics.Put("uniform.effectiveNoiseMode", GasFieldBridge.EffectiveNoiseMode);
+            GasFieldDiagnostics.Put("uniform.replaceDust",
+                VisualTweaksSettings.gasFieldReplaceDeadlife);
             material.SetVector(ParamsId, new Vector4(fade, 2.6f, opacity, shaderTime));
             material.SetVector(Params2Id, new Vector4(width, height, ambientVelX, ambientVelZ));
             // vWorld -> uv for the baked window: uv = vWorld * xy + zw. The shader used
@@ -669,6 +819,9 @@ namespace VisualTweaks
                 sincePublish = FlowStepLimit;
             }
 
+            GasFieldDiagnostics.Put("clock.sincePublish", sincePublish);
+            GasFieldDiagnostics.Put("clock.sincePublishSaturated",
+                shaderClock - noisePublishTime >= FlowStepLimit);
             material.SetVector(
                 Params9Id,
                 new Vector4(
@@ -724,7 +877,22 @@ namespace VisualTweaks
             material.SetTexture(GasTexWideCurId, wideCur);
             material.SetTexture(GasTexWidePrevId, widePrev);
 
+            GasFieldDiagnostics.Put("tex.gasCurrent", gasCur?.name ?? "null");
+            GasFieldDiagnostics.Put("tex.gasPrevious", gasPrev?.name ?? "null");
+            GasFieldDiagnostics.Put("tex.mistCurrent", mistCur?.name ?? "null");
+            GasFieldDiagnostics.Put("tex.mistPrevious", mistPrev?.name ?? "null");
+            GasFieldDiagnostics.Put("tex.gasWideCurrent", wideCur?.name ?? "null");
+            GasFieldDiagnostics.Put("tex.gasWidePrevious", widePrev?.name ?? "null");
+            GasFieldDiagnostics.Put("tex.wind", windTexture?.name ?? "null");
+            GasFieldDiagnostics.Put("tex.gasPrevEqualsCur", ReferenceEquals(gasCur, gasPrev));
+            GasFieldDiagnostics.Put("tex.mistPrevEqualsCur", ReferenceEquals(mistCur, mistPrev));
+            GasFieldDiagnostics.Put("tex.widePrevEqualsCur", ReferenceEquals(wideCur, widePrev));
+            GasFieldDiagnostics.Put("tex.material", material?.name ?? "null");
+            GasFieldDiagnostics.Put("tex.mesh", mesh?.name ?? "null");
+
             Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0);
+
+            GasFieldDiagnostics.EndFrame(true);
 
             VisualTweaksLog.TraceOnce(
                 ref loggedDraw,
@@ -913,6 +1081,10 @@ namespace VisualTweaks
 
             if (resize)
             {
+                GasFieldDiagnostics.Flag("resize", true);
+                GasFieldDiagnostics.Flag("textureResize", true);
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("EnsureResources RESIZE: " + width + "x" + height
+                    + " -> " + needW + "x" + needH);
                 DisposeTextures();
 
                 width = needW;
@@ -1195,13 +1367,22 @@ namespace VisualTweaks
         /// mist snapshot is copied first: the temporal-patch blend must not modify AO's
         /// published array, which gameplay code also reads.
         ///
-        /// <paramref name="timedPublish"/> is true only for the 10 Hz cadence. A refresh
-        /// forced by a camera/window move runs on the camera's schedule (possibly every
-        /// frame) and must not restart the cross-fade or count as a solver publish.
+        /// <paramref name="restartFade"/> is true only for a 10 Hz publish on a stable
+        /// window. A refresh forced by a camera/window move runs on the camera's schedule
+        /// (possibly every frame) and must not restart the cross-fade: pinning fade to 0
+        /// there is what made the whole field appear to freeze while panning, and
+        /// restarting it on a moved window is what made the layer flash for one frame.
         /// </summary>
-        private void Refresh(Map map, float realtime, bool incremental, bool timedPublish)
+        private void Refresh(Map map, float realtime, bool incremental, bool restartFade)
         {
+            if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("Refresh begin: restartFade=" + restartFade
+                + " incremental=" + incremental);
             bool wrote = BakeSmooth(map, realtime, incremental);
+            GasFieldDiagnostics.Put("refresh.wrote", wrote);
+            GasFieldDiagnostics.Put("refresh.restartFade", restartFade);
+            GasFieldDiagnostics.Put("refresh.gasClean", gasClean);
+            GasFieldDiagnostics.Put("refresh.mistClean", mistClean);
+            GasFieldDiagnostics.Flag("fadeRestarted", wrote && restartFade);
 
             builtSmooth = VisualTweaksSettings.gasFieldSmooth;
 
@@ -1218,7 +1399,7 @@ namespace VisualTweaks
                 // consumed by a draw and the integration would bail out anyway, so skip
                 // both; the next non-empty Refresh fills them before any uniform is written.
                 lastRefresh = realtime;
-                if (wrote && timedPublish)
+                if (wrote && restartFade)
                 {
                     fadeStart = realtime;
                 }
@@ -1237,17 +1418,19 @@ namespace VisualTweaks
 
             lastRefresh = realtime;
 
-            // Only a timed publish restarts the cross-fade. A window-move refresh runs at
-            // whatever rate the camera dictates (potentially every frame), so letting it
-            // reset fadeStart pinned the display at fade 0 — the previous texture — for as
-            // long as the camera moved. UploadTexture already cuts the fade by pointing
-            // both halves at the fresh texture when the window origin changed, so a moved
-            // window needs no fade restart to look right.
+            // Only a 10 Hz publish on a stable window restarts the cross-fade. A
+            // window-move refresh runs at whatever rate the camera dictates (potentially
+            // every frame), so letting it reset fadeStart pinned the display at fade 0 —
+            // the previous texture — for as long as the camera moved; and a publish that
+            // does restart it on a moved window draws one frame from that old-window
+            // picture (Draw forces fade to 1 on those frames). UploadTexture already cuts
+            // the fade by pointing both halves at the fresh texture when the origin
+            // changed, so a moved window needs no fade restart to look right.
             //
             // A publish that wrote nothing has nothing to fade *from*: restarting there
             // re-exposes the previous texture, and while the gate holds a channel empty
             // that texture is the last one that had content — the ghost.
-            if (wrote && timedPublish)
+            if (wrote && restartFade)
             {
                 fadeStart = realtime;
             }
@@ -1278,6 +1461,10 @@ namespace VisualTweaks
             // no wide pass and no upload.
             bool gasWritten = BakeGasSmooth(map, k, incremental);
             bool mistWritten = BakeMistSmooth(map, k, incremental);
+            GasFieldDiagnostics.Put("refresh.gasWritten", gasWritten);
+            GasFieldDiagnostics.Put("refresh.mistWritten", mistWritten);
+            GasFieldDiagnostics.Put("refresh.smoothK", k);
+            GasFieldDiagnostics.Put("refresh.smoothDt", dt);
 
             // Whatever was baked above covered this window at this origin, so every cell in
             // it now has history for the next blend.
@@ -1349,6 +1536,9 @@ namespace VisualTweaks
         // nothing" is exactly what the pair pointers mean then.
         private static void CollapsePair(ref Texture2D? previous, Texture2D? current, WindowTrack track)
         {
+            GasFieldDiagnostics.Flag("collapsePair", true);
+            if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("CollapsePair: previous <- current ("
+                + (current?.name ?? "null") + ")");
             previous = current;
             track.PrevMinX = track.MinX;
             track.PrevMinZ = track.MinZ;
@@ -1458,6 +1648,9 @@ namespace VisualTweaks
                 return;
             }
 
+            GasFieldDiagnostics.Flag("flowGridRebuilt", true);
+            if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("EnsureFlowGrid REBUILT: " + flowCellsX + "x" + flowCellsZ
+                + " -> " + cellsX + "x" + cellsZ);
             flowCellsX = cellsX;
             flowCellsZ = cellsZ;
 
@@ -1565,6 +1758,12 @@ namespace VisualTweaks
 
             ambientLastTime = clockTime;
             noisePublishTime = clockTime;
+            GasFieldDiagnostics.Put("clock.noisePublishTime", clockTime);
+            GasFieldDiagnostics.Put("noise.ambientDx", ambientDx);
+            GasFieldDiagnostics.Put("noise.ambientDz", ambientDz);
+            GasFieldDiagnostics.Put("noise.ambientVelX", ambientVelX);
+            GasFieldDiagnostics.Put("noise.ambientVelZ", ambientVelZ);
+            if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("BakeAmbient publish: dt=" + dt.ToString("F4"));
         }
 
         /// <summary>
@@ -1582,6 +1781,12 @@ namespace VisualTweaks
             // CompletedSteps increments exactly once per published snapshot.
             int steps = GasFieldBridge.CompletedSteps(map);
             bool newPublish = steps != lastFlowSteps;
+            GasFieldDiagnostics.Put("flow.completedSteps", steps);
+            GasFieldDiagnostics.Put("flow.lastFlowSteps", lastFlowSteps);
+            GasFieldDiagnostics.Flag("newPublish", newPublish);
+            GasFieldDiagnostics.Put("flow.newPublish", newPublish);
+            GasFieldDiagnostics.Put("flow.simulationIntervalTicks",
+                GasFieldBridge.SimulationIntervalTicks);
             if (!newPublish
                 && !double.IsNaN(lastFlowTime)
                 && clockTime - lastFlowTime >= refreshPeriod * 1.5)
@@ -1590,7 +1795,11 @@ namespace VisualTweaks
                 // it, fall back to the configured publish period instead of freezing.
                 newPublish = true;
             }
-            lastFlowSteps = steps;
+            // Do not latch the step counter until the snapshot is actually consumed.
+            // On a failed TryGetWind the next frame must still count as a new publish;
+            // latching it here kept the early return alive while shaderClock moved on,
+            // so sincePublish saturated at FlowStepLimit and the pattern stalled until
+            // the timeout fallback happened to fire.
             if (!newPublish && flowInitialized)
             {
                 return;
@@ -1603,6 +1812,9 @@ namespace VisualTweaks
             // from the current solver sample. It must not bail out either: the early
             // return would leave lastFlowTime at NaN and freeze the flow for good.
             bool reseed = double.IsNaN(lastFlowTime);
+            GasFieldDiagnostics.Flag("reseed", reseed);
+            GasFieldDiagnostics.Put("flow.reseed", reseed);
+            GasFieldDiagnostics.Put("flow.lastFlowTime", lastFlowTime);
             double dt = reseed ? 0.0 : clockTime - lastFlowTime;
             if (!double.IsFinite(dt) || dt <= 0.0)
             {
@@ -1625,6 +1837,8 @@ namespace VisualTweaks
                     out float[]? obstacleMask))
             {
                 // No solver data: hold the last displacement instead of snapping to zero.
+                GasFieldDiagnostics.Flag("tryGetWindFailed", true);
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("BakeFlow: TryGetWind FAILED, hold last displacement");
                 return;
             }
 
@@ -1632,13 +1846,18 @@ namespace VisualTweaks
                 ? 1f - Mathf.Exp(-(float)dt / FlowVelocityTau)
                 : 1f;
             flowInitialized = true;
+            lastFlowSteps = steps;
             lastFlowTime = clockTime;
 
             float animation = Mathf.Clamp(VisualTweaksSettings.gasFieldAnimation, 0f, 2f);
-            // Integrate with the velocity that was displayed during this interval, *then*
-            // low-pass toward the new sample. Doing it in the other order would move the
-            // pattern by (vNew - vOld) * dt at every publish — small, but visible as a
-            // twitch during an explosion. dt is already in game-time seconds, so no extra
+            // Land the displacement exactly where the shader already is. flowUx/flowUz
+            // are the rates uploaded with the last texture, and the shader has been
+            // showing D + U * (clock - noisePublishTime) * animation ever since.
+            // Integrating with flowVx instead made the publish boundary jump by
+            // (U_new - U_old) * dt * animation: a solver rewrite, an explosion or even
+            // a window-mean change then read as one frame of stutter / snap-back. The
+            // ambient path never had this problem because it integrates and extrapolates
+            // with the same ambientVel. dt is in game-time seconds, so no extra
             // game-speed factor belongs here.
             float step = (float)dt * animation;
             int count = flowCellsX * flowCellsZ;
@@ -1647,6 +1866,12 @@ namespace VisualTweaks
             {
                 Array.Copy(flowDx, flowPrevDx, count);
                 Array.Copy(flowDz, flowPrevDz, count);
+
+                for (int i = 0; i < count; i++)
+                {
+                    flowDx[i] += flowUx[i] * step;
+                    flowDz[i] += flowUz[i] * step;
+                }
             }
 
             for (int gz = 0; gz < flowCellsZ; gz++)
@@ -1679,12 +1904,6 @@ namespace VisualTweaks
                     }
 
                     int i = row + gx;
-                    if (step > 0f)
-                    {
-                        flowDx[i] += flowVx[i] * step;
-                        flowDz[i] += flowVz[i] * step;
-                    }
-
                     if (k < 1f)
                     {
                         vx = flowVx[i] + (vx - flowVx[i]) * k;
@@ -1737,13 +1956,22 @@ namespace VisualTweaks
                 // the noise into stripes after a few minutes.
                 RelaxFlowDeviation(Mathf.Exp(-(float)dt / FlowDeviationTau));
 
-                // The shader extends the *realized* displacement of this interval, which
-                // already includes the relaxation, so the publish boundary is continuous.
+                // flowU is the rate the shader will use for the *next* interval, so it no
+                // longer has to equal this interval's measured difference. Keep that
+                // measured part (it carries the relaxation) and blend in the local wind:
+                // without it U becomes purely self-referential and the per-cell differences
+                // that "follow local wind" exists to show flatten out over a few publishes.
+                // The same low-pass gain as the velocity stops a solver rewrite from
+                // becoming a rate step. Note the boundary is continuous regardless of how
+                // U is defined: the CPU advances D by the very U the shader extrapolated.
                 float invStep = 1f / step;
+                float uk = 1f - Mathf.Exp(-(float)dt / FlowVelocityTau);
                 for (int i = 0; i < count; i++)
                 {
-                    flowUx[i] = (flowDx[i] - flowPrevDx[i]) * invStep;
-                    flowUz[i] = (flowDz[i] - flowPrevDz[i]) * invStep;
+                    float realizedUx = (flowDx[i] - flowPrevDx[i]) * invStep;
+                    float realizedUz = (flowDz[i] - flowPrevDz[i]) * invStep;
+                    flowUx[i] = realizedUx + (flowVx[i] - realizedUx) * uk;
+                    flowUz[i] = realizedUz + (flowVz[i] - realizedUz) * uk;
                 }
             }
             else
@@ -1755,7 +1983,32 @@ namespace VisualTweaks
                 }
             }
 
+            float uMax = 0f;
+            double uSum = 0.0;
+            for (int i = 0; i < count; i++)
+            {
+                float m = Mathf.Max(Mathf.Abs(flowUx[i]), Mathf.Abs(flowUz[i]));
+                if (m > uMax)
+                {
+                    uMax = m;
+                }
+
+                uSum += m;
+            }
+
+            GasFieldDiagnostics.Put("noise.flowUMax", uMax);
+            GasFieldDiagnostics.Put("noise.flowUMean", count > 0 ? (float)(uSum / count) : 0f);
+            GasFieldDiagnostics.Put("noise.flowDxCenter", count > 0 ? flowDx[count / 2] : 0f);
+            GasFieldDiagnostics.Put("noise.flowDzCenter", count > 0 ? flowDz[count / 2] : 0f);
+            GasFieldDiagnostics.Put("noise.flowVxCenter", count > 0 ? flowVx[count / 2] : 0f);
+            GasFieldDiagnostics.Put("noise.flowUxCenter", count > 0 ? flowUx[count / 2] : 0f);
+            GasFieldDiagnostics.Put("flow.dt", dt);
+            GasFieldDiagnostics.Put("flow.step", step);
+            if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("BakeFlow publish: dt=" + dt.ToString("F4")
+                + " steps=" + steps + " reseed=" + reseed);
+
             noisePublishTime = clockTime;
+            GasFieldDiagnostics.Put("clock.noisePublishTime", clockTime);
             UploadFlowTexture();
         }
 
@@ -1935,6 +2188,8 @@ namespace VisualTweaks
             float[]? sent = windSent;
             if (sent != null && SameBytes(windUpload, sent))
             {
+                GasFieldDiagnostics.Flag("flowUploaded", false);
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("UploadFlowIfChanged: SKIPPED (bytes identical)");
                 return;
             }
 
@@ -1955,6 +2210,9 @@ namespace VisualTweaks
             cpuData.MarkDirty();
             windTexture.Apply(false, false);
             Array.Copy(windUpload, windSent, windUpload.Length);
+            GasFieldDiagnostics.Flag("flowUploaded", true);
+            if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("UploadFlowIfChanged: UPLOAD "
+                + windUpload.Length + " floats -> " + (windTexture?.name ?? "null"));
         }
 
         private static bool SameBytes<T>(T[] a, T[] b) where T : struct
@@ -2660,8 +2918,17 @@ namespace VisualTweaks
             // leave the field "maybe null" for the rest of the method, and the swap below
             // assigns it to `previous`.
             Texture2D? live = current;
+            string channel = track == gasTrack ? "gas" : "mist";
+            GasFieldDiagnostics.Put("upload.channel", channel);
+            GasFieldDiagnostics.Put("upload.forceUpload", forceUpload);
+            GasFieldDiagnostics.Put("upload.liveIsNull", live == null);
+            GasFieldDiagnostics.Put("upload.coversWindow", CoversWindow(track));
+            GasFieldDiagnostics.Put("upload.sameWindow", SameWindow(pixels, sent));
             if (!forceUpload && live != null && CoversWindow(track) && SameWindow(pixels, sent))
             {
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("UploadTexture " + channel
+                    + ": SHORT-CIRCUIT, no upload this frame");
+                GasFieldDiagnostics.Flag(channel == "gas" ? "gasUploaded" : "mistUploaded", false);
                 return false;
             }
 
@@ -2691,8 +2958,22 @@ namespace VisualTweaks
                 bool sameOrigin = track.Valid
                     && track.MinX == rectMinX
                     && track.MinZ == rectMinZ;
+                bool prevCovers = PrevCoversView(track);
+                GasFieldDiagnostics.Flag("sameOrigin", sameOrigin);
+                GasFieldDiagnostics.Flag("prevCoversView", prevCovers);
+                GasFieldDiagnostics.Put("upload.sameOrigin", sameOrigin);
+                GasFieldDiagnostics.Put("upload.prevCoversView", prevCovers);
+                GasFieldDiagnostics.Put("upload.trackMinX", track.MinX);
+                GasFieldDiagnostics.Put("upload.trackMinZ", track.MinZ);
+                GasFieldDiagnostics.Put("upload.trackPrevMinX", track.PrevMinX);
+                GasFieldDiagnostics.Put("upload.trackPrevMinZ", track.PrevMinZ);
+                GasFieldDiagnostics.Put("upload.trackWinW", track.WinW);
+                GasFieldDiagnostics.Put("upload.trackWinH", track.WinH);
+                GasFieldDiagnostics.Put("upload.trackValid", track.Valid);
+                GasFieldDiagnostics.Put("upload.rectMinX", rectMinX);
+                GasFieldDiagnostics.Put("upload.rectMinZ", rectMinZ);
 
-                if (sameOrigin && PrevCoversView(track))
+                if (sameOrigin && prevCovers)
                 {
                     // Always the old texture: same origin, so _Params6 already describes it.
                     previous = current;
@@ -2708,6 +2989,10 @@ namespace VisualTweaks
                     // publish, which makes the fade a no-op.
                     previous = write;
                     previousIsFresh = true;
+                    GasFieldDiagnostics.Flag("crossFadeCut", true);
+                    if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("UploadTexture " + channel
+                        + ": CROSS-FADE CUT (sameOrigin=" + sameOrigin
+                        + " prevCovers=" + prevCovers + ")");
 
                     if (VisualTweaksLog.GasTraceEnabled)
                     {
@@ -2730,6 +3015,17 @@ namespace VisualTweaks
             current = write;
 
             TrackWindows(track, previousIsFresh);
+            GasFieldDiagnostics.Flag(channel == "gas" ? "gasUploaded" : "mistUploaded", true);
+            GasFieldDiagnostics.Flag(channel == "gas" ? "gasPreviousFresh" : "mistPreviousFresh",
+                previousIsFresh);
+            GasFieldDiagnostics.Put("upload.previousIsFresh", previousIsFresh);
+            GasFieldDiagnostics.Put("upload.write", write?.name ?? "null");
+            GasFieldDiagnostics.Put("upload.previous", previous?.name ?? "null");
+            GasFieldDiagnostics.Put("upload.current", current?.name ?? "null");
+            GasFieldDiagnostics.Put("upload.trackMinXAfter", track.MinX);
+            GasFieldDiagnostics.Put("upload.trackMinZAfter", track.MinZ);
+            GasFieldDiagnostics.Put("upload.trackPrevMinXAfter", track.PrevMinX);
+            GasFieldDiagnostics.Put("upload.trackPrevMinZAfter", track.PrevMinZ);
             Swap(ref pixels, ref sent);
             return true;
         }
