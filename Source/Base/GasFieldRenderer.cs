@@ -362,7 +362,16 @@ namespace VisualTweaks
         private int quadHeight = -1;
 
         private float refreshPeriod = DefaultRefreshSeconds;
+
+        // Two clocks, deliberately separate. `lastRefresh` timestamps the last bake of
+        // *any* kind (including the ones a camera move forces) and only feeds the
+        // smoothing delta in BakeSmooth. `lastTimedRefresh` is the 10 Hz solver cadence:
+        // a window-move refresh must not touch it. When both used lastRefresh, a
+        // continuous pan reset the timer every frame, timerDue never fired, and every
+        // bake took the incremental path — which reuses the shifted pixels without
+        // resampling the solver, so the gas appeared to freeze while the camera moved.
         private float lastRefresh = float.NegativeInfinity;
+        private float lastTimedRefresh = float.NegativeInfinity;
         private float fadeStart = float.NegativeInfinity;
 
         // Ambient drift history, in noise units. The offset is a path integral of the
@@ -490,7 +499,15 @@ namespace VisualTweaks
 
             // The solver only moves while the game runs. A paused game still needs one
             // upload so a map that was just loaded (or a slider change) shows the field.
-            bool timerDue = !paused && realtime - lastRefresh >= refreshPeriod;
+            // Deliberately independent of lastRefresh: a window-move refresh must not
+            // postpone the next timed publish, or a continuous pan starves the 10 Hz
+            // resample and the gas stops advancing on screen. The clock advances only on
+            // a due publish, so pausing still freezes the cadence with the game.
+            bool timerDue = !paused && realtime - lastTimedRefresh >= refreshPeriod;
+            if (timerDue)
+            {
+                lastTimedRefresh = realtime;
+            }
 
             if (gasCurrent == null || rectMoved || smoothChanged || noiseModeChanged || timerDue)
             {
@@ -512,9 +529,12 @@ namespace VisualTweaks
                 // of window steps away, which is exactly the "jumps to a random nearby place
                 // with no gas" report. A size change without an origin move (zoom crossing a
                 // bucket, view clipped against the map border) used to take that path.
+                // A timed publish always resamples the whole window, even when the same
+                // frame also moved it. `incremental` is only for a movement-only bake in
+                // between two timed publishes.
                 bool incremental = scrolled && !timerDue && !smoothChanged;
 
-                Refresh(map, realtime, incremental);
+                Refresh(map, realtime, incremental, timerDue);
             }
 
             if (rectMoved)
@@ -929,6 +949,7 @@ namespace VisualTweaks
                 mistClean = false;
                 smoothInitialized = false;
                 lastRefresh = float.NegativeInfinity;
+                lastTimedRefresh = float.NegativeInfinity;
                 fadeStart = float.NegativeInfinity;
                 winW = 0;
                 winH = 0;
@@ -1173,8 +1194,12 @@ namespace VisualTweaks
         /// Bakes the two per-cell fields into the back textures and swaps them in. The
         /// mist snapshot is copied first: the temporal-patch blend must not modify AO's
         /// published array, which gameplay code also reads.
+        ///
+        /// <paramref name="timedPublish"/> is true only for the 10 Hz cadence. A refresh
+        /// forced by a camera/window move runs on the camera's schedule (possibly every
+        /// frame) and must not restart the cross-fade or count as a solver publish.
         /// </summary>
-        private void Refresh(Map map, float realtime, bool incremental)
+        private void Refresh(Map map, float realtime, bool incremental, bool timedPublish)
         {
             bool wrote = BakeSmooth(map, realtime, incremental);
 
@@ -1193,7 +1218,7 @@ namespace VisualTweaks
                 // consumed by a draw and the integration would bail out anyway, so skip
                 // both; the next non-empty Refresh fills them before any uniform is written.
                 lastRefresh = realtime;
-                if (wrote)
+                if (wrote && timedPublish)
                 {
                     fadeStart = realtime;
                 }
@@ -1212,15 +1237,17 @@ namespace VisualTweaks
 
             lastRefresh = realtime;
 
-            // Fade every publish that actually produced a picture — including the ones that
-            // moved the window: each texture carries its own mapping, and the only cells the
-            // two disagree on sit in the margin outside the view.
+            // Only a timed publish restarts the cross-fade. A window-move refresh runs at
+            // whatever rate the camera dictates (potentially every frame), so letting it
+            // reset fadeStart pinned the display at fade 0 — the previous texture — for as
+            // long as the camera moved. UploadTexture already cuts the fade by pointing
+            // both halves at the fresh texture when the window origin changed, so a moved
+            // window needs no fade restart to look right.
             //
-            // A publish that wrote nothing has nothing to fade *from*. Restarting the fade
-            // there is not harmless: it re-exposes the previous texture, and while the gate
-            // holds a channel empty that texture is the last one that had content — the
-            // ghost. It also pinned the display near fade 0 on every frame the camera moved.
-            if (wrote)
+            // A publish that wrote nothing has nothing to fade *from*: restarting there
+            // re-exposes the previous texture, and while the gate holds a channel empty
+            // that texture is the last one that had content — the ghost.
+            if (wrote && timedPublish)
             {
                 fadeStart = realtime;
             }
