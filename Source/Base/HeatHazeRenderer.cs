@@ -75,6 +75,18 @@ namespace VisualTweaks
         // rarer than the zoom gesture that caused the surplus.
         private const int ShrinkDelayFrames = 180;
 
+        // A heater is not in the heat-pusher family at all: Building_Heater never puts heat
+        // into the air, it moves its room's single temperature value. The G channel
+        // therefore never saw one, and the room walk stays under the start threshold at the
+        // 21 C a heater is set to. While it is actually running, stamp a small plume at the
+        // unit so the hot air is visible where it comes out.
+        //
+        // Deliberately weaker and tighter than a campfire (21 heat/s -> strength 1.0 over
+        // 4.25 cells): 21 energy/s spread across a whole room is not the same local flux as
+        // 21 heat/s dumped into the air at one cell.
+        private const float HeaterPlumeRadius = 2.1f;
+        private const float HeaterPlumeStrength = 0.4f;
+
         private const int RenderQueue = 3174;
 
         private static readonly float Altitude =
@@ -962,6 +974,14 @@ namespace VisualTweaks
             return maxFireByte;
         }
 
+        /// <summary>
+        /// Stamps every building that is putting heat into the air right now.
+        ///
+        /// Two kinds land here: heaters, which the component family never exposes, and
+        /// buildings whose CompHeatPusher means a live flame or exhaust rather than standing
+        /// ambient warmth. Work tables are excluded below and left to the temperature
+        /// channel, because their CompHeatPusher is on whenever the bench has power or fuel.
+        /// </summary>
         private void StampHeatPushers(List<Building> buildings, ref int maxFireByte)
         {
             if (buildings == null)
@@ -972,8 +992,28 @@ namespace VisualTweaks
             for (int i = 0; i < buildings.Count; i++)
             {
                 Building building = buildings[i];
+
+                // Handled first: a heater has no CompHeatPusher to look up, and this way it
+                // does not pay for the lookup either.
+                if (building is Building_Heater heater)
+                {
+                    StampHeater(heater, ref maxFireByte);
+                    continue;
+                }
+
                 CompHeatPusher pusher = building.TryGetComp<CompHeatPusher>();
                 if (pusher == null || !IsHeatSourceActive(pusher))
+                {
+                    continue;
+                }
+
+                // Work tables carry this component as standing background warmth: a stove
+                // radiates 3-4 heat/s whenever it has power or fuel, working or not. Sealing
+                // it into the G channel is what makes an idle stove shimmer. A kitchen that
+                // is really cooking already warms its room through heatPerTickWhileWorking,
+                // which the temperature channel picks up on its own.
+                if (building.def.building != null
+                    && building.def.building.heatPerTickWhileWorking > 0f)
                 {
                     continue;
                 }
@@ -991,6 +1031,40 @@ namespace VisualTweaks
                 float strength = Mathf.Clamp01(Mathf.Sqrt(heat / 21f));
                 StampRadial(building.TrueCenter(), radius, strength, ref maxFireByte);
             }
+        }
+
+        /// <summary>
+        /// Stamps the plume of a heater that is currently pushing heat into its room.
+        ///
+        /// Building_Heater only writes operatingAtHighPower from TickRare, and only while it
+        /// has power, so a heater that lost power or was flicked off keeps whatever value it
+        /// had. The power and flick checks below cover both cases instead of trusting the
+        /// flag alone.
+        /// </summary>
+        private void StampHeater(Building_Heater heater, ref int maxFireByte)
+        {
+            if (!heater.SpawnedOrAnyParentSpawned || !FlickUtility.WantsToBeOn(heater))
+            {
+                return;
+            }
+
+            CompTempControl? control = heater.compTempControl;
+            if (control == null || !control.operatingAtHighPower)
+            {
+                return;
+            }
+
+            CompPowerTrader? power = heater.compPowerTrader;
+            if (power != null && !power.PowerOn)
+            {
+                return;
+            }
+
+            StampRadial(
+                heater.TrueCenter(),
+                HeaterPlumeRadius,
+                HeaterPlumeStrength,
+                ref maxFireByte);
         }
 
         /// <summary>
