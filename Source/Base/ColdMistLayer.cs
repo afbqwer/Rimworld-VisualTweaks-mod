@@ -25,7 +25,7 @@ namespace VisualTweaks
 
             try
             {
-                renderer.Draw(map, frame.View, frame.Paused, frame.Speed);
+                renderer.Draw(map, frame.View, frame.Paused, frame.Speed, frame.Tick);
             }
             catch (Exception ex)
             {

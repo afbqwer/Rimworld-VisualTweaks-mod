@@ -746,6 +746,7 @@ namespace VisualTweaks
 
             CellRect window = new CellRect(winMinX, winMinZ, winW, winH);
             IReadOnlyList<Room> rooms = map.regionGrid.AllRooms;
+            RegionGrid regionGrid = map.regionGrid;
 
             for (int i = 0; i < rooms.Count; i++)
             {
@@ -780,11 +781,6 @@ namespace VisualTweaks
                     continue;
                 }
 
-                if (packed.r > maxTempByte)
-                {
-                    maxTempByte = packed.r;
-                }
-
                 int x0 = Mathf.Max(extents.minX, winMinX);
                 int x1 = Mathf.Min(extents.maxX, winMinX + winW - 1);
                 int z0 = Mathf.Max(extents.minZ, winMinZ);
@@ -794,34 +790,69 @@ namespace VisualTweaks
                     continue;
                 }
 
-                // A rectangular room is exactly its extents, so whole rows can be filled.
-                // Room.Cells is a yield iterator that costs a state-machine MoveNext and an
-                // IntVec3 copy per cell; almost every built room is a rectangle, so this
-                // skips that for the common case. An L-shaped or split room has fewer cells
-                // than its footprint and falls through to the exact walk below.
-                if (room.CellCount == extents.Width * extents.Height)
+                // Region-driven from here on. Region.Cells walks the region's *bounding
+                // rectangle* and keeps the cells that resolve back to it, and Room.Cells
+                // wraps that in a second yield iterator, so the old per-room fallback below
+                // paid two state-machine MoveNext calls per cell. Splitting the decision per
+                // region instead of per room also keeps nearly every cell on the fast path:
+                // an L-shaped room is still cut into rectangular regions, so only the few
+                // regions that straddle a corner ever need the membership test.
+                List<Region> regions = room.Regions;
+                bool wrote = false;
+                for (int r = 0; r < regions.Count; r++)
                 {
-                    uint packedWord = PackWord(packed);
-                    int span = x1 - x0 + 1;
-                    for (int z = z0; z <= z1; z++)
-                    {
-                        int row = (capacityH - 1 - (z - winMinZ)) * capacityW
-                            + (x0 - winMinX);
-                        words.Slice(row, span).Fill(packedWord);
-                    }
+                    Region region = regions[r];
+                    CellRect inner = region.extentsClose;
 
-                    continue;
-                }
-
-                foreach (IntVec3 cell in room.Cells)
-                {
-                    if (cell.x < x0 || cell.x > x1 || cell.z < z0 || cell.z > z1)
+                    int minX = Mathf.Max(inner.minX, x0);
+                    int maxX = Mathf.Min(inner.maxX, x1);
+                    int minZ = Mathf.Max(inner.minZ, z0);
+                    int maxZ = Mathf.Min(inner.maxZ, z1);
+                    if (minX > maxX || minZ > maxZ)
                     {
                         continue;
                     }
 
-                    maskPixels[(capacityH - 1 - (cell.z - winMinZ)) * capacityW
-                        + (cell.x - winMinX)] = packed;
+                    // A rectangular region is exactly its extents, so whole rows can be
+                    // filled at memset speed.
+                    if (region.CellCount == inner.Width * inner.Height)
+                    {
+                        uint packedWord = PackWord(packed);
+                        int span = maxX - minX + 1;
+                        for (int z = minZ; z <= maxZ; z++)
+                        {
+                            int row = (capacityH - 1 - (z - winMinZ)) * capacityW
+                                + (minX - winMinX);
+                            words.Slice(row, span).Fill(packedWord);
+                        }
+
+                        wrote = true;
+                        continue;
+                    }
+
+                    for (int z = minZ; z <= maxZ; z++)
+                    {
+                        int row = (capacityH - 1 - (z - winMinZ)) * capacityW;
+                        for (int x = minX; x <= maxX; x++)
+                        {
+                            if (regionGrid.GetRegionAt_NoRebuild_InvalidAllowed(new IntVec3(x, 0, z)) != region)
+                            {
+                                continue;
+                            }
+
+                            maskPixels[row + (x - winMinX)] = packed;
+                            wrote = true;
+                        }
+                    }
+                }
+
+                // Only a room that actually painted something counts towards "is anything
+                // visible". An L-shaped room whose bounding box sits in the window but whose
+                // cells do not would otherwise raise the maximum and keep a quad alive that
+                // discards every fragment.
+                if (wrote && packed.r > maxTempByte)
+                {
+                    maxTempByte = packed.r;
                 }
             }
 

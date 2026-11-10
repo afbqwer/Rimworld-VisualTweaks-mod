@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using RimWorld;
 using Verse;
@@ -21,19 +22,30 @@ namespace VisualTweaks
     ///  * the mask spans the whole map instead of a resized window, because a
     ///    full-map RGBA32 texture is at most a few hundred KB and that removes the
     ///    capacity growth/shrink machinery entirely;
-    ///  * cells are filled by walking rooms instead of sampling every cell, so the
-    ///    cost scales with the number of *cold* rooms rather than with the zoom
-    ///    level, and no 2x2 stride is needed at far zoom;
-    ///  * no scroll optimisation: a window rebake clears and refills the window,
-    ///    which is cheaper than the bookkeeping for shifted strips;
+    ///  * cells are filled by walking the visible part of each cold room's regions
+    ///    instead of sampling every cell, so the cost follows the cold interior on
+    ///    screen rather than the zoom level, and no 2x2 stride is needed at far zoom;
+    ///  * no scroll optimisation: because the mask is anchored in map space, a pan needs
+    ///    no bookkeeping at all — the cells that stayed on screen are still valid, so only
+    ///    the newly exposed strips are baked;
     ///  * the shader needs no scene grab, so there is no refraction path at all.
     /// </summary>
     internal sealed class ColdMistRenderer : IDisposable
     {
-        // Room temperature only moves when a cooler, heater, door or roof changes;
-        // 4 Hz is far below anything the eye can catch and keeps the room walk and
-        // the texture upload cheap. The shader animates continuously between bakes.
-        private const float BakeInterval = 0.25f;
+        // Vanilla re-equalises every room's temperature on ticks where TicksGame % 120 == 7
+        // (MapTemperature.MapTemperatureTick). Baking faster repaints a mask that cannot
+        // have changed; baking slower misses changes. One bake per 120 ticks therefore
+        // produces the same picture for an eighth of the work at 1x, and still tracks the
+        // data at 15x, where 120 ticks is only 0.13 s. The shader animates continuously
+        // between bakes either way.
+        private const int BakeIntervalTicks = 120;
+        private const int TempEqualiseOffset = 7;
+
+        // Hard ceiling on how often the mask is refreshed, whatever the speed tier. Above
+        // 1 Hz nothing is perceptible: the vapour keeps animating in the shader between
+        // bakes, and one bake per second is already eight times the rate at which room
+        // temperature moves at 1x. It doubles as the cadence when there is no tick manager.
+        private const float MaxRefreshInterval = 1f;
 
         // Extra cells baked on each side so the camera can pan a little without a
         // rebake, and so the bilinear filter stays inside baked data at the edges
@@ -94,6 +106,14 @@ namespace VisualTweaks
         private int quadWidth = -1;
         private int quadHeight = -1;
 
+        // Window whose cells are actually valid in maskPixels. Normally equal to the window
+        // above; it only differs when the window moved, at which point everything outside
+        // the old rect is the part that has to be baked again.
+        private int bakedMinX = int.MinValue;
+        private int bakedMinZ = int.MinValue;
+        private int bakedW = -1;
+        private int bakedH = -1;
+
         // Window whose contents are on the GPU. The origin is part of the hash: the
         // mask is anchored in map space, so an identical-looking window one room
         // over still needs an upload.
@@ -101,21 +121,25 @@ namespace VisualTweaks
 
         private float shaderTime;
         private float lastBake = float.NegativeInfinity;
+        private int lastBakeTick = -1;
         private float lastMinTemp = float.PositiveInfinity;
         private bool loggedDraw;
         private bool wasPaused;
 
-        internal void Draw(Map map, CellRect view, bool paused, TimeSpeed speed)
+        internal void Draw(Map map, CellRect view, bool paused, TimeSpeed speed, int tick)
         {
-            EnsureResources(map);
-
-            // Frozen while paused, faster with every game speed tier.
-            OverlayClock.Advance(ref shaderTime, paused, speed);
-
+            // Zero opacity means there is nothing to draw, so do not even allocate for it.
+            // Checked before EnsureResources for the same reason the heat haze checks its
+            // intensity first: an effect the player has switched off should cost nothing.
             if (VisualTweaksSettings.coldMistOpacity <= 0.001f)
             {
                 return;
             }
+
+            EnsureResources(map);
+
+            // Frozen while paused, faster with every game speed tier.
+            OverlayClock.Advance(ref shaderTime, paused, speed);
 
             if (!EnsureWindow(map, view, out bool windowChanged))
             {
@@ -124,12 +148,21 @@ namespace VisualTweaks
 
             float realtime = Time.realtimeSinceStartup;
 
-            // Nothing in the world changes while paused, so only a window move needs a
-            // fresh bake (newly exposed cells were never baked). Unpausing always bakes
-            // once instead of waiting for the next cadence.
+            // Two things can make the mask stale: the world moved, which happens on the
+            // tick vanilla re-equalises room temperatures (so the bake follows the tick
+            // clock, not the wall clock), or the window moved, because newly exposed cells
+            // were never baked. Nothing else, which is why a paused game only bakes when
+            // the camera pans and unpausing bakes once instead of waiting out the cadence.
             bool resumed = wasPaused && !paused;
             wasPaused = paused;
-            bool bakeDue = windowChanged || resumed || realtime - lastBake >= BakeInterval;
+            bool cadenceDue = resumed || BakeDue(tick, realtime);
+
+            // A pan leaves every cell that is still on screen valid, because the mask is
+            // anchored in map space: only the exposed strips need work. A cadence bake, a
+            // resize, a jump or the first bake ever rewrites the whole window instead.
+            bool stripsOnly = windowChanged && !cadenceDue && CanBakeStrips();
+
+            bool bakeDue = windowChanged || cadenceDue;
             if (paused && !windowChanged)
             {
                 bakeDue = false;
@@ -137,8 +170,17 @@ namespace VisualTweaks
 
             if (bakeDue)
             {
-                Bake(map);
+                if (stripsOnly)
+                {
+                    BakeExposed(map);
+                }
+                else
+                {
+                    Bake(map);
+                }
+
                 lastBake = realtime;
+                lastBakeTick = tick > 0 ? PhaseAlignedTick(tick) : -1;
             }
 
             if (!HasVisibleMist())
@@ -188,6 +230,45 @@ namespace VisualTweaks
         {
             return (celsius - VisualTweaksSettings.ColdTempNormMin)
                 / (VisualTweaksSettings.ColdTempNormMax - VisualTweaksSettings.ColdTempNormMin);
+        }
+
+        /// <summary>
+        /// True when a bake is due on the game clock. The wall-clock ceiling comes first so
+        /// it applies to every speed tier; <c>tick &lt; lastBakeTick</c> covers a loaded save,
+        /// whose clock is not the one this renderer was counting on.
+        /// </summary>
+        private bool BakeDue(int tick, float realtime)
+        {
+            if (realtime - lastBake < MaxRefreshInterval)
+            {
+                return false;
+            }
+
+            if (tick <= 0)
+            {
+                // No tick manager to follow: the ceiling above is the whole cadence.
+                return true;
+            }
+
+            return lastBakeTick < 0
+                || tick < lastBakeTick
+                || tick - lastBakeTick >= BakeIntervalTicks;
+        }
+
+        /// <summary>
+        /// Snaps a tick back to the last vanilla temperature pass, so the cadence keeps
+        /// phase with the data instead of drifting: the next bake then lands on the tick
+        /// right after vanilla's next equalise pass, never on an arbitrary offset.
+        /// </summary>
+        private static int PhaseAlignedTick(int tick)
+        {
+            int sinceEqualise = (tick - TempEqualiseOffset) % BakeIntervalTicks;
+            if (sinceEqualise < 0)
+            {
+                sinceEqualise += BakeIntervalTicks;
+            }
+
+            return tick - sinceEqualise;
         }
 
         private bool HasVisibleMist()
@@ -348,26 +429,146 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Refills the visible window from vanilla room data.
-        ///
-        /// Only enclosed interiors contribute: a room that uses the outdoor
-        /// temperature (a courtyard, a ruin, anything with more than a quarter of its
-        /// ceiling missing) is treated as outdoors and left alone, and so is a room
-        /// exposed to vacuum. This is exactly the "vanilla room cold, no outdoors"
-        /// scope the effect is meant to cover, and it keeps AO's own mist system
-        /// untouched because nothing here reads AO's fields.
+        /// Refills the whole window, then uploads if anything changed. This is the cadence
+        /// path: a room temperature may have moved anywhere in the window, so no cell can
+        /// be reused.
         /// </summary>
         private void Bake(Map map)
         {
             EnsureResources(map);
 
-            ClearWindow(maskPixels);
+            lastMinTemp = BakeRect(map, new CellRect(winMinX, winMinZ, winW, winH));
+            MarkBaked();
+
+            // Nothing is cold enough to draw: leave the previous texture alone and skip the
+            // upload. The next bake that crosses the threshold refreshes it before the
+            // shader is allowed to draw.
+            if (!HasVisibleMist())
+            {
+                return;
+            }
+
+            uint hash = HashWindow(maskPixels);
+            if (hash == uploadedHash)
+            {
+                return;
+            }
+
+            uploadedHash = hash;
+            UploadMask();
+        }
+
+        /// <summary>
+        /// Refills only the strips a pan exposed.
+        ///
+        /// The mask is anchored in map space, so every cell that stayed on screen already
+        /// holds the right value and rebaking it would rewrite identical pixels. At most two
+        /// strips — one per moved axis — are what actually changed. The heat haze cannot do
+        /// this: its mask lives in window-local coordinates, so a pan has to scroll the whole
+        /// buffer first and then patch the strips.
+        /// </summary>
+        private void BakeExposed(Map map)
+        {
+            int dx = winMinX - bakedMinX;
+            int dz = winMinZ - bakedMinZ;
+
+            float minTemp = float.PositiveInfinity;
+
+            if (dx != 0)
+            {
+                int x = dx > 0 ? bakedMinX + bakedW : winMinX;
+                minTemp = Mathf.Min(
+                    minTemp,
+                    BakeRect(map, new CellRect(x, winMinZ, Mathf.Abs(dx), winH)));
+            }
+
+            if (dz != 0)
+            {
+                int z = dz > 0 ? bakedMinZ + bakedH : winMinZ;
+                minTemp = Mathf.Min(
+                    minTemp,
+                    BakeRect(map, new CellRect(winMinX, z, winW, Mathf.Abs(dz))));
+            }
+
+            MarkBaked();
+
+            // A strip that found nothing cold must not close the gate the rest of the window
+            // is holding open. Keeping the stale lower value is harmless — those fragments
+            // discard — and the next cadence bake recomputes the real minimum.
+            if (minTemp < float.PositiveInfinity)
+            {
+                lastMinTemp = Mathf.Min(lastMinTemp, minTemp);
+            }
+
+            // These cells changed for certain, so there is no hash worth computing to prove
+            // it and the GPU copy is stale either way. Marking it unknown makes the next
+            // cadence bake re-decide instead of trusting a hash that no longer describes
+            // the texture.
+            uploadedHash = uint.MaxValue;
+            if (HasVisibleMist())
+            {
+                UploadMask();
+            }
+        }
+
+        private void UploadMask()
+        {
+            // Reachable only from the bake paths, which EnsureResources has already run, so
+            // the texture exists; the null-forgiving read is what keeps the draw path free
+            // of a check that can never fire.
+            Texture2D texture = maskTexture!;
+            texture.SetPixels32(maskPixels);
+            texture.Apply(false, false);
+        }
+
+        private void MarkBaked()
+        {
+            bakedMinX = winMinX;
+            bakedMinZ = winMinZ;
+            bakedW = winW;
+            bakedH = winH;
+        }
+
+        /// <summary>
+        /// True when the mask already holds valid data for a same-sized window that still
+        /// overlaps the current one, so a pan can be patched instead of rebaked.
+        /// </summary>
+        private bool CanBakeStrips()
+        {
+            return bakedW > 0
+                && bakedH > 0
+                && winW == bakedW
+                && winH == bakedH
+                && (winMinX != bakedMinX || winMinZ != bakedMinZ)
+                && Mathf.Abs(winMinX - bakedMinX) < winW
+                && Mathf.Abs(winMinZ - bakedMinZ) < winH;
+        }
+
+        /// <summary>
+        /// Clears <paramref name="dirty"/> and refills it from vanilla room data, returning
+        /// the lowest temperature it actually wrote (+infinity when it wrote nothing).
+        ///
+        /// Only enclosed interiors contribute: a room that uses the outdoor temperature (a
+        /// courtyard, a ruin, anything with more than a quarter of its ceiling missing) is
+        /// treated as outdoors and left alone, and so is a room exposed to vacuum. This is
+        /// exactly the "vanilla room cold, no outdoors" scope the effect is meant to cover,
+        /// and it keeps AO's own mist system untouched because nothing here reads AO's
+        /// fields.
+        /// </summary>
+        private float BakeRect(Map map, CellRect dirty)
+        {
+            ClearRect(dirty);
 
             float startTemp = VisualTweaksSettings.coldMistStartTemp;
             float minTemp = float.PositiveInfinity;
 
-            CellRect window = new CellRect(winMinX, winMinZ, winW, winH);
             IReadOnlyList<Room> rooms = map.regionGrid.AllRooms;
+            RegionGrid regionGrid = map.regionGrid;
+
+            // The mask as 32-bit words, so a run of identical cells is one Fill instead of
+            // one store per cell. Same view the heat haze uses; the texture upload still
+            // takes the Color32 array.
+            Span<uint> words = MemoryMarshal.Cast<Color32, uint>(maskPixels.AsSpan());
 
             // Mist in a vacuum would be nonsense, and space maps are AO's business.
             bool checkVacuum = map.Biome != null && map.Biome.inVacuum;
@@ -396,55 +597,77 @@ namespace VisualTweaks
                     continue;
                 }
 
-                // Only rooms that actually overlap the baked window count towards
-                // "is anything visible". A cold room on the far side of the map must
-                // not keep the quad alive: every fragment of it would discard.
-                if (!room.ExtentsClose.Overlaps(window))
-                {
-                    continue;
-                }
-
-                if (temp < minTemp)
-                {
-                    minTemp = temp;
-                }
-
                 byte value = EncodeTemperature(temp);
                 Color32 packed = new Color32(value, 0, 0, 255);
 
-                foreach (IntVec3 cell in room.Cells)
+                // Region-driven, not room-driven. Region.Cells walks the region's
+                // *bounding rectangle* and keeps the cells that resolve back to it, and
+                // Room.Cells/District.Cells wrap that in two more yield iterators. Doing
+                // the walk here instead costs the same membership test vanilla does, but
+                // only over the part of the rectangle that is on screen, and without the
+                // iterators. Measured in Tools/ColdMistBakeBench: ~2 ns/cell against
+                // ~16 ns/cell through Room.Cells on the same data, plus every cell of a
+                // half-visible room that used to be tested and thrown away.
+                List<Region> regions = room.Regions;
+                bool wrote = false;
+                for (int r = 0; r < regions.Count; r++)
                 {
-                    if (cell.x < winMinX
-                        || cell.x >= winMinX + winW
-                        || cell.z < winMinZ
-                        || cell.z >= winMinZ + winH)
+                    Region region = regions[r];
+                    CellRect extents = region.extentsClose;
+
+                    int minX = Mathf.Max(extents.minX, dirty.minX);
+                    int minZ = Mathf.Max(extents.minZ, dirty.minZ);
+                    int maxX = Mathf.Min(extents.maxX, dirty.maxX);
+                    int maxZ = Mathf.Min(extents.maxZ, dirty.maxZ);
+                    if (minX > maxX || minZ > maxZ)
                     {
                         continue;
                     }
 
-                    maskPixels[(mapHeight - 1 - cell.z) * mapWidth + cell.x] = packed;
+                    // A rectangular region *is* its extents, so no membership test is
+                    // needed and whole rows can be filled at memset speed. This is the
+                    // same trade the heat haze makes on rectangular rooms; doing it per
+                    // region rather than per room catches the common case where an
+                    // irregular room is still cut into rectangular regions.
+                    if (region.CellCount == extents.Width * extents.Height)
+                    {
+                        uint packedWord = PackWord(packed);
+                        for (int z = minZ; z <= maxZ; z++)
+                        {
+                            int row = (mapHeight - 1 - z) * mapWidth + minX;
+                            words.Slice(row, maxX - minX + 1).Fill(packedWord);
+                        }
+
+                        wrote = true;
+                        continue;
+                    }
+
+                    for (int z = minZ; z <= maxZ; z++)
+                    {
+                        int row = (mapHeight - 1 - z) * mapWidth;
+                        for (int x = minX; x <= maxX; x++)
+                        {
+                            if (regionGrid.GetRegionAt_NoRebuild_InvalidAllowed(new IntVec3(x, 0, z)) != region)
+                            {
+                                continue;
+                            }
+
+                            maskPixels[row + x] = packed;
+                            wrote = true;
+                        }
+                    }
+                }
+
+                // Only a room that actually painted something counts towards "is
+                // anything visible". A cold room on the far side of the map must not
+                // keep the quad alive: every fragment of it would discard.
+                if (wrote && temp < minTemp)
+                {
+                    minTemp = temp;
                 }
             }
 
-            lastMinTemp = minTemp;
-
-            // Nothing is cold enough to draw: leave the previous texture alone and
-            // skip the upload. The next bake that crosses the threshold refreshes it
-            // before the shader is allowed to draw.
-            if (!HasVisibleMist())
-            {
-                return;
-            }
-
-            uint hash = HashWindow(maskPixels);
-            if (hash == uploadedHash)
-            {
-                return;
-            }
-
-            uploadedHash = hash;
-            maskTexture.SetPixels32(maskPixels);
-            maskTexture.Apply(false, false);
+            return minTemp;
         }
 
         private static byte EncodeTemperature(float celsius)
@@ -454,15 +677,29 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Zeroes the window. A cell that lost its room (a wall built inside it, a
-        /// roof removed) must read as "no room" rather than keep an old temperature.
+        /// The same cell as one 32-bit word. Color32 lays its bytes out as r, g, b, a, so on
+        /// little-endian the word reads r | g &lt;&lt; 8 | b &lt;&lt; 16 | a &lt;&lt; 24. Only r
+        /// and a carry data here, and a row fill overwrites whole cells, so both come from
+        /// the packed value and nothing stale survives.
         /// </summary>
-        private void ClearWindow(Color32[] maskPixels)
+        private static uint PackWord(Color32 cell)
         {
-            for (int z = 0; z < winH; z++)
+            return (uint)cell.r
+                | ((uint)cell.g << 8)
+                | ((uint)cell.b << 16)
+                | ((uint)cell.a << 24);
+        }
+
+        /// <summary>
+        /// Zeroes a rectangle. A cell that lost its room (a wall built inside it, a roof
+        /// removed) must read as "no room" rather than keep an old temperature.
+        /// </summary>
+        private void ClearRect(CellRect rect)
+        {
+            for (int z = rect.minZ; z <= rect.maxZ; z++)
             {
-                int row = (mapHeight - 1 - (winMinZ + z)) * mapWidth + winMinX;
-                Array.Clear(maskPixels, row, winW);
+                int row = (mapHeight - 1 - z) * mapWidth + rect.minX;
+                Array.Clear(maskPixels, row, rect.Width);
             }
         }
 
@@ -471,6 +708,11 @@ namespace VisualTweaks
         /// because the mask is anchored in map space: two identical-looking windows
         /// one room apart must still be uploaded, while a static camera over static
         /// temperatures hashes the same and skips the upload entirely.
+        ///
+        /// One 32-bit read per cell instead of a Color32 fetch plus two shifts. The whole
+        /// word is hashed rather than just r and a: every byte of a cell is written either
+        /// by the row fill (all four from the packed value) or by the clear (all four zero),
+        /// so g and b can never be stale.
         /// </summary>
         private uint HashWindow(Color32[] maskPixels)
         {
@@ -480,13 +722,14 @@ namespace VisualTweaks
             hash = (hash ^ (uint)winW) * 16777619u;
             hash = (hash ^ (uint)winH) * 16777619u;
 
+            ReadOnlySpan<uint> words = MemoryMarshal.Cast<Color32, uint>(maskPixels.AsSpan());
             for (int z = 0; z < winH; z++)
             {
                 int row = (mapHeight - 1 - (winMinZ + z)) * mapWidth + winMinX;
+                ReadOnlySpan<uint> line = words.Slice(row, winW);
                 for (int x = 0; x < winW; x++)
                 {
-                    Color32 cell = maskPixels[row + x];
-                    hash = (hash ^ (uint)(cell.r | (cell.a << 8))) * 16777619u;
+                    hash = (hash ^ line[x]) * 16777619u;
                 }
             }
 
@@ -552,9 +795,14 @@ namespace VisualTweaks
             quadHeight = -1;
             quadMinX = int.MinValue;
             quadMinZ = int.MinValue;
+            bakedMinX = int.MinValue;
+            bakedMinZ = int.MinValue;
+            bakedW = -1;
+            bakedH = -1;
             winW = 0;
             winH = 0;
             lastBake = float.NegativeInfinity;
+            lastBakeTick = -1;
             lastMinTemp = float.PositiveInfinity;
             wasPaused = false;
         }
