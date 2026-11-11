@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using Verse;
@@ -34,8 +35,9 @@ namespace VisualTweaks
         // minutes). The leftover fraction below is the stable tail that turns the fade back
         // into a transition. 0.6 keeps the blend soft (6 frames at 10 Hz) without ever
         // touching 1 only on the restart frame.
-        private const float FadeFraction = 0.6f;
-        private const float MinFadeSeconds = 0.02f;
+        private const float FadeFraction = 0.9f;
+        private const float FadeFloorFraction = 0.35f;
+        private const float FadeFrames = 2.4f;
 
         // Below ~50 ms the bake cost stops paying for itself (the screen cannot show more
         // than one update per frame anyway); above a second the delay becomes obvious.
@@ -253,6 +255,95 @@ namespace VisualTweaks
         private float[] mistSmoothState = Array.Empty<float>();
         private bool smoothInitialized;
 
+        // --- diagnostics only: what the screen actually showed --------------------
+        // Every other probe in this file answers "did a pointer/uniform/texture change".
+        // None of them answers the only question a flash report is really asking: did the
+        // *picture* change between two frames? Two CPU copies answer it.
+        //
+        //   shadowPixels / shadowMinX..  a copy of the last gas upload, i.e. the content
+        //                                the texture that becomes `previous` holds. This
+        //                                mirrors exactly what _Params7 claims, because
+        //                                TrackWindows sets PrevMin from the same upload.
+        //   screenComposited             the composite this renderer drew last frame,
+        //                                sampled on a fixed world grid over the view.
+        //
+        // With those, each frame can reproduce the shader's own mix (mix(prev, cur, fade))
+        // in world space and measure the step. A large step on a frame where nothing else
+        // moved is a visible jump; a large step that the fade hides is not. That is the
+        // distinction the pointer-level snapshots could never make.
+        private Color32[] shadowPixels = Array.Empty<Color32>();
+        // The half of the ping-pong that was uploaded last, i.e. the CPU side of the
+        // texture bound as _GasTexCur. UploadTexture swaps the staging buffers, so after
+        // an upload the picture lives in what used to be `sent`.
+        private Color32[] displayedGas = Array.Empty<Color32>();
+        private int[] sampleX = Array.Empty<int>();
+        private int[] sampleZ = Array.Empty<int>();
+
+        /// <summary>
+        /// The window each gas texture was actually uploaded with, recorded at upload time.
+        ///
+        /// Everything else about the cross-fade is bookkeeping: TrackWindows *says* which
+        /// window the previous texture holds, and _Params7 is derived from what it says. If
+        /// that claim is ever wrong the shader samples a texture through the wrong mapping
+        /// and the whole field is drawn displaced by exactly the difference — for as long as
+        /// it lasts, and then it snaps back when the next upload rewrites the claim. That is
+        /// the "it jumps somewhere else for a frame and comes straight back" report, and no
+        /// amount of diffing uniform values against each other can see it, because they are
+        /// all derived from the same claim. Recording the truth separately can.
+        /// </summary>
+        private struct TexWindowRecord
+        {
+            public Texture2D? Tex;
+            public int X;
+            public int Z;
+            public int W;
+            public int H;
+        }
+
+        private TexWindowRecord gasWindowA;
+        private TexWindowRecord gasWindowB;
+        private int shadowMinX;
+        private int shadowMinZ;
+        private int shadowW;
+        private int shadowH;
+        private float[] screenComposited = Array.Empty<float>();
+        private bool screenPrimed;
+        private int screenSize;
+        private int latticeCount;
+        private int latticeStride = 4;
+        private float latticeRebuiltAt = float.NegativeInfinity;
+
+        // Screen-space box of the drawn quad, in pixels (see RecordQuadProjection).
+        private bool projectValid;
+        private float projectMinX;
+        private float projectMinY;
+        private float projectMaxX;
+        private float projectMaxY;
+
+        /// <summary>Samples per axis of the composite snapshot (24x24 over the view).</summary>
+        private const int ScreenGrid = 24;
+
+        /// <summary>Search radius, in cells, of the frame-to-frame displacement fit.</summary>
+        private const int AlignRadius = 4;
+
+        /// <summary>How much better the shifted fit has to be before it counts as a move.</summary>
+        private const float AlignGain = 0.25f;
+
+        /// <summary>Fewest compared samples the displacement fit will trust.</summary>
+        private const int MinAlignPoints = 12;
+
+        /// <summary>Cells below this density (0..1 of one channel) are not worth sampling.</summary>
+        private const float LatticeFloor = 0.003f;
+
+        /// <summary>
+        /// How often the sample set is rebuilt. Long enough that the set stays fixed across
+        /// many frames (the comparison needs that), short enough to follow a pan.
+        /// </summary>
+        private const float LatticeSeconds = 0.2f;
+
+        /// <summary>Mean |delta| a frame needs before it is written as a JUMP line.</summary>
+        private const float ScreenJumpMean = 0.035f;
+
         // The region of the *current* window whose smoothing state is valid, in window
         // coordinates. The state is indexed by texture row/column, and those are anchored
         // at the window origin, so after a pan the rows the previous bake did not cover
@@ -428,11 +519,43 @@ namespace VisualTweaks
         private float lastTimedRefresh = float.NegativeInfinity;
         private float fadeStart = float.NegativeInfinity;
 
-        // How long the blend from the previous snapshot to the current one takes. Read on
-        // every frame, so a change to the publish period (game speed, AO interval) shifts
-        // it together with the timer instead of letting one outrun the other.
-        private float FadeDuration =>
-            Mathf.Max(MinFadeSeconds, refreshPeriod * FadeFraction);
+        // How long the blend from the previous snapshot to the current one takes, frozen at
+        // the moment the blend restarts.
+        //
+        // It used to be recomputed from refreshPeriod on every frame, which is a function of
+        // the publish clock only — and that is the problem. At 60 fps a 60 ms blend is four
+        // drawn frames and reads as a dissolve; at 15 fps it is a single step, i.e. a hard
+        // cut with extra bookkeeping. "Worse the lower the frame rate" is exactly this: the
+        // blend exists, but no frame ever samples it in between. Widening it to at least a
+        // couple of frames is what makes the same publish look like a blend at any frame
+        // rate; freezing it at the restart keeps the value monotone, which a per-frame
+        // recompute could not promise (a change mid-climb moves fade backwards, and a fade
+        // that steps backwards is a visible flash of its own).
+        private float fadeSpan = DefaultRefreshSeconds * FadeFraction;
+
+        private float NextFadeSpan()
+        {
+            float period = Mathf.Max(0.01f, refreshPeriod);
+            float frame = Time.smoothDeltaTime;
+            if (!(frame > 0.0001f) || frame > 0.5f)
+            {
+                frame = 0.016f;
+            }
+
+            // Upper bound stays under one publish period: a blend that outlives its own
+            // publish would still be mixing two generations when the third arrives.
+            return Mathf.Clamp(frame * FadeFrames, period * FadeFloorFraction, period * FadeFraction);
+        }
+
+        private void RestartFade(float realtime)
+        {
+            fadeStart = realtime;
+            fadeSpan = NextFadeSpan();
+        }
+
+        // Left as a property for the two call sites that only need the current width of
+        // the blend; it now reports the frozen value.
+        private float FadeDuration => fadeSpan;
 
         // Ambient drift history, in noise units. The offset is a path integral of the
         // wind, not wind * absolute time: the latter teleported the whole pattern
@@ -686,13 +809,23 @@ namespace VisualTweaks
                     + " timerDue=" + timerDue + " incremental=" + incremental
                     + " rectMoved=" + rectMoved + " forceUpload=" + forceUpload);
 
-                // Hand-restored fade guard (A/B). A timed publish that lands on a moving
-                // window must not restart the cross-fade either: it would leave the
-                // following frames fading in from the old window's picture. See the
-                // fade guard further down.
-                bool restartFade = timerDue && !rectMoved;
+                // Restart on a window move as well as on a timed publish.
+                //
+                // The pair this upload just replaced holds the picture that was on screen
+                // one frame ago, and _Params7 can sample it at its own origin, so fade = 0
+                // shows exactly what the previous frame showed and the following frames
+                // walk forward from there. Not restarting left fade pinned at 1, which
+                // showed the freshly baked texture immediately — a hard cut on precisely
+                // the frames whose content had moved the most.
+                //
+                // This used to be `timerDue && !rectMoved` because the Draw layer forced
+                // fade back to 1 on every moved frame; the two cancelled into a 0 -> 1 step
+                // within one frame, which is the flash. With that guard gone (the shader can
+                // now blend across origins), a restart is safe and is what makes panning
+                // and zooming smooth.
+                bool restartFade = timerDue || rectMoved;
                 GasFieldDiagnostics.Put("refresh.restartFade", restartFade);
-                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("fade guard at Refresh: timerDue=" + timerDue
+                if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("fade restart: timerDue=" + timerDue
                     + " rectMoved=" + rectMoved + " -> restartFade=" + restartFade);
 
                 Refresh(map, realtime, incremental, restartFade);
@@ -720,27 +853,20 @@ namespace VisualTweaks
                 ? 1f
                 : Mathf.Clamp01((realtime - fadeStart) / FadeDuration);
 
-            // Hand-restored fade guard (A/B). A cross-fade is only meaningful between two
-            // pictures of the same window: on a frame that moved its *origin*, fade < 1
-            // draws the whole layer from the previous texture, baked at the old origin —
-            // one frame of "the layer jumped back to where the camera was, then snapped
-            // forward". The frame-rate gate was the failed fix (it flashed on every speed
-            // change); the deterministic condition is the origin, not the window.
+            // No hard cut at this layer any more.
             //
-            // A window that only changed *size* keeps its origin, so the uv mapping is
-            // shared and the blend stays sound. Forcing fade to 1 there was the second
-            // source of flashes: ZoomBucket hysteresis hops the window by one quantum
-            // while the camera zooms (measured 14 hops in 0.9 s), and every hop was a
-            // full bake plus a hard cut, i.e. one flash per hop. UploadTexture already
-            // cuts the pair itself when the previous picture does not cover the new
-            // window (PrevCoversView), so the guard does not have to.
+            // UploadTexture already decides, per publish, whether the old texture answers
+            // for the current view (PrevCoversView) and cuts the pair when it does not.
+            // When it does, _Params7 lets the shader sample that texture at its own origin,
+            // so a window that moved blends like any other publish.
+            //
+            // Forcing fade to 1 on every moved frame — what this used to do — is why
+            // panning and zooming flashed at all. A moving camera changes the window on
+            // almost every frame, so the cross-fade was overridden on exactly the frames
+            // whose content differed most, and the size of the step scales with the frame
+            // interval: the lower the frame rate, the larger the jump. That is the
+            // "frequent when the frame rate is low, rare when it is high" report, measured.
             float fadeBeforeGuard = fade;
-            if (rectMoved && originMoved)
-            {
-                fade = 1f;
-            }
-
-            GasFieldDiagnostics.Flag("fadeGuardApplied", rectMoved && originMoved);
             GasFieldDiagnostics.Put("fade.fadeBeforeGuard", fadeBeforeGuard);
             GasFieldDiagnostics.Put("fade.fadeAfterGuard", fade);
 
@@ -773,6 +899,19 @@ namespace VisualTweaks
                 quadBeforeX != quadMinX || quadBeforeZ != quadMinZ || quadBeforeW != quadWidth);
             GasFieldDiagnostics.Put("window.quadMinX", quadMinX);
             GasFieldDiagnostics.Put("window.quadMinZ", quadMinZ);
+
+            // Where the quad actually lands on screen, in pixels.
+            //
+            // Every other probe in this file reads the CPU-side picture and the uniforms, and
+            // every one of them came back clean across four logs: the bake matches the
+            // solver, the uv matches the window, the previous pair's claim matches what it
+            // holds, and the noise offset is monotone. If the field still moves on screen
+            // with all of that true, the difference is in the projection — the mesh, the
+            // camera, or the transform — and that is the one thing none of them look at.
+            // Two WorldToScreenPoint calls a frame settle it: a quad that jumps for one
+            // frame shows up here as a pixel offset, and a quad that does not cannot be
+            // responsible for what the eye reports.
+            RecordQuadProjection();
 
             if (width <= 0 || height <= 0)
             {
@@ -891,6 +1030,14 @@ namespace VisualTweaks
             GasFieldDiagnostics.Put("clock.sincePublish", sincePublish);
             GasFieldDiagnostics.Put("clock.sincePublishSaturated",
                 shaderClock - noisePublishTime >= FlowStepLimit);
+
+            // The exact quantity the shader feeds into `off0`: the accumulated drift plus
+            // the extrapolation since the last bake. It must be monotone — the shader has
+            // no other state — so a frame where it goes backwards is a one-frame jump of
+            // the whole *pattern* with no density change behind it. Reported as two
+            // scalars here and checked frame to frame by the diagnostics.
+            GasFieldDiagnostics.Put("noise.offsetX", ambientDx + ambientVelX * (float)sincePublish);
+            GasFieldDiagnostics.Put("noise.offsetZ", ambientDz + ambientVelZ * (float)sincePublish);
             material.SetVector(
                 Params9Id,
                 new Vector4(
@@ -958,6 +1105,41 @@ namespace VisualTweaks
             GasFieldDiagnostics.Put("tex.widePrevEqualsCur", ReferenceEquals(wideCur, widePrev));
             GasFieldDiagnostics.Put("tex.material", material?.name ?? "null");
             GasFieldDiagnostics.Put("tex.mesh", mesh?.name ?? "null");
+
+            // Invariant, checked on the state the frame is actually drawn from: the texture
+            // bound as current must be the one _Params6 describes. Any disagreement is a
+            // whole-field displacement by exactly the difference — which is what "it jumps
+            // to another place" looks like, and nothing else in the snapshot would say so.
+            bool uvStale = gasTrack.Valid
+                && (gasTrack.MinX != rectMinX
+                    || gasTrack.MinZ != rectMinZ
+                    || gasTrack.WinW < winW
+                    || gasTrack.WinH < winH);
+            GasFieldDiagnostics.Flag("uvStale", uvStale);
+            GasFieldDiagnostics.Put("geom.uvOffsetX", gasTrack.Valid ? rectMinX - gasTrack.MinX : 0);
+            GasFieldDiagnostics.Put("geom.uvOffsetZ", gasTrack.Valid ? rectMinZ - gasTrack.MinZ : 0);
+
+            // And the same check for the previous half: compare the window _Params7 claims
+            // against the window that texture was really uploaded with. A nonzero shift here
+            // means the cross-fade is drawing the old picture at the wrong origin — a
+            // whole-field displacement for exactly as long as the wrong claim survives.
+            if (gasPrevious != null && gasTrack.Valid)
+            {
+                TexWindowRecord held = ReferenceEquals(gasPrevious, gasSmoothA) ? gasWindowA : gasWindowB;
+                if (ReferenceEquals(held.Tex, gasPrevious))
+                {
+                    int shiftX = gasTrack.PrevMinX - held.X;
+                    int shiftZ = gasTrack.PrevMinZ - held.Z;
+                    GasFieldDiagnostics.Put("geom.prevShiftX", shiftX);
+                    GasFieldDiagnostics.Put("geom.prevShiftZ", shiftZ);
+                    GasFieldDiagnostics.Flag("prevWindowMismatch", shiftX != 0 || shiftZ != 0);
+                }
+            }
+
+            // Measure the composite the shader is about to draw, *before* drawing it: the
+            // jump this reports is the step the eye is about to see, not a reconstruction
+            // from uniforms after the fact.
+            SampleComposite(realtime, fade, sincePublish);
 
             Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0);
 
@@ -1238,7 +1420,25 @@ namespace VisualTweaks
             // hops the window between 144 and 168 every frame, and each hop is a full
             // rebake. The delay makes the shrink follow a real zoom gesture instead of the
             // jitter riding on top of it.
-            if (wantWinW > winW)
+            //
+            // Growing needs a dead band too, and leaving it out was the remaining source
+            // of the jump: grow-on-contact plus delayed-shrink turns a view that jitters
+            // across a bucket edge into a clean 1 Hz sawtooth (grow now, shrink 30 frames
+            // later, grow again). Requiring a full quantum to grow costs at most 8 cells of
+            // the 34-cell margin — still 13 per side against PanSlack's 9 — and it makes
+            // the window hold still for a view that is only wobbling.
+            //
+            // The dead band must never be allowed to starve the margin, though. Holding the
+            // window 8 cells under wantWinW, with snapping eating up to 7 more, left the
+            // east margin at 2 cells; the slack test then failed on every frame and
+            // recentred forever — 3477 "recentre" notes in 30 s, most of them slack=False
+            // with no border flush at all. The floor below breaks that loop: the window may
+            // lag a bucket behind for hysteresis, but never behind the view plus both
+            // margins.
+            int minWinW = Mathf.Min(width, viewW + 2 * BakeMargin);
+            int minWinH = Mathf.Min(height, viewH + 2 * BakeMargin);
+
+            if (winW < minWinW || wantWinW > winW + WindowQuantum)
             {
                 winW = wantWinW;
                 windowSurplusWFrames = 0;
@@ -1258,7 +1458,7 @@ namespace VisualTweaks
                 windowSurplusWFrames = 0;
             }
 
-            if (wantWinH > winH)
+            if (winH < minWinH || wantWinH > winH + WindowQuantum)
             {
                 winH = wantWinH;
                 windowSurplusHFrames = 0;
@@ -1290,14 +1490,44 @@ namespace VisualTweaks
                 && rectMinX + winW <= mapWidth
                 && rectMinZ + winH <= mapHeight;
 
+            // A side already flush with the map border can never have PanSlack of margin:
+            // the clamp parked it there and no camera movement can push it further. Testing
+            // the slack on such a side is not merely useless, it is the bug — it makes
+            // viewInsideSlack permanently false, so the *un-pinned* axes get recentred
+            // every single frame and follow the view's one-cell jitter.
+            //
+            // That is the "layer jumps while the camera is still" report, and it is exactly
+            // what the log shows: rectMinX pinned at 0 (camera viewMinX -168, clipped to 0)
+            // while rectMinZ walks 50 <-> 48 twice per publish, each step a full rebake.
+            bool flushWest = rectMinX <= 0;
+            bool flushEast = rectMinX + winW >= mapWidth;
+            bool flushNorth = rectMinZ <= 0;
+            bool flushSouth = rectMinZ + winH >= mapHeight;
+
             bool viewInsideSlack =
-                rectMinX + PanSlack <= view.minX
-                && view.maxX <= rectMinX + winW - 1 - PanSlack
-                && rectMinZ + PanSlack <= view.minZ
-                && view.maxZ <= rectMinZ + winH - 1 - PanSlack;
+                (flushWest || rectMinX + PanSlack <= view.minX)
+                && (flushEast || view.maxX <= rectMinX + winW - 1 - PanSlack)
+                && (flushNorth || rectMinZ + PanSlack <= view.minZ)
+                && (flushSouth || view.maxZ <= rectMinZ + winH - 1 - PanSlack);
 
             if (resize || !windowFitsMap || !viewInsideSlack)
             {
+                // Which of the three fired, and what the window is about to become. Without
+                // this the log only shows the consequences (a moved rect, a rebake) and the
+                // reason has to be reconstructed from the surrounding numbers — the last two
+                // rounds were spent doing exactly that.
+                if (GasFieldDiagnostics.Enabled)
+                {
+                    GasFieldDiagnostics.Note("recentre: resize=" + resize
+                        + " fits=" + windowFitsMap
+                        + " slack=" + viewInsideSlack
+                        + " flush=" + (flushWest ? "W" : "") + (flushEast ? "E" : "")
+                        + (flushNorth ? "N" : "") + (flushSouth ? "S" : "")
+                        + " view=(" + view.minX + "," + view.minZ + ")-("
+                        + view.maxX + "," + view.maxZ + ")"
+                        + " win=(" + rectMinX + "," + rectMinZ + ") " + winW + "x" + winH);
+                }
+
                 int minX = Mathf.Clamp(view.minX - BakeMargin, 0, Mathf.Max(0, mapWidth - winW));
                 int minZ = Mathf.Clamp(view.minZ - BakeMargin, 0, Mathf.Max(0, mapHeight - winH));
 
@@ -1490,11 +1720,15 @@ namespace VisualTweaks
         /// mist snapshot is copied first: the temporal-patch blend must not modify AO's
         /// published array, which gameplay code also reads.
         ///
-        /// <paramref name="restartFade"/> is true only for a 10 Hz publish on a stable
-        /// window. A refresh forced by a camera/window move runs on the camera's schedule
-        /// (possibly every frame) and must not restart the cross-fade: pinning fade to 0
-        /// there is what made the whole field appear to freeze while panning, and
-        /// restarting it on a moved window is what made the layer flash for one frame.
+        /// <paramref name="restartFade"/> is true for a timed publish *and* for a window
+        /// move. Both upload a new texture, and the half that stops being live holds what
+        /// the screen showed one frame ago; _Params7 samples it at its own origin, so
+        /// starting the blend again there is continuous rather than a jump.
+        ///
+        /// It was once limited to stable windows, because the Draw layer forced fade back
+        /// to 1 whenever the window moved — the restart and the guard cancelled into a
+        /// single-frame 0 -> 1 step, which is exactly the flash. That guard is gone now
+        /// that the shader can blend a pair with different origins.
         /// </summary>
         private void Refresh(Map map, float realtime, bool incremental, bool restartFade)
         {
@@ -1524,7 +1758,7 @@ namespace VisualTweaks
                 lastRefresh = realtime;
                 if (wrote && restartFade)
                 {
-                    fadeStart = realtime;
+                    RestartFade(realtime);
                 }
 
                 return;
@@ -1541,21 +1775,14 @@ namespace VisualTweaks
 
             lastRefresh = realtime;
 
-            // Only a 10 Hz publish on a stable window restarts the cross-fade. A
-            // window-move refresh runs at whatever rate the camera dictates (potentially
-            // every frame), so letting it reset fadeStart pinned the display at fade 0 —
-            // the previous texture — for as long as the camera moved; and a publish that
-            // does restart it on a moved window draws one frame from that old-window
-            // picture (Draw forces fade to 1 on those frames). UploadTexture already cuts
-            // the fade by pointing both halves at the fresh texture when the origin
-            // changed, so a moved window needs no fade restart to look right.
-            //
             // A publish that wrote nothing has nothing to fade *from*: restarting there
             // re-exposes the previous texture, and while the gate holds a channel empty
-            // that texture is the last one that had content — the ghost.
+            // that texture is the last one that had content — the ghost. That is the only
+            // condition left; the window-stability rule that used to be here went with the
+            // Draw-side guard (see the parameter description).
             if (wrote && restartFade)
             {
-                fadeStart = realtime;
+                RestartFade(realtime);
             }
         }
 
@@ -2545,14 +2772,20 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Diagnostic: compares the baked red channel with the solver at the same cell and at
-        /// +/-8 cells on each axis, and logs the match rate plus the quad/uv the draw will
-        /// use. A displacement of the texture shows up as a high match rate at a nonzero
-        /// offset; a correct one as ~1.0 at offset zero.
+        /// Diagnostic: how far the baked texels sit from the solver, at the correct offset
+        /// and at +/-8 cells on each axis.
+        ///
+        /// Uses the sum of all four channels and a mean absolute error, not the red channel
+        /// with exact equality. The old version counted `baked.r == solver.r`, which is
+        /// meaningless on a faint field: an ordinary cloud is 1..3 per channel, the temporal
+        /// filter shifts every one of those by one, and a gas type that is not red leaves
+        /// the channel at zero — the last log had nz = 0 and the check silently never ran.
+        /// The mean error is scale-free, so the argmin over the offsets still finds a
+        /// displacement of a handful of bytes.
         /// </summary>
         private void LogGasSignature(GasGrid gasGrid)
         {
-            if (!VisualTweaksLog.GasTraceEnabled
+            if ((!VisualTweaksLog.GasTraceEnabled && !GasFieldDiagnostics.Enabled)
                 || traceRealtime - lastSignatureLog < 0.5f)
             {
                 return;
@@ -2561,31 +2794,30 @@ namespace VisualTweaks
             lastSignatureLog = traceRealtime;
 
             int nz = 0;
-            int eq0 = 0, eqxp = 0, eqxm = 0, eqzp = 0, eqzm = 0;
+            long err0 = 0, errx = 0, errz = 0;
             int stride = Mathf.Max(1, winW / 40);
 
             for (int z = 2; z < winH - 2; z += stride)
             {
                 for (int x = 2; x < winW - 2; x += stride)
                 {
-                    int baked = gasSmoothPixels[(height - 1 - z) * width + x].r;
+                    Color32 c = gasSmoothPixels[(height - 1 - z) * width + x];
+                    int baked = c.r + c.g + c.b + c.a;
                     if (baked == 0)
                     {
                         continue;
                     }
 
-                    nz++;
                     int index = (rectMinZ + z) * mapWidth + rectMinX + x;
                     if (index < 0 || index + 8 >= mapWidth * mapHeight)
                     {
                         continue;
                     }
 
-                    if (baked == (int)(gasGrid.GetDirect(index) & 0xFFu)) eq0++;
-                    if (baked == (int)(gasGrid.GetDirect(index + 8) & 0xFFu)) eqxp++;
-                    if (baked == (int)(gasGrid.GetDirect(index - 8) & 0xFFu)) eqxm++;
-                    if (baked == (int)(gasGrid.GetDirect(index + 8 * mapWidth) & 0xFFu)) eqzp++;
-                    if (baked == (int)(gasGrid.GetDirect(index - 8 * mapWidth) & 0xFFu)) eqzm++;
+                    nz++;
+                    err0 += Math.Abs(baked - GasSum(gasGrid.GetDirect(index)));
+                    errx += Math.Abs(baked - GasSum(gasGrid.GetDirect(index + 8)));
+                    errz += Math.Abs(baked - GasSum(gasGrid.GetDirect(index + 8 * mapWidth)));
                 }
             }
 
@@ -2594,12 +2826,31 @@ namespace VisualTweaks
                 return;
             }
 
+            // Also into the frame snapshot, so every report carries a direct answer to
+            // "is the field drawn where the solver says it is".
+            float e0 = err0 / (float)nz;
+            float ex = errx / (float)nz;
+            float ez = errz / (float)nz;
+            GasFieldDiagnostics.Put("sig.err0", e0);
+            GasFieldDiagnostics.Put("sig.errCellX", ex);
+            GasFieldDiagnostics.Put("sig.errCellZ", ez);
+            GasFieldDiagnostics.Put("sig.cells", nz);
+            GasFieldDiagnostics.Flag("sigMisplaced", e0 > 1f && (e0 > ex * 1.5f || e0 > ez * 1.5f));
+
             VisualTweaksLog.GasTrace(
                 "sig win (" + rectMinX + "," + rectMinZ + ") " + winW + "x" + winH
                 + " nz=" + nz
-                + $" eq0={100f * eq0 / nz:F1}% eq+x={100f * eqxp / nz:F1}% eq-x={100f * eqxm / nz:F1}%"
-                + $" eq+z={100f * eqzp / nz:F1}% eq-z={100f * eqzm / nz:F1}%"
+                + $" err0={e0:F2} err+x={ex:F2} err+z={ez:F2}"
                 + " quad (" + quadMinX + "," + quadMinZ + ") " + quadWidth + "x" + quadHeight);
+        }
+
+        /// <summary>Sum of the four packed gas channels, for the signature comparison.</summary>
+        private static int GasSum(uint packed)
+        {
+            return (int)(packed & 0xFFu)
+                + (int)((packed >> 8) & 0xFFu)
+                + (int)((packed >> 16) & 0xFFu)
+                + (int)((packed >> 24) & 0xFFu);
         }
 
         /// <summary>
@@ -3156,20 +3407,36 @@ namespace VisualTweaks
                 GasFieldDiagnostics.Put("upload.rectMinX", rectMinX);
                 GasFieldDiagnostics.Put("upload.rectMinZ", rectMinZ);
 
-                if (sameOrigin && prevCovers)
+                // Coverage is the only thing that decides whether the old texture can be
+                // blended from — *not* whether the origin happens to match.
+                //
+                // This used to require sameOrigin, and that one condition is what made the
+                // layer jump on every pan and every zoom. A moving camera changes the
+                // origin constantly, so the cross-fade was cut on essentially every upload
+                // and each publish landed as a hard cut. At 60 fps the step between two
+                // publishes is small enough to hide; at 20 fps it is three times larger,
+                // which is exactly the "worse the lower the frame rate" report.
+                //
+                // _Params7 already carries the mapping of the window the previous texture
+                // holds (set right next to _Params6, from gasTrack.PrevMin), so a pair with
+                // different origins samples both halves correctly and the overlap — the same
+                // world cells in both — blends to the same value. The earlier note here
+                // about the two mappings drifting out of lockstep describes the state before
+                // _Params7 existed.
+                if (prevCovers)
                 {
-                    // Always the old texture: same origin, so _Params6 already describes it.
+                    // Always the old texture, at whatever origin _Params7 describes.
                     previous = current;
                 }
                 else
                 {
-                    // Either the window moved or the previous window does not contain the
-                    // view, so part of what this quad draws was never baked into it. Sampling
-                    // it anyway — even through its own uv — reads the cleared ring, or with
-                    // Clamp its edge texels, and the newly exposed strip blends in from the
-                    // wrong picture for one refresh interval. The bake just filled the whole
-                    // window, so cut: previous and current point at the same texture for this
-                    // publish, which makes the fade a no-op.
+                    // The previous picture does not contain the view, so part of what this
+                    // quad draws was never baked into it. Sampling it anyway — even through
+                    // its own uv — reads the cleared ring, or with Clamp its edge texels,
+                    // and the newly exposed strip blends in from the wrong picture for one
+                    // refresh interval. The bake just filled the whole window, so cut:
+                    // previous and current point at the same texture for this publish,
+                    // which makes the fade a no-op.
                     previous = write;
                     previousIsFresh = true;
                     GasFieldDiagnostics.Flag("crossFadeCut", true);
@@ -3197,6 +3464,14 @@ namespace VisualTweaks
             write.Apply(false, false);
             current = write;
 
+            // The window the *previous* half holds, read before TrackWindows overwrites it.
+            // The diagnostic copy below needs it: the previous texture was baked at this
+            // window, not at the one this upload is writing.
+            int prevWindowX = track.MinX;
+            int prevWindowZ = track.MinZ;
+            int prevWindowW = track.WinW;
+            int prevWindowH = track.WinH;
+
             TrackWindows(track, previousIsFresh);
             GasFieldDiagnostics.Flag(channel == "gas" ? "gasUploaded" : "mistUploaded", true);
             GasFieldDiagnostics.Flag(channel == "gas" ? "gasPreviousFresh" : "mistPreviousFresh",
@@ -3210,6 +3485,53 @@ namespace VisualTweaks
             GasFieldDiagnostics.Put("upload.trackPrevMinXAfter", track.PrevMinX);
             GasFieldDiagnostics.Put("upload.trackPrevMinZAfter", track.PrevMinZ);
             Swap(ref pixels, ref sent);
+
+            // Diagnostic bookkeeping for the composite metric. After the swap the two
+            // aliases have traded places: `sent` now holds the bytes that were just
+            // uploaded (what the shader samples as _GasTexCur), and `pixels` holds the
+            // *other* buffer — the one uploaded one publish earlier, which is exactly what
+            // `previous` now points at.
+            //
+            // This had them backwards. The shadow was copied from `sent` *after* the swap,
+            // i.e. from the new picture, so the "previous" half of every reconstructed
+            // composite was the current one: the metric could only ever report cur against
+            // cur. That is why contentDiff was exactly 0.0000 for two hundred samples and
+            // why the alignment kept finding no shift — it was blending a picture with
+            // itself.
+            if (GasFieldDiagnostics.Enabled && ReferenceEquals(track, gasTrack))
+            {
+                displayedGas = sent;
+                if (previousIsFresh)
+                {
+                    // Both halves were pointed at the fresh texture (a cut), so "previous"
+                    // is this upload.
+                    CaptureShadow(sent, rectMinX, rectMinZ, winW, winH);
+                }
+                else
+                {
+                    CaptureShadow(pixels, prevWindowX, prevWindowZ, prevWindowW, prevWindowH);
+                }
+
+                // Record what this texture really holds, next to what TrackWindows is about
+                // to claim it holds. The two are compared on the frame the pair is drawn.
+                TexWindowRecord record = new TexWindowRecord
+                {
+                    Tex = write,
+                    X = rectMinX,
+                    Z = rectMinZ,
+                    W = winW,
+                    H = winH,
+                };
+                if (ReferenceEquals(write, gasSmoothA))
+                {
+                    gasWindowA = record;
+                }
+                else
+                {
+                    gasWindowB = record;
+                }
+            }
+
             return true;
         }
 
@@ -3222,6 +3544,451 @@ namespace VisualTweaks
         /// from wherever the window used to be, and the halo shows it. Clearing it makes
         /// the halo fade out at the window edge instead.
         /// </summary>
+        /// <summary>
+        /// Keeps a CPU copy of the gas staging buffer as it is uploaded, together with the
+        /// window it was baked for. Called from UploadTexture *before* the ping-pong swap,
+        /// so from the next frame on it describes `previous` — the half the shader samples
+        /// through _Params7.
+        /// </summary>
+        private void CaptureShadow(Color32[] pixels, int originX, int originZ, int windowW, int windowH)
+        {
+            if (shadowPixels.Length != pixels.Length)
+            {
+                shadowPixels = new Color32[pixels.Length];
+            }
+
+            Array.Copy(pixels, shadowPixels, pixels.Length);
+            shadowMinX = originX;
+            shadowMinZ = originZ;
+            shadowW = windowW;
+            shadowH = windowH;
+        }
+
+        /// <summary>
+        /// Rebuilds the sample set: the cells that actually hold gas, inside the view, with
+        /// a stride that adapts to how much of the window is lit.
+        ///
+        /// A uniform grid is the wrong instrument for this field. An ordinary cloud lights
+        /// 5% of the window, so a 24x24 grid over the view spends 95% of its points on
+        /// empty cells: the mean delta is divided by 20 and the correlation is fitted to
+        /// noise. Sampling the lit texels instead makes every point carry information, and
+        /// the stride feedback keeps the count near the capacity at any zoom level.
+        /// </summary>
+        private void RebuildLattice(float realtime, float fade, out double contentSum, out int contentCount)
+        {
+            contentSum = 0.0;
+            contentCount = 0;
+            latticeRebuiltAt = realtime;
+            latticeCount = 0;
+
+            int cap = sampleX.Length;
+            if (cap == 0 || winW <= 0 || winH <= 0)
+            {
+                return;
+            }
+
+            int stride = Mathf.Clamp(latticeStride, 1, 16);
+            bool overflow = false;
+
+            for (int z = 0; z < winH; z += stride)
+            {
+                int wz = rectMinZ + z;
+                if (wz < viewMinZ || wz > viewMaxZ)
+                {
+                    continue;
+                }
+
+                for (int x = 0; x < winW; x += stride)
+                {
+                    int wx = rectMinX + x;
+                    if (wx < viewMinX || wx > viewMaxX)
+                    {
+                        continue;
+                    }
+
+                    float cur = SampleGasAt(displayedGas, rectMinX, rectMinZ, winW, winH, wx, wz);
+                    if (cur < LatticeFloor)
+                    {
+                        continue;
+                    }
+
+                    if (latticeCount >= cap)
+                    {
+                        overflow = true;
+                        break;
+                    }
+
+                    float prev = SampleGasAt(shadowPixels, shadowMinX, shadowMinZ, shadowW, shadowH, wx, wz);
+                    if (fade < 0.999f && fade > 0.001f)
+                    {
+                        contentSum += Math.Abs(cur - prev);
+                        contentCount++;
+                    }
+
+                    sampleX[latticeCount] = wx;
+                    sampleZ[latticeCount] = wz;
+                    screenComposited[latticeCount] = prev + (cur - prev) * fade;
+                    latticeCount++;
+                }
+
+                if (overflow)
+                {
+                    break;
+                }
+            }
+
+            // Feedback, so the count lands near the capacity instead of on one side of it:
+            // too many lit cells and the scan stops early (a biased corner of the view),
+            // too few and most of the alignment's points are wasted on empty space.
+            if (overflow)
+            {
+                latticeStride = Mathf.Min(16, latticeStride + 1);
+            }
+            else if (latticeCount < cap / 3)
+            {
+                latticeStride = Mathf.Max(1, latticeStride - 1);
+            }
+        }
+
+        /// <summary>
+        /// One density sample at a world cell, through the same index convention the bake
+        /// writes and LogGasSignature reads (texture row 0 holds the north edge of the
+        /// window). Outside the window the shader reads the cleared ring, which is zero.
+        /// </summary>
+        private float SampleGasAt(Color32[] pixels, int originX, int originZ, int windowW, int windowH,
+            int worldX, int worldZ)
+        {
+            int x = worldX - originX;
+            int z = worldZ - originZ;
+            if (x < 0 || z < 0 || x >= windowW || z >= windowH
+                || width <= 0 || x >= width || z >= height)
+            {
+                return 0f;
+            }
+
+            Color32 c = pixels[(height - 1 - z) * width + x];
+            // Max over the channels: four gas types share the texture, and a jump in any
+            // one of them is a visible jump.
+            int m = c.r;
+            if (c.g > m) m = c.g;
+            if (c.b > m) m = c.b;
+            if (c.a > m) m = c.a;
+            return m * Inv255;
+        }
+
+        /// <summary>
+        /// The composite the shader would draw at one world cell: the same mix of the same
+        /// two textures with the same mappings _Params6/_Params7 carry.
+        /// </summary>
+        private float CompositeAt(int worldX, int worldZ, float fade)
+        {
+            float cur = SampleGasAt(displayedGas, rectMinX, rectMinZ, winW, winH, worldX, worldZ);
+            float prev = SampleGasAt(shadowPixels, shadowMinX, shadowMinZ, shadowW, shadowH, worldX, worldZ);
+            return prev + (cur - prev) * fade;
+        }
+
+        /// <summary>
+        /// Rebuilds the composite the shader is about to draw and diffs it against the one
+        /// it drew last frame.
+        ///
+        /// Two numbers matter, and the second one is the one that answers the report:
+        ///   screen.deltaMean / deltaMax  how far the drawn picture moved at a fixed offset
+        ///   align.dx / align.dz          the offset that best matches last frame's picture
+        ///
+        /// The absolute delta is useless here: this field is faint (a lit cell is 7/255 on
+        /// average), so moving the whole cloud one cell changes the mean by 0.0004 — below
+        /// any threshold that would not also fire on ordinary evolution. The alignment is
+        /// scale-free: it asks "which shift makes this frame look like the last one", so a
+        /// one-frame displacement shows up as a nonzero (dx,dz) with a large gain even when
+        /// the picture barely changes in magnitude.
+        /// </summary>
+        private void SampleComposite(float realtime, float fade, double sincePublish)
+        {
+            if (!GasFieldDiagnostics.Enabled || width <= 0 || height <= 0
+                || displayedGas.Length != width * height
+                || shadowPixels.Length != width * height)
+            {
+                return;
+            }
+
+            int n = ScreenGrid * ScreenGrid;
+            if (screenComposited.Length != n || screenSize != width * height)
+            {
+                // A texture resize reallocates every buffer, so the snapshot describes a
+                // different coordinate system; start over instead of comparing across it.
+                screenSize = width * height;
+                screenComposited = new float[n];
+                sampleX = new int[n];
+                sampleZ = new int[n];
+                latticeCount = 0;
+                screenPrimed = false;
+            }
+
+            double sum = 0.0;
+            float max = 0f;
+            double contentSum = 0.0;
+            int contentCount = 0;
+            int changed = 0;
+            int compared = 0;
+            int count = latticeCount;
+
+            // Pass 1: re-sample the *same world cells* the previous frame sampled, so a
+            // camera pan contributes no delta at all, and so the comparison is between two
+            // pictures of the same place.
+            if (screenPrimed && count > 0)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    int wx = sampleX[i];
+                    int wz = sampleZ[i];
+                    if (wx < viewMinX || wx > viewMaxX || wz < viewMinZ || wz > viewMaxZ)
+                    {
+                        continue;
+                    }
+
+                    float mixed = CompositeAt(wx, wz, fade);
+                    float delta = Mathf.Abs(mixed - screenComposited[i]);
+                    compared++;
+                    sum += delta;
+                    if (delta > max)
+                    {
+                        max = delta;
+                    }
+
+                    if (delta >= 0.02f)
+                    {
+                        changed++;
+                    }
+                }
+            }
+
+            // Pass 1b: which shift of the current picture best reproduces last frame's?
+            //
+            // This is the measurement that matches the report ("it jumps to another place
+            // for one frame and comes back"). It is a normalized L1 match, so it does not
+            // care how faint the field is: what matters is that the pattern is where the
+            // pattern was. Runs before the lattice is rebuilt, which overwrites what it
+            // compares against.
+            int alignX = 0;
+            int alignZ = 0;
+            float alignGain = 0f;
+            float alignErr = 0f;
+            bool alignEdge = false;
+            if (compared >= MinAlignPoints)
+            {
+                float bestErr = float.MaxValue;
+                float zeroErr = 0f;
+                for (int dz = -AlignRadius; dz <= AlignRadius; dz++)
+                {
+                    for (int dx = -AlignRadius; dx <= AlignRadius; dx++)
+                    {
+                        double err = 0.0;
+                        double norm = 0.0;
+                        for (int i = 0; i < count; i++)
+                        {
+                            int wx = sampleX[i];
+                            int wz = sampleZ[i];
+                            if (wx < viewMinX || wx > viewMaxX || wz < viewMinZ || wz > viewMaxZ)
+                            {
+                                continue;
+                            }
+
+                            float c = CompositeAt(wx + dx, wz + dz, fade);
+                            float was = screenComposited[i];
+                            err += Math.Abs(c - was);
+                            norm += c + was;
+                        }
+
+                        if (norm <= 1e-9)
+                        {
+                            continue;
+                        }
+
+                        float e = (float)(err / norm);
+                        if (dx == 0 && dz == 0)
+                        {
+                            zeroErr = e;
+                        }
+
+                        if (e < bestErr)
+                        {
+                            bestErr = e;
+                            alignX = dx;
+                            alignZ = dz;
+                        }
+                    }
+                }
+
+                alignErr = bestErr;
+                if (zeroErr > 1e-6f)
+                {
+                    alignGain = 1f - bestErr / zeroErr;
+                }
+
+                alignEdge = Mathf.Abs(alignX) == AlignRadius || Mathf.Abs(alignZ) == AlignRadius;
+            }
+
+            // Pass 2: rebuild the sample set from the current picture — but only at cells
+            // that actually hold gas.
+            //
+            // This is the third attempt at the sampling and the first that is not blind. A
+            // uniform 24x24 grid over the view hits ~5% lit cells on an ordinary cloud, so
+            // the mean delta is diluted by an order of magnitude and the correlation has
+            // almost no points to work on; measured on the last two logs, the absolute
+            // delta never exceeded 0.007 and the alignment never even ran. Sampling the
+            // lit texels themselves makes the same 576 points carry ~20x the signal.
+            //
+            // Rebuilt on a timer rather than every frame: the set has to be fixed between
+            // the frame that records it and the frame that compares against it, and the
+            // scan is the expensive part.
+            if (count == 0 || realtime - latticeRebuiltAt >= LatticeSeconds)
+            {
+                RebuildLattice(realtime, fade, out contentSum, out contentCount);
+                count = latticeCount;
+            }
+            else if (fade < 0.999f && fade > 0.001f)
+            {
+                // Content diff on the fixed set, for the frames in between.
+                for (int i = 0; i < count; i++)
+                {
+                    int wx = sampleX[i];
+                    int wz = sampleZ[i];
+                    if (wx < viewMinX || wx > viewMaxX || wz < viewMinZ || wz > viewMaxZ)
+                    {
+                        continue;
+                    }
+
+                    float cur = SampleGasAt(displayedGas, rectMinX, rectMinZ, winW, winH, wx, wz);
+                    float prev = SampleGasAt(shadowPixels, shadowMinX, shadowMinZ, shadowW, shadowH, wx, wz);
+                    contentSum += Math.Abs(cur - prev);
+                    contentCount++;
+                }
+            }
+
+            float mean = compared > 0 ? (float)(sum / compared) : -1f;
+            float content = contentCount > 0 ? (float)(contentSum / contentCount) : 0f;
+            GasFieldDiagnostics.Put("screen.deltaMean", mean);
+            GasFieldDiagnostics.Put("screen.deltaMax", max);
+            GasFieldDiagnostics.Put("screen.changed", compared > 0 ? changed / (float)compared : 0f);
+            GasFieldDiagnostics.Put("screen.compared", compared);
+            GasFieldDiagnostics.Put("screen.samples", count);
+            GasFieldDiagnostics.Put("screen.latticeStride", latticeStride);
+            GasFieldDiagnostics.Put("screen.contentDiff", content);
+            GasFieldDiagnostics.Put("screen.prevEqualsCur", ReferenceEquals(gasCurrent, gasPrevious));
+            GasFieldDiagnostics.Put("align.dx", alignX);
+            GasFieldDiagnostics.Put("align.dz", alignZ);
+            GasFieldDiagnostics.Put("align.gain", alignGain);
+            GasFieldDiagnostics.Put("align.err", alignErr);
+
+            if (!screenPrimed || compared < MinAlignPoints)
+            {
+                screenPrimed = true;
+                return;
+            }
+
+            // Two independent ways of saying "the picture jumped": it moved to another
+            // place (align), or it changed in place beyond anything the fade could hide
+            // (deltaMean). Both write a line the moment they happen with everything needed
+            // to attribute them, instead of waiting for some watched key to change and
+            // reconstructing afterwards.
+            bool shifted = (Mathf.Abs(alignX) + Mathf.Abs(alignZ) >= 1) && alignGain > AlignGain;
+            bool stepped = mean >= ScreenJumpMean;
+            bool peak = GasFieldDiagnostics.IsPeak(mean);
+            if (shifted || stepped || peak)
+            {
+                string description = DescribeFrame(
+                    shifted ? "SHIFT" : "STEP", realtime, alignX, alignZ, alignGain, alignEdge,
+                    compared, mean, max, content, fade, sincePublish);
+
+                if (shifted || stepped)
+                {
+                    GasFieldDiagnostics.Jump(description);
+                }
+
+                // Worst frame of the last few seconds, kept even when it trips no threshold
+                // at all: that is what keeps a run from coming back with nothing to read.
+                GasFieldDiagnostics.Peak(mean, peak ? description : null);
+            }
+            else
+            {
+                GasFieldDiagnostics.Peak(mean, null);
+            }
+
+            screenPrimed = true;
+        }
+
+        /// <summary>
+        /// Projects the quad's two opposite corners to screen pixels and records the box.
+        /// Cheap (two transforms), and it is the only probe that reports where the draw
+        /// actually went rather than what it was asked to contain.
+        /// </summary>
+        private void RecordQuadProjection()
+        {
+            projectValid = false;
+
+            Camera? cam = Find.Camera;
+            if (cam == null || mesh == null || quadWidth <= 0 || quadHeight <= 0)
+            {
+                return;
+            }
+
+            float altitude = QuadVertices[0].y;
+            Vector3 a = cam.WorldToScreenPoint(new Vector3(quadMinX, altitude, quadMinZ));
+            Vector3 b = cam.WorldToScreenPoint(
+                new Vector3(quadMinX + quadWidth, altitude, quadMinZ + quadHeight));
+            if (a.z <= 0f || b.z <= 0f)
+            {
+                return;
+            }
+
+            projectMinX = Mathf.Min(a.x, b.x);
+            projectMinY = Mathf.Min(a.y, b.y);
+            projectMaxX = Mathf.Max(a.x, b.x);
+            projectMaxY = Mathf.Max(a.y, b.y);
+            projectValid = true;
+
+            GasFieldDiagnostics.Put("project.x0", projectMinX);
+            GasFieldDiagnostics.Put("project.y0", projectMinY);
+            GasFieldDiagnostics.Put("project.w", projectMaxX - projectMinX);
+            GasFieldDiagnostics.Put("project.h", projectMaxY - projectMinY);
+        }
+
+        /// <summary>
+        /// The one-line record of a measured frame. Shared by the immediate JUMP lines and
+        /// the periodic PEAK record so both carry exactly the same fields.
+        /// </summary>
+        private string DescribeFrame(
+            string tag, float realtime, int dx, int dz, float gain, bool edge, int points,
+            float mean, float max, float content, float fade, double sincePublish)
+        {
+            return "frame=" + Time.frameCount.ToString(CultureInfo.InvariantCulture)
+                + " t=" + realtime.ToString("F2", CultureInfo.InvariantCulture)
+                + " " + tag
+                + " dx=" + dx + " dz=" + dz
+                + " gain=" + gain.ToString("F2", CultureInfo.InvariantCulture)
+                + (edge ? "(edge)" : "")
+                + " pts=" + points
+                + " deltaMean=" + mean.ToString("F4", CultureInfo.InvariantCulture)
+                + " deltaMax=" + max.ToString("F3", CultureInfo.InvariantCulture)
+                + " content=" + content.ToString("F3", CultureInfo.InvariantCulture)
+                + " fade=" + fade.ToString("F3", CultureInfo.InvariantCulture)
+                + " since=" + sincePublish.ToString("F3", CultureInfo.InvariantCulture)
+                + " cur=(" + rectMinX + "," + rectMinZ + ") " + winW + "x" + winH
+                + " prev=(" + shadowMinX + "," + shadowMinZ + ") " + shadowW + "x" + shadowH
+                + " view=(" + viewMinX + "," + viewMinZ + ")-(" + viewMaxX + "," + viewMaxZ + ")"
+                + " rectMoved=" + GasFieldDiagnostics.FlagValue("rectMoved")
+                + " cut=" + GasFieldDiagnostics.FlagValue("crossFadeCut")
+                + " timerDue=" + GasFieldDiagnostics.FlagValue("timerDue")
+                + " uvStale=" + GasFieldDiagnostics.FlagValue("uvStale")
+                + " prevMismatch=" + GasFieldDiagnostics.FlagValue("prevWindowMismatch")
+                + (projectValid
+                    ? " proj=" + projectMinX.ToString("F1", CultureInfo.InvariantCulture)
+                        + "," + projectMinY.ToString("F1", CultureInfo.InvariantCulture)
+                        + " " + (projectMaxX - projectMinX).ToString("F1", CultureInfo.InvariantCulture)
+                        + "x" + (projectMaxY - projectMinY).ToString("F1", CultureInfo.InvariantCulture)
+                    : " proj=-");
+        }
+
         /// <summary>
         /// vWorld -> uv for a window whose south-west corner is (originX, originZ).
         /// Both textures of a pair share the capacity, so only the offset differs.

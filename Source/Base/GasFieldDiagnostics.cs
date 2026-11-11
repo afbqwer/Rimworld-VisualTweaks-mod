@@ -90,7 +90,8 @@ namespace VisualTweaks
             "event.noiseModeChanged", "event.refreshed", "event.fadeRestarted",
             "event.fadeGuardApplied",
             "event.newPublish", "event.reseed", "event.tryGetWindFailed",
-            "event.flowGridRebuilt", "event.textureResize",
+            "event.flowGridRebuilt", "event.textureResize", "event.uvStale",
+            "event.prevWindowMismatch", "event.sigMisplaced",
         };
 
         // Numeric discontinuities that are too large to be ordinary animation.
@@ -98,6 +99,21 @@ namespace VisualTweaks
         private const double SinceReset = 0.02;
         private const double ClockJump = 0.10;
         private const double FlowUJump = 2.0;
+
+        /// <summary>
+        /// How far the shader's noise offset may move backwards, in noise units, before it
+        /// counts as a teleport. It advances about 0.1 per publish, so 0.003 is well below
+        /// any ordinary frame-to-frame step and well above float noise.
+        /// </summary>
+        private const double NoiseBack = 0.003;
+
+        /// <summary>
+        /// Mean screen-space step (0..1 of a density channel) that counts as a jump.
+        /// Gas densities are small — a dense blast cell is 1.0 but an ordinary cloud sits
+        /// well under 0.3 — so 0.035 across a 24x24 grid over the view is already a
+        /// picture-wide shift, not a cell or two changing.
+        /// </summary>
+        private const double ScreenJump = 0.035;
 
         private sealed class Frame
         {
@@ -135,11 +151,16 @@ namespace VisualTweaks
 
                 Append(sb, "fade", "fade.fade");
                 Append(sb, "fadeBefore", "fade.fadeBeforeGuard");
-                Append(sb, "fadeGuard", "event.fadeGuardApplied");
+                Append(sb, "cut", "event.crossFadeCut");
                 Append(sb, "rect", "window.rectMinX");
                 Append(sb, "/", "window.rectMinZ");
                 Append(sb, "win", "window.winW");
                 Append(sb, "x", "window.winH");
+                // The view the renderer was handed. A camera that jumps for one frame and
+                // returns would move the gas and nothing else in this log would say so —
+                // every other key is derived from the window that view produced.
+                Append(sb, "vwX", "window.viewMinX");
+                Append(sb, "vwZ", "window.viewMinZ");
                 Append(sb, "tmr", "clock.timerDue");
                 Append(sb, "since", "clock.sincePublish");
                 Append(sb, "prevEq", "tex.gasPrevEqualsCur");
@@ -179,6 +200,18 @@ namespace VisualTweaks
         private static bool sessionStarted;
         private static bool writeFailed;
         private static int rotation;
+        private static double lastJumpWrite = double.NegativeInfinity;
+        private static int jumpSuppressed;
+
+        /// <summary>Minimum seconds between two JUMP lines.</summary>
+        private const double JumpSpacing = 0.08;
+
+        /// <summary>Length of the window the periodic PEAK record reports on.</summary>
+        private const double PeakWindow = 2.5;
+
+        private static float peakMean;
+        private static string peakDescription = "";
+        private static double peakWindowStart;
         private static readonly Dictionary<string, int> ReasonCounts =
             new Dictionary<string, int>(StringComparer.Ordinal);
 
@@ -349,6 +382,114 @@ namespace VisualTweaks
             Put("event." + key, on);
         }
 
+        /// <summary>
+        /// Reads back a flag this frame already recorded, for the one-line JUMP record.
+        /// Returns "-" when the frame never set it, so the line never invents a value.
+        /// </summary>
+        internal static string FlagValue(string key)
+        {
+            if (!Enabled || current == null)
+            {
+                return "-";
+            }
+
+            return current.Get("event." + key) ?? "-";
+        }
+
+        /// <summary>
+        /// Writes a self-contained line the moment a measured discontinuity happens.
+        ///
+        /// The event reports are diff-driven: they fire when a watched key changes and
+        /// carry the surrounding history. That is the wrong shape for "the picture moved",
+        /// because the interesting frame is often one where every watched key stayed the
+        /// same (same window, same textures, only the fade or the content moved). Those
+        /// frames are exactly the ones the user reports and the log never showed. This
+        /// bypasses the event machinery and records the measurement itself.
+        ///
+        /// Throttled so a badly broken frame cannot flood the file, with the number of
+        /// dropped lines reported inline.
+        /// </summary>
+        internal static void Jump(string text)
+        {
+            if (!Enabled)
+            {
+                return;
+            }
+
+            double now = Time.realtimeSinceStartupAsDouble;
+            if (now - lastJumpWrite < JumpSpacing)
+            {
+                jumpSuppressed++;
+                return;
+            }
+
+            lastJumpWrite = now;
+            Write("JUMP " + text
+                + (jumpSuppressed > 0
+                    ? " (+" + jumpSuppressed.ToString(CultureInfo.InvariantCulture) + " suppressed)"
+                    : "")
+                + "\n");
+            jumpSuppressed = 0;
+        }
+
+        /// <summary>
+        /// Whether this frame's measured step is worth describing for the periodic PEAK
+        /// record. Two calls on purpose: the caller only builds the description when this
+        /// says yes, so the common frame allocates nothing.
+        /// </summary>
+        internal static bool IsPeak(float mean)
+        {
+            return Enabled && mean > peakMean;
+        }
+
+        /// <summary>
+        /// Records the worst frame of the last few seconds and writes it out when the window
+        /// closes, whether or not it tripped any threshold.
+        ///
+        /// This exists because the two previous rounds of instrumentation produced *zero*
+        /// data: the thresholds were set for a picture that changes by tens of percent, the
+        /// field on screen changes by a fraction of a percent, and "no JUMP lines" was
+        /// indistinguishable from "the measurement never ran". A periodic worst-of record
+        /// cannot come back empty, so every run tells us what the numbers actually are and
+        /// the thresholds can be calibrated against a real distribution.
+        /// </summary>
+        internal static void Peak(float mean, string? description)
+        {
+            if (!Enabled)
+            {
+                return;
+            }
+
+            double now = Time.realtimeSinceStartupAsDouble;
+            if (peakWindowStart <= 0.0)
+            {
+                peakWindowStart = now;
+            }
+
+            // A null description means "this frame is not a new worst", which still has to
+            // be reported so the window can close on schedule.
+            if (description != null && mean > peakMean)
+            {
+                peakMean = mean;
+                peakDescription = description;
+            }
+
+            if (now - peakWindowStart < PeakWindow)
+            {
+                return;
+            }
+
+            if (peakDescription.Length > 0)
+            {
+                Write("PEAK worst of " + PeakWindow.ToString("F0", CultureInfo.InvariantCulture)
+                    + "s: " + peakDescription + "\n");
+            }
+
+            peakMean = 0f;
+            peakDescription = "";
+            peakWindowStart = now;
+        }
+
         /// <summary>Call at every exit of GasFieldRenderer.Draw, including the early returns.</summary>
         internal static void EndFrame(bool drawMesh, string skipReason = "")
         {
@@ -505,6 +646,32 @@ namespace VisualTweaks
             if (flowJump >= FlowUJump)
             {
                 reasons.Add("FLOW_U_JUMP:" + flowJump.ToString("F2", CultureInfo.InvariantCulture));
+            }
+
+            // The measured step of the drawn picture. Unlike every other reason here this
+            // one is not a guess about a mechanism: it is the quantity the user perceives.
+            double screenDelta = Number(now, "screen.deltaMean");
+            if (screenDelta >= ScreenJump)
+            {
+                reasons.Add("SCREEN_JUMP:" + screenDelta.ToString("F3", CultureInfo.InvariantCulture)
+                    + "/max " + Number(now, "screen.deltaMax").ToString("F3", CultureInfo.InvariantCulture));
+            }
+
+            // The shader's noise offset is a path integral and can only grow. A frame where
+            // it shrinks means the whole pattern teleported backwards for one frame — the
+            // "it jumps somewhere else and comes straight back" report, with no density
+            // change to show for it, which is why every other probe missed it.
+            double noiseX = Number(now, "noise.offsetX");
+            double noiseZ = Number(now, "noise.offsetZ");
+            bool noiseKnown = !string.IsNullOrEmpty(now.Get("noise.offsetX"))
+                && !string.IsNullOrEmpty(before.Get("noise.offsetX"));
+            double noiseBack = noiseKnown
+                ? Math.Max(Number(before, "noise.offsetX") - noiseX,
+                    Number(before, "noise.offsetZ") - noiseZ)
+                : 0.0;
+            if (noiseBack >= NoiseBack)
+            {
+                reasons.Add("NOISE_BACK:" + noiseBack.ToString("F4", CultureInfo.InvariantCulture));
             }
 
             return reasons;
