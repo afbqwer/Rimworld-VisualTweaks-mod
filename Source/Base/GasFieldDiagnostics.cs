@@ -91,7 +91,8 @@ namespace VisualTweaks
             "event.fadeGuardApplied",
             "event.newPublish", "event.reseed", "event.tryGetWindFailed",
             "event.flowGridRebuilt", "event.textureResize", "event.uvStale",
-            "event.prevWindowMismatch", "event.sigMisplaced",
+            "event.prevWindowMismatch", "event.sigMisplaced", "event.curWindowMismatch", "event.knownCleared", "event.uniformTouched",
+            "event.wideMisaligned",
         };
 
         // Numeric discontinuities that are too large to be ordinary animation.
@@ -212,6 +213,9 @@ namespace VisualTweaks
         private static float peakMean;
         private static string peakDescription = "";
         private static double peakWindowStart;
+        private static float peakOtherScore;
+        private static string peakOtherDescription = "";
+        private static double peakOtherStart;
         private static readonly Dictionary<string, int> ReasonCounts =
             new Dictionary<string, int>(StringComparer.Ordinal);
 
@@ -386,6 +390,40 @@ namespace VisualTweaks
         /// Reads back a flag this frame already recorded, for the one-line JUMP record.
         /// Returns "-" when the frame never set it, so the line never invents a value.
         /// </summary>
+        /// <summary>
+        /// Writes one already-formatted probe line. Used by the framebuffer probe, which
+        /// has to log every frame rather than only the frames where a watched key changed:
+        /// a distribution with no spikes is itself the answer.
+        /// </summary>
+        internal static void Pixel(string text)
+        {
+            if (!Enabled)
+            {
+                return;
+            }
+
+            Write(text + "\n");
+        }
+
+        /// <summary>The current frame's value for a numeric key, or null.</summary>
+        internal static float? Number(string key)
+        {
+            if (!Enabled || current == null)
+            {
+                return null;
+            }
+
+            string? raw = current.Get(key);
+            if (raw == null)
+            {
+                return null;
+            }
+
+            return float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out float v)
+                ? v
+                : (float?)null;
+        }
+
         internal static string FlagValue(string key)
         {
             if (!Enabled || current == null)
@@ -453,6 +491,49 @@ namespace VisualTweaks
         /// cannot come back empty, so every run tells us what the numbers actually are and
         /// the thresholds can be calibrated against a real distribution.
         /// </summary>
+        /// <summary>
+        /// A second PEAK channel, ranked by a quantity other than the density delta.
+        ///
+        /// The density PEAK cannot surface a frame whose jump is in the noise pattern or
+        /// the zoom: the density barely moves there, so such a frame never wins the window
+        /// and is never written. This one ranks by `score` (the caller passes the largest
+        /// per-frame move of a *non-density* input) so those frames get recorded too.
+        /// </summary>
+        internal static void PeakOther(float score, string? description)
+        {
+            if (!Enabled)
+            {
+                return;
+            }
+
+            double now = Time.realtimeSinceStartupAsDouble;
+            if (peakOtherStart <= 0.0)
+            {
+                peakOtherStart = now;
+            }
+
+            if (description != null && score > peakOtherScore)
+            {
+                peakOtherScore = score;
+                peakOtherDescription = description;
+            }
+
+            if (now - peakOtherStart < PeakWindow)
+            {
+                return;
+            }
+
+            if (peakOtherDescription.Length > 0)
+            {
+                Write("PEAKX worst of " + PeakWindow.ToString("F0", CultureInfo.InvariantCulture)
+                    + "s: " + peakOtherDescription + "\n");
+            }
+
+            peakOtherScore = 0f;
+            peakOtherDescription = "";
+            peakOtherStart = now;
+        }
+
         internal static void Peak(float mean, string? description)
         {
             if (!Enabled)
@@ -674,7 +755,26 @@ namespace VisualTweaks
                 reasons.Add("NOISE_BACK:" + noiseBack.ToString("F4", CultureInfo.InvariantCulture));
             }
 
+            // Two thirds of this log was the cross-fade's own bookkeeping: the texture
+            // pointers swap every publish by design, so CHG:tex.* / fadeStart /
+            // noisePublishTime fired on essentially every publish and buried the frames
+            // that matter. They stay in the snapshot (they are good context) but no longer
+            // count as a reason to write a report, which cuts the event rate by ~5x and is
+            // what makes a one-minute capture practical instead of a ten-second one.
+            if (reasons.Count > 0)
+            {
+                reasons.RemoveAll(IsBookkeepingReason);
+            }
+
             return reasons;
+        }
+
+        private static bool IsBookkeepingReason(string reason)
+        {
+            return reason.StartsWith("CHG:tex.", StringComparison.Ordinal)
+                || reason.StartsWith("CHG:fade.fadeStart", StringComparison.Ordinal)
+                || reason.StartsWith("CHG:clock.noisePublishTime", StringComparison.Ordinal)
+                || reason.StartsWith("SINCE_RESET", StringComparison.Ordinal);
         }
 
         private static bool HasImportant(List<string> reasons)
@@ -692,6 +792,9 @@ namespace VisualTweaks
                     || r.StartsWith("CHG:gate.active", StringComparison.Ordinal)
                     || r.StartsWith("CHG:gate.gasClean", StringComparison.Ordinal)
                     || r.StartsWith("CHG:gate.mistClean", StringComparison.Ordinal)
+                    || r.StartsWith("FLAG:event.layerSlid", StringComparison.Ordinal)
+                    || r.StartsWith("FLAG:event.curWindowMismatch", StringComparison.Ordinal)
+                    || r.StartsWith("FLAG:event.prevWindowMismatch", StringComparison.Ordinal)
                     || r.StartsWith("FLAG:event.quadRebuilt", StringComparison.Ordinal)
                     || r.StartsWith("SINCE_RESET", StringComparison.Ordinal))
                 {
