@@ -39,6 +39,13 @@ namespace VisualTweaks
         private const float FadeFloorFraction = 0.35f;
         private const float FadeFrames = 2.4f;
 
+        /// <summary>Hard ceiling on one blend, so a single hitch cannot stretch it.</summary>
+        // 0.08 rather than 0.12: the gate below guarantees the blend finishes before the
+        // next publish, so a shorter blend costs nothing in continuity and keeps the field
+        // updating at 12-20 Hz instead of 5-7. It was 0.12 while the frame rate was being
+        // measured down by the screen probe, and it stretched the publish interval with it.
+        private const float MaxFadeSpan = 0.08f;
+
         // Below ~50 ms the bake cost stops paying for itself (the screen cannot show more
         // than one update per frame anyway); above a second the delay becomes obvious.
         private const float MinPublishPeriod = 0.05f;
@@ -307,6 +314,20 @@ namespace VisualTweaks
         private int shadowW;
         private int shadowH;
         private float[] screenComposited = Array.Empty<float>();
+        // The current half alone, sampled at the same cells. Splitting this out answers a
+        // question the composite cannot: on a frame with no upload and fade at 1, the
+        // composite *is* the current texture, so any change there is the bake itself
+        // churning, not the blend.
+        private float[] screenCurrent = Array.Empty<float>();
+        // The wide (8x8 block) field at the same cells. The halo it feeds is the only part
+        // of the picture that reacts to the block grid rather than to a cell, so it is the
+        // only part that can move while every density sample stays put.
+        private float[] screenHalo = Array.Empty<float>();
+        // Last frame's composite at the same cells, -1 where the point was not compared.
+        // The snapshot has to be rewritten every frame: it used to be written only in the
+        // periodic lattice rebuild, so every "frame to frame" delta was really a
+        // "this frame vs up to 0.2 s ago" delta and a one-frame jump was diluted ~12x.
+        private float[] screenWas = Array.Empty<float>();
         private bool screenPrimed;
         private int screenSize;
         private int latticeCount;
@@ -315,6 +336,39 @@ namespace VisualTweaks
 
         // Screen-space box of the drawn quad, in pixels (see RecordQuadProjection).
         private bool projectValid;
+        // The four quantities that actually vary per frame in what the shader consumes.
+        // Everything else it reads is either constant or derived from these and the window.
+        private float liveDetail;
+        private float liveCellPixels;
+        private float liveOffX;
+        private float liveOffZ;
+        private float liveFade;
+        private float prevDetail = -1f;
+        private float prevCellPixels = -1f;
+        private float prevOffX;
+        private float prevOffZ;
+        private float prevFade = -1f;
+        private float deltaDetail;
+        private float lastHaloDelta;
+        private bool knownCleared;
+
+        // What this renderer last wrote into the material, so the next frame can ask the
+        // material whether anyone else overwrote it in between.
+        //
+        // This is the one remaining way the field can be drawn somewhere else for exactly
+        // one frame while every CPU-side number stays correct: Graphics.DrawMesh is queued,
+        // and the material's constants are read when the queue is flushed at the end of the
+        // frame. If anything writes those same properties after this method returns, the
+        // queued draw uses *that* value — a wrong origin for one frame, reverted the next.
+        // Reading the values back at the start of the next frame detects exactly that.
+        private Vector4 setParams;
+        private Vector4 setParams6;
+        private Vector4 setParams7;
+        private bool haveSetUniforms;
+        private float deltaCellPixels;
+        private float deltaOff;
+        private float deltaFade;
+
         private float projectMinX;
         private float projectMinY;
         private float projectMaxX;
@@ -343,6 +397,9 @@ namespace VisualTweaks
 
         /// <summary>Mean |delta| a frame needs before it is written as a JUMP line.</summary>
         private const float ScreenJumpMean = 0.035f;
+
+        /// <summary>Score at which a non-density input step counts as the worst of a window.</summary>
+        private const float PeakOtherScore = 1f;
 
         // The region of the *current* window whose smoothing state is valid, in window
         // coordinates. The state is indexed by texture row/column, and those are anchored
@@ -533,6 +590,11 @@ namespace VisualTweaks
         // that steps backwards is a visible flash of its own).
         private float fadeSpan = DefaultRefreshSeconds * FadeFraction;
 
+        // Consecutive frames on which a timed publish was due and deliberately skipped
+        // because the previous blend had not finished. Diagnostic: it is the direct measure
+        // of "the publish rate is outrunning the frame rate".
+        private int blendHeldFrames;
+
         private float NextFadeSpan()
         {
             float period = Mathf.Max(0.01f, refreshPeriod);
@@ -542,9 +604,15 @@ namespace VisualTweaks
                 frame = 0.016f;
             }
 
-            // Upper bound stays under one publish period: a blend that outlives its own
-            // publish would still be mixing two generations when the third arrives.
-            return Mathf.Clamp(frame * FadeFrames, period * FadeFloorFraction, period * FadeFraction);
+            // It used to be capped under one publish period, on the argument that a blend
+            // outliving its own publish would mix two generations. The cap was the bug: at
+            // 40 fps the period is two and a half frames, the blend needs 2.4, and so every
+            // publish truncated the blend at ~0.55. A truncated blend is not a smaller
+            // blend — it is a step, because the display jumps from 55% of the way to the
+            // new picture back to the start of the next one. The publish now waits for the
+            // blend instead (see Refresh), so the blend can be as long as the frame rate
+            // needs; MaxFadeSpan only keeps a hitch from stretching it absurdly.
+            return Mathf.Clamp(frame * FadeFrames, period * FadeFloorFraction, MaxFadeSpan);
         }
 
         private void RestartFade(float realtime)
@@ -588,6 +656,13 @@ namespace VisualTweaks
             bool paused)
         {
             GasFieldDiagnostics.BeginFrame(realtime);
+            knownCleared = false;
+            CheckUniformsUntouched();
+
+            // The framebuffer probe reads the real frame back, once per frame, while the
+            // diagnostics are on. Everything else here reconstructs the picture; this is the
+            // only reader that cannot be fooled by the renderer's own bookkeeping.
+            GasScreenProbe.Tick();
             GasFieldDiagnostics.Put("gate.active", GasFieldBridge.Active);
             GasFieldDiagnostics.Put("gate.useGasField", VisualTweaksSettings.useGasField);
             GasFieldDiagnostics.Put("gate.shaderReady", GasFieldBridge.ShaderReady);
@@ -683,6 +758,7 @@ namespace VisualTweaks
             GasFieldDiagnostics.Put("window.rectMinZ", rectMinZ);
             GasFieldDiagnostics.Put("window.winW", winW);
             GasFieldDiagnostics.Put("window.winH", winH);
+            GasFieldDiagnostics.Flag("fullMapWindow", winW == mapWidth && winH == mapHeight);
             GasFieldDiagnostics.Put("window.width", width);
             GasFieldDiagnostics.Put("window.height", height);
             GasFieldDiagnostics.Put("window.viewMinX", viewMinX);
@@ -741,6 +817,7 @@ namespace VisualTweaks
                 ClampKnown();
             }
 
+            GasFieldDiagnostics.Flag("knownCleared", knownCleared);
             GasFieldDiagnostics.Flag("scrolled", scrolled);
             GasFieldDiagnostics.Put("window.scrolled", scrolled);
             GasFieldDiagnostics.Put("window.previousMinX", previousMinX);
@@ -764,10 +841,35 @@ namespace VisualTweaks
             // resample and the gas stops advancing on screen. The clock advances only on
             // a due publish, so pausing still freezes the cadence with the game.
             bool timerDue = !paused && realtime - lastTimedRefresh >= refreshPeriod;
+
+            // A publish does not *replace* a running blend, it truncates it — and the
+            // truncation is a step of (1 - fade) x delta inside one frame. At the gas's
+            // edge, where the density is ~0.004 and the whole visible change is a few
+            // percent of alpha, that step is the artefact: the contour moves out, then
+            // moves back when the next blend starts. Measured at 40 fps: the blend peaked
+            // at 0.42..0.60 and was cut every publish, so 40..58% of every publish's change
+            // arrived as a one-frame step. At 60 fps the same publish was sampled twice in
+            // between and read as a blend, which is why the defect tracks the frame rate.
+            //
+            // Waiting costs nothing: the solver's gas diffuses over seconds, so the field
+            // only has to be re-read as often as it can be shown smoothly. With this gate
+            // the effective period stretches to the blend length when the frame rate cannot
+            // fit both, instead of the blend being cut short.
+            if (timerDue && !paused && fadeStart > 0f
+                && realtime - fadeStart < FadeDuration)
+            {
+                timerDue = false;
+                blendHeldFrames++;
+            }
+
             if (timerDue)
             {
                 lastTimedRefresh = realtime;
+                blendHeldFrames = 0;
             }
+
+            GasFieldDiagnostics.Put("clock.blendHeld", blendHeldFrames);
+            GasFieldDiagnostics.Put("clock.fadeSpan", FadeDuration);
 
             GasFieldDiagnostics.Flag("timerDue", timerDue);
             GasFieldDiagnostics.Flag("smoothChanged", smoothChanged);
@@ -823,10 +925,28 @@ namespace VisualTweaks
                 // within one frame, which is the flash. With that guard gone (the shader can
                 // now blend across origins), a restart is safe and is what makes panning
                 // and zooming smooth.
-                bool restartFade = timerDue || rectMoved;
+                // A scroll-only window move does *not* restart the blend.
+                //
+                // On the incremental path the staging pixels were copied out of the buffer
+                // that is still on screen (ScrollBuffers, from `sent`) and only the strip
+                // outside the view was re-baked, so the new texture is the same picture at a
+                // new origin. There is nothing to fade: at fade 1 the display is already
+                // that picture, and at fade 0.5 both halves are it too. Restarting anyway
+                // costs a half-step of density for no reason.
+                //
+                // It is not a rare path. Measured on a 90 s capture at 20 Hz publishing and
+                // 37 fps: two publishes every 0.05 s, so the blend gets exactly one frame
+                // and tops out around 0.55 (0 -> 0.59 -> 0); and while panning, the window
+                // recentres every 2..3 frames, each recentre firing a second restart. The
+                // field was never once shown settled, and the per-frame step measured
+                // 0.0112 mean against a local density of 0.016 — a ~70% lurch, larger the
+                // lower the frame rate. Removing the restart from the scroll path takes
+                // out the half that changes nothing.
+                bool restartFade = timerDue || (rectMoved && !incremental);
                 GasFieldDiagnostics.Put("refresh.restartFade", restartFade);
                 if (GasFieldDiagnostics.Enabled) GasFieldDiagnostics.Note("fade restart: timerDue=" + timerDue
-                    + " rectMoved=" + rectMoved + " -> restartFade=" + restartFade);
+                    + " rectMoved=" + rectMoved + " incremental=" + incremental
+                    + " -> restartFade=" + restartFade);
 
                 Refresh(map, realtime, incremental, restartFade);
             }
@@ -968,6 +1088,8 @@ namespace VisualTweaks
             float scale = Mathf.Clamp(VisualTweaksSettings.gasFieldScale, 0.5f, 2f);
             float detail = Mathf.Clamp01(
                 (cellPixels - DetailFadeStartPixels) / DetailFadeRangePixels);
+            liveDetail = detail;
+            liveCellPixels = cellPixels;
 
             // The shader's time is the renderer-local clock, not RealTime.UnpausedRealTime:
             // the latter is one float for the whole application session, and after hours
@@ -993,22 +1115,26 @@ namespace VisualTweaks
             GasFieldDiagnostics.Put("uniform.replaceDust",
                 VisualTweaksSettings.gasFieldReplaceDeadlife);
             material.SetVector(ParamsId, new Vector4(fade, 2.6f, opacity, shaderTime));
+            setParams = new Vector4(fade, 2.6f, opacity, shaderTime);
             material.SetVector(Params2Id, new Vector4(width, height, ambientVelX, ambientVelZ));
             // vWorld -> uv for the baked window: uv = vWorld * xy + zw. The shader used
             // to divide by the map size; now the texture only covers the window.
             //
             // vWorld -> uv for the baked window: uv = vWorld * xy + zw.
-            material.SetVector(Params6Id, WindowMap(rectMinX, rectMinZ));
+            Vector4 mapCur = WindowMap(rectMinX, rectMinZ);
+            material.SetVector(Params6Id, mapCur);
+            setParams6 = mapCur;
             // Each pair's previous half comes from an older window, so it needs the mapping
             // of the window *it* holds. Only the strip that left or entered at the window
             // edge is affected, and that strip sits in the margin outside the view — the
             // cross-fade's job is to smooth the 10 Hz step, which it can only do if the
             // publish that moved the window blends like any other.
-            material.SetVector(
-                Params7Id,
-                WindowMap(
-                    gasTrack.Valid ? gasTrack.PrevMinX : rectMinX,
-                    gasTrack.Valid ? gasTrack.PrevMinZ : rectMinZ));
+            Vector4 mapPrev = WindowMap(
+                gasTrack.Valid ? gasTrack.PrevMinX : rectMinX,
+                gasTrack.Valid ? gasTrack.PrevMinZ : rectMinZ);
+            material.SetVector(Params7Id, mapPrev);
+            setParams7 = mapPrev;
+            haveSetUniforms = true;
             material.SetVector(
                 Params8Id,
                 WindowMap(
@@ -1038,6 +1164,9 @@ namespace VisualTweaks
             // scalars here and checked frame to frame by the diagnostics.
             GasFieldDiagnostics.Put("noise.offsetX", ambientDx + ambientVelX * (float)sincePublish);
             GasFieldDiagnostics.Put("noise.offsetZ", ambientDz + ambientVelZ * (float)sincePublish);
+            liveOffX = (float)(ambientDx + ambientVelX * sincePublish);
+            liveOffZ = (float)(ambientDz + ambientVelZ * sincePublish);
+            liveFade = fade;
             material.SetVector(
                 Params9Id,
                 new Vector4(
@@ -1116,6 +1245,14 @@ namespace VisualTweaks
                     || gasTrack.WinW < winW
                     || gasTrack.WinH < winH);
             GasFieldDiagnostics.Flag("uvStale", uvStale);
+
+            // The block grid's alignment, in cells. Must be 0 on both axes: any other value
+            // means the 8x8 wide field is grouped on cells that will be regrouped the next
+            // time the window recentres — the halo then steps by that offset and steps back.
+            GasFieldDiagnostics.Put("wide.offsetX", rectMinX % WideDownsample);
+            GasFieldDiagnostics.Put("wide.offsetZ", rectMinZ % WideDownsample);
+            GasFieldDiagnostics.Flag("wideMisaligned",
+                rectMinX % WideDownsample != 0 || rectMinZ % WideDownsample != 0);
             GasFieldDiagnostics.Put("geom.uvOffsetX", gasTrack.Valid ? rectMinX - gasTrack.MinX : 0);
             GasFieldDiagnostics.Put("geom.uvOffsetZ", gasTrack.Valid ? rectMinZ - gasTrack.MinZ : 0);
 
@@ -1123,6 +1260,22 @@ namespace VisualTweaks
             // against the window that texture was really uploaded with. A nonzero shift here
             // means the cross-fade is drawing the old picture at the wrong origin — a
             // whole-field displacement for exactly as long as the wrong claim survives.
+            // The same check for the current half, against what that texture was really baked
+            // from rather than against what TrackWindows claims. Strictly stronger than
+            // uvStale, which can only compare a claim with itself.
+            if (gasCurrent != null)
+            {
+                TexWindowRecord heldCur = ReferenceEquals(gasCurrent, gasSmoothA) ? gasWindowA : gasWindowB;
+                if (ReferenceEquals(heldCur.Tex, gasCurrent))
+                {
+                    int curShiftX = rectMinX - heldCur.X;
+                    int curShiftZ = rectMinZ - heldCur.Z;
+                    GasFieldDiagnostics.Put("geom.curShiftX", curShiftX);
+                    GasFieldDiagnostics.Put("geom.curShiftZ", curShiftZ);
+                    GasFieldDiagnostics.Flag("curWindowMismatch", curShiftX != 0 || curShiftZ != 0);
+                }
+            }
+
             if (gasPrevious != null && gasTrack.Valid)
             {
                 TexWindowRecord held = ReferenceEquals(gasPrevious, gasSmoothA) ? gasWindowA : gasWindowB;
@@ -1310,11 +1463,23 @@ namespace VisualTweaks
             int viewW = Mathf.Max(1, view.Width);
             int viewH = Mathf.Max(1, view.Height);
 
-            // --- capacity: grow-only, geometric, clamped to the map -----------------
-            int needW = Mathf.Min(mapWidth, viewW + 2 * BakeMargin);
-            int needH = Mathf.Min(mapHeight, viewH + 2 * BakeMargin);
-            needW = Mathf.Min(RoundUp(needW, CapacityQuantum), mapWidth);
-            needH = Mathf.Min(RoundUp(needH, CapacityQuantum), mapHeight);
+            // --- capacity: the whole map ------------------------------------------
+            //
+            // The texture used to be a window that followed the camera: view + margin,
+            // reallocated when the zoom outgrew it, recentred in 8-cell steps, scrolled
+            // when it moved, and cross-faded between two windows that could disagree.
+            // Every single artifact this investigation measured lived on that path — the
+            // worst frames all carried `rectMoved=1` with `cur` and `prev` of different
+            // sizes, and none of them appeared while the window was still.
+            //
+            // A whole-map texture is the same size as the window was (the bake already
+            // uploaded the full capacity every publish, and the window was view + 34 cells
+            // on a map that is 250 wide), and it makes the mapping constant for the
+            // lifetime of the map: uv = vWorld / mapSize, no origin, no resize on zoom, no
+            // scrolling, and _Params6 == _Params7 always, so the cross-fade can no longer
+            // mix two different mappings at all.
+            int needW = mapWidth;
+            int needH = mapHeight;
 
             bool rectMoved = false;
             originMoved = false;
@@ -1372,7 +1537,17 @@ namespace VisualTweaks
                 {
                     mistScratch = new float[mapCells];
                 }
-                gasSmoothState = new float[cellCount * 4];
+                // Map-sized, not capacity-sized: see BakeGasRow. Reallocated only when the
+                // map itself changes, and every entry starts as NaN ("no history").
+                int smoothCells = mapWidth * mapHeight;
+                if (gasSmoothState.Length != smoothCells * 4)
+                {
+                    gasSmoothState = new float[smoothCells * 4];
+                    for (int i = 0; i < gasSmoothState.Length; i++)
+                    {
+                        gasSmoothState[i] = float.NaN;
+                    }
+                }
                 mistSmoothState = new float[cellCount * 2];
 
                 wideW = Mathf.Max(1, width / WideDownsample);
@@ -1403,9 +1578,13 @@ namespace VisualTweaks
 
             EnsureCanvas();
 
-            // --- window: what gets baked, follows the view exactly -------------------
-            int wantWinW = Mathf.Min(width, RoundUp(viewW + 2 * BakeMargin, WindowQuantum));
-            int wantWinH = Mathf.Min(height, RoundUp(viewH + 2 * BakeMargin, WindowQuantum));
+            // --- window: the whole map, always --------------------------------------
+            //
+            // Keeping the window equal to the map is what removes the last of the moving
+            // parts: the origin is 0 forever, `rectMoved` is true only on the first frame
+            // and after a map change, and nothing downstream ever sees a window that moved.
+            int wantWinW = width;
+            int wantWinH = height;
 
             // Hysteresis, and it is load-bearing. CurrentViewRect is Floor/Ceil of a moving
             // float, so view.Width jitters by one cell while the camera pans. RoundUp with
@@ -1542,15 +1721,37 @@ namespace VisualTweaks
                 int snappedX = minX - minX % WideDownsample;
                 int snappedZ = minZ - minZ % WideDownsample;
 
-                // Snapping moves the origin down, eating into the far margin. That is still
-                // >= 10 cells because winW >= viewW + 34, but against the east/south border
-                // the clamp above already parked the origin at mapSize - win, which is not
-                // block-aligned; snapping there would leave the last few visible cells
-                // unbaked. Coverage wins, and it costs nothing: that origin is pinned by the
-                // clamp, so it does not change while the camera pans along the border and
-                // the block grid stays put anyway.
-                minX = snappedX + winW > view.maxX ? snappedX : minX;
-                minZ = snappedZ + winH > view.maxZ ? snappedZ : minZ;
+                // Snap unconditionally, and grow the window by the amount the origin moved
+                // so the far edge stays exactly where it was. Snapping used to be
+                // conditional ("only if the snapped window still reaches view.max"), which
+                // left the origin unaligned exactly where the map clamp pins it — at a
+                // border — and that is where this camera spends its time.
+                //
+                // Measured on the 60 s capture: rectMinZ % 8 took the values 0 and 2 (59
+                // and 159 snapshots), so every recentre between "free" and "pinned at the
+                // south border" rebuilt the 8x8 wide field over a *different set of cells*.
+                // The narrow density field is per cell and unaffected, but the wide field is
+                // what widens the dense gas's contour — the halo — so the picture's interior
+                // stayed put while the visible edge stepped by up to six cells and stepped
+                // back. It also explains the frame-rate dependence: at 30 fps the camera
+                // travels twice as far per recentre as at 60, so the block offset changes by
+                // more and does so on more of the frames.
+                int growX = minX - snappedX;
+                int growZ = minZ - snappedZ;
+                if ((growX != 0 || growZ != 0)
+                    && winW + growX <= width
+                    && winH + growZ <= height)
+                {
+                    minX = snappedX;
+                    minZ = snappedZ;
+                    winW += growX;
+                    winH += growZ;
+                }
+
+                // The old conditional application is gone: the snap above is now applied
+                // unconditionally and the window grew instead of the far edge moving, so
+                // the last visible cells on the border side are still baked (the far edge
+                // never moved at all). Nothing here may undo the alignment.
 
                 // Assign unconditionally: the clamp result is the only valid origin, even
                 // when it happens to equal the current one.
@@ -1970,13 +2171,32 @@ namespace VisualTweaks
                 return;
             }
 
-            int rowBase = wideH - blockH;
+            // (rowBase is gone: the wide blocks are anchored like the gas rows now, at the
+            // bottom of the texture, not at the bottom of the *content*.)
             float inv = 1f / (WideDownsample * WideDownsample * 255f);
 
             for (int by = 0; by < blockH; by++)
             {
-                int outRow = (rowBase + by) * wideW;
-                int srcRow = (height - winH + by * WideDownsample) * width;
+                // This loop has to use the *same* row convention as the gas bake, and it
+                // did not. BakeGasSmooth writes window offset z to row (height - 1 - z);
+                // this used to read from (height - winH + 8*by) and write to
+                // (wideH - blockH + by), which is neither the same row nor the same end of
+                // the texture: block 0 averaged the window's *northern* strip and landed
+                // where the shader samples its *southern* one. The halo was therefore
+                // mirrored in Z and displaced by whatever spare capacity the texture had —
+                // and that spare capacity is exactly (height - winH), which changes every
+                // time the window resizes.
+                //
+                // Only Z. X was always correct: block bx covers cells 8bx..8bx+7 and lands
+                // in column bx, which is what the shader's uv asks for. That asymmetry is
+                // the reported one — moving the camera vertically jitters the gas's edge,
+                // moving it horizontally does not, because with the window spanning the
+                // whole map width (winW == width) the X axis never changes at all.
+                //
+                // Reacts to the frame rate for the same reason: the vertical window size
+                // steps every 8 cells of camera travel, so a slow frame changes it by more.
+                int outRow = (wideH - 1 - by) * wideW;
+                int srcRow = (height - 1 - (by * WideDownsample + WideDownsample - 1)) * width;
 
                 for (int bx = 0; bx < blockW; bx++)
                 {
@@ -2681,39 +2901,44 @@ namespace VisualTweaks
                     {
                         if (knownX0 > 0)
                         {
-                            BakeGasRow(gasGrid, fogGrid, row, outputRow, 0, knownX0, 1f);
+                            BakeGasRow(gasGrid, fogGrid, row, outputRow, 0, knownX0, k);
                         }
 
                         if (knownX1 < winW)
                         {
-                            BakeGasRow(gasGrid, fogGrid, row, outputRow, knownX1, winW, 1f);
+                            BakeGasRow(gasGrid, fogGrid, row, outputRow, knownX1, winW, k);
                         }
                     }
                     else
                     {
-                        BakeGasRow(gasGrid, fogGrid, row, outputRow, 0, winW, 1f);
+                        BakeGasRow(gasGrid, fogGrid, row, outputRow, 0, winW, k);
                     }
 
                     continue;
                 }
 
+                // Every span takes the same coefficient now. A cell that has no history is
+                // seeded from the solver by the NaN check inside BakeGasRow; a cell that has
+                // one is smoothed, wherever the window happens to be. The old k=1 spans were
+                // there to seed cells the window had just exposed, and they did it by
+                // throwing away the history of every cell they touched.
                 if (rowKnown)
                 {
                     if (knownX0 > 0)
                     {
-                        BakeGasRow(gasGrid, fogGrid, row, outputRow, 0, knownX0, 1f);
+                        BakeGasRow(gasGrid, fogGrid, row, outputRow, 0, knownX0, k);
                     }
 
                     BakeGasRow(gasGrid, fogGrid, row, outputRow, knownX0, knownX1, k);
 
                     if (knownX1 < winW)
                     {
-                        BakeGasRow(gasGrid, fogGrid, row, outputRow, knownX1, winW, 1f);
+                        BakeGasRow(gasGrid, fogGrid, row, outputRow, knownX1, winW, k);
                     }
                 }
                 else
                 {
-                    BakeGasRow(gasGrid, fogGrid, row, outputRow, 0, winW, 1f);
+                    BakeGasRow(gasGrid, fogGrid, row, outputRow, 0, winW, k);
                 }
             }
 
@@ -2757,17 +2982,63 @@ namespace VisualTweaks
                     a = ((packed >> 24) & 0xFFu) * Inv255;
                 }
 
-                int cell = (outputRow + x) * 4;
-                gasSmoothState[cell] += (r - gasSmoothState[cell]) * cellK;
-                gasSmoothState[cell + 1] += (g - gasSmoothState[cell + 1]) * cellK;
-                gasSmoothState[cell + 2] += (b - gasSmoothState[cell + 2]) * cellK;
-                gasSmoothState[cell + 3] += (a - gasSmoothState[cell + 3]) * cellK;
+                // The history is indexed by *map cell*, not by texel. That is the whole
+                // point of this loop: a texel means "this cell, in this window", so any
+                // window change used to invalidate it — and invalidating it meant seeding
+                // it straight from the solver, i.e. dropping the temporal lag in one frame.
+                // The lag is what the eye reads as the gas: at the edge the solver value can
+                // be tens of percent above the smoothed one, so a rebake moved the whole
+                // contour outward and the next publishes pulled it back. "It jumps to
+                // another place and then immediately returns", on every pan and zoom, worst
+                // at a low frame rate. Map-anchored, the history simply follows the camera.
+                //
+                // NaN marks "never seen": seeded once with the solver value, then smoothed.
+                int cell = index * 4;
+                float s0 = gasSmoothState[cell];
+                float s1 = gasSmoothState[cell + 1];
+                float s2 = gasSmoothState[cell + 2];
+                float s3 = gasSmoothState[cell + 3];
+                gasSmoothState[cell] = float.IsNaN(s0) ? r : s0 + (r - s0) * cellK;
+                gasSmoothState[cell + 1] = float.IsNaN(s1) ? g : s1 + (g - s1) * cellK;
+                gasSmoothState[cell + 2] = float.IsNaN(s2) ? b : s2 + (b - s2) * cellK;
+                gasSmoothState[cell + 3] = float.IsNaN(s3) ? a : s3 + (a - s3) * cellK;
 
                 gasSmoothPixels[outputRow + x] = new Color32(
                     ToByte(gasSmoothState[cell]),
                     ToByte(gasSmoothState[cell + 1]),
                     ToByte(gasSmoothState[cell + 2]),
                     ToByte(gasSmoothState[cell + 3]));
+            }
+        }
+
+        /// <summary>
+        /// Compares the material's current constants with what this renderer wrote last
+        /// frame. A difference means someone else touched the material between the queued
+        /// draw and the flush, which would draw the field at a different place for exactly
+        /// one frame and then look correct again.
+        /// </summary>
+        private void CheckUniformsUntouched()
+        {
+            if (!GasFieldDiagnostics.Enabled || !haveSetUniforms || material == null)
+            {
+                haveSetUniforms = material != null;
+                return;
+            }
+
+            Vector4 p = material.GetVector(ParamsId);
+            Vector4 p6 = material.GetVector(Params6Id);
+            Vector4 p7 = material.GetVector(Params7Id);
+            bool touched = (p - setParams).sqrMagnitude > 1e-10f
+                || (p6 - setParams6).sqrMagnitude > 1e-10f
+                || (p7 - setParams7).sqrMagnitude > 1e-10f;
+
+            GasFieldDiagnostics.Flag("uniformTouched", touched);
+            if (touched)
+            {
+                GasFieldDiagnostics.Put("uniform.driftP6z", p6.z - setParams6.z);
+                GasFieldDiagnostics.Put("uniform.driftP6w", p6.w - setParams6.w);
+                GasFieldDiagnostics.Put("uniform.driftP7w", p7.w - setParams7.w);
+                GasFieldDiagnostics.Put("uniform.driftFade", p.x - setParams.x);
             }
         }
 
@@ -2923,7 +3194,8 @@ namespace VisualTweaks
                 return false;
             }
 
-            Array.Clear(gasSmoothState, 0, gasSmoothState.Length);
+            // The gas history is map-anchored and deliberately survives a window change;
+            // only the "which part of this window is baked" bookkeeping is reset here.
             ClearWindowPixels(gasSmoothPixels);
             gasClean = true;
 
@@ -3185,7 +3457,9 @@ namespace VisualTweaks
             // identical).
             if (!gasClean)
             {
-                ShiftWindow(gasSmoothState, gasSmoothState, 4, dx, dz);
+                // gasSmoothState used to be shifted here, because it lived in texel space.
+                // It lives in map space now, so a window move needs no reindexing at all —
+                // and shifting it would corrupt it.
                 ShiftPixels(gasSmoothSent, gasSmoothPixels, dx, dz);
             }
 
@@ -3289,6 +3563,7 @@ namespace VisualTweaks
 
         private void ClearKnown()
         {
+            knownCleared = true;
             knownX0 = 0;
             knownX1 = 0;
             knownZ0 = 0;
@@ -3628,6 +3903,8 @@ namespace VisualTweaks
                     sampleX[latticeCount] = wx;
                     sampleZ[latticeCount] = wz;
                     screenComposited[latticeCount] = prev + (cur - prev) * fade;
+                    screenCurrent[latticeCount] = cur;
+                    screenHalo[latticeCount] = WideAt(wx, wz);
                     latticeCount++;
                 }
 
@@ -3680,6 +3957,39 @@ namespace VisualTweaks
         /// The composite the shader would draw at one world cell: the same mix of the same
         /// two textures with the same mappings _Params6/_Params7 carry.
         /// </summary>
+        /// <summary>
+        /// The wide field at a world cell: the mean of the 8x8 block that contains it,
+        /// grouped exactly the way BakeWide groups it — blocks start at the window origin,
+        /// not at a world multiple of eight. Written this way on purpose: reproducing the
+        /// shader's own grouping is the only way to tell "the density changed" from "the
+        /// block grid moved", and the grid is the one thing that used to move on its own.
+        /// </summary>
+        private float WideAt(int worldX, int worldZ)
+        {
+            int blocksX = winW / WideDownsample;
+            int blocksZ = winH / WideDownsample;
+            if (blocksX <= 0 || blocksZ <= 0)
+            {
+                return 0f;
+            }
+
+            int bx = Mathf.Clamp((worldX - rectMinX) / WideDownsample, 0, blocksX - 1);
+            int bz = Mathf.Clamp((worldZ - rectMinZ) / WideDownsample, 0, blocksZ - 1);
+            int cellX = rectMinX + bx * WideDownsample;
+            int cellZ = rectMinZ + bz * WideDownsample;
+
+            float sum = 0f;
+            for (int z = 0; z < WideDownsample; z++)
+            {
+                for (int x = 0; x < WideDownsample; x++)
+                {
+                    sum += SampleGasAt(displayedGas, rectMinX, rectMinZ, winW, winH, cellX + x, cellZ + z);
+                }
+            }
+
+            return sum / (WideDownsample * WideDownsample);
+        }
+
         private float CompositeAt(int worldX, int worldZ, float fade)
         {
             float cur = SampleGasAt(displayedGas, rectMinX, rectMinZ, winW, winH, worldX, worldZ);
@@ -3711,6 +4021,33 @@ namespace VisualTweaks
                 return;
             }
 
+            // How far each of the four time-varying shader inputs moved since the previous
+            // drawn frame. Everything else the fragment shader reads is constant or derived
+            // from the window, so if the picture stepped and none of these did, the step did
+            // not come from a uniform.
+            if (prevFade < 0f)
+            {
+                deltaFade = 0f;
+                deltaCellPixels = 0f;
+                deltaDetail = 0f;
+                deltaOff = 0f;
+            }
+            else
+            {
+                deltaFade = Mathf.Abs(liveFade - prevFade);
+                deltaCellPixels = liveCellPixels - prevCellPixels;
+                deltaDetail = liveDetail - prevDetail;
+                float ox = liveOffX - prevOffX;
+                float oz = liveOffZ - prevOffZ;
+                deltaOff = Mathf.Sqrt(ox * ox + oz * oz);
+            }
+
+            prevFade = liveFade;
+            prevCellPixels = liveCellPixels;
+            prevDetail = liveDetail;
+            prevOffX = liveOffX;
+            prevOffZ = liveOffZ;
+
             int n = ScreenGrid * ScreenGrid;
             if (screenComposited.Length != n || screenSize != width * height)
             {
@@ -3718,6 +4055,9 @@ namespace VisualTweaks
                 // different coordinate system; start over instead of comparing across it.
                 screenSize = width * height;
                 screenComposited = new float[n];
+                screenCurrent = new float[n];
+                screenHalo = new float[n];
+                screenWas = new float[n];
                 sampleX = new int[n];
                 sampleZ = new int[n];
                 latticeCount = 0;
@@ -3730,6 +4070,8 @@ namespace VisualTweaks
             int contentCount = 0;
             int changed = 0;
             int compared = 0;
+            double curSum = 0.0;
+            double haloSum = 0.0;
             int count = latticeCount;
 
             // Pass 1: re-sample the *same world cells* the previous frame sampled, so a
@@ -3739,6 +4081,11 @@ namespace VisualTweaks
             {
                 for (int i = 0; i < count; i++)
                 {
+                    screenWas[i] = -1f;
+                }
+
+                for (int i = 0; i < count; i++)
+                {
                     int wx = sampleX[i];
                     int wz = sampleZ[i];
                     if (wx < viewMinX || wx > viewMaxX || wz < viewMinZ || wz > viewMaxZ)
@@ -3746,8 +4093,18 @@ namespace VisualTweaks
                         continue;
                     }
 
-                    float mixed = CompositeAt(wx, wz, fade);
+                    float curNow = SampleGasAt(displayedGas, rectMinX, rectMinZ, winW, winH, wx, wz);
+                    float prevNow = SampleGasAt(shadowPixels, shadowMinX, shadowMinZ, shadowW, shadowH, wx, wz);
+                    float mixed = prevNow + (curNow - prevNow) * fade;
+
+                    curSum += Mathf.Abs(curNow - screenCurrent[i]);
+                    float haloNow = WideAt(wx, wz);
+                    haloSum += Mathf.Abs(haloNow - screenHalo[i]);
+                    screenHalo[i] = haloNow;
                     float delta = Mathf.Abs(mixed - screenComposited[i]);
+                    screenWas[i] = screenComposited[i];
+                    screenComposited[i] = mixed;
+                    screenCurrent[i] = curNow;
                     compared++;
                     sum += delta;
                     if (delta > max)
@@ -3786,15 +4143,13 @@ namespace VisualTweaks
                         double norm = 0.0;
                         for (int i = 0; i < count; i++)
                         {
-                            int wx = sampleX[i];
-                            int wz = sampleZ[i];
-                            if (wx < viewMinX || wx > viewMaxX || wz < viewMinZ || wz > viewMaxZ)
+                            float was = screenWas[i];
+                            if (was < 0f)
                             {
                                 continue;
                             }
 
-                            float c = CompositeAt(wx + dx, wz + dz, fade);
-                            float was = screenComposited[i];
+                            float c = CompositeAt(sampleX[i] + dx, sampleZ[i] + dz, fade);
                             err += Math.Abs(c - was);
                             norm += c + was;
                         }
@@ -3866,6 +4221,7 @@ namespace VisualTweaks
             }
 
             float mean = compared > 0 ? (float)(sum / compared) : -1f;
+            lastHaloDelta = compared > 0 ? (float)(haloSum / compared) : 0f;
             float content = contentCount > 0 ? (float)(contentSum / contentCount) : 0f;
             GasFieldDiagnostics.Put("screen.deltaMean", mean);
             GasFieldDiagnostics.Put("screen.deltaMax", max);
@@ -3874,6 +4230,15 @@ namespace VisualTweaks
             GasFieldDiagnostics.Put("screen.samples", count);
             GasFieldDiagnostics.Put("screen.latticeStride", latticeStride);
             GasFieldDiagnostics.Put("screen.contentDiff", content);
+            GasFieldDiagnostics.Put("cur.deltaMean", compared > 0 ? (float)(curSum / compared) : -1f);
+
+            // How far the *halo* moved. The halo is an 8x8 block average anchored at the
+            // window origin, so it is the one quantity that changes when the window origin
+            // lands on a different block — even though not a single density value did. Read
+            // together with wide.offsetX/Z this separates "the cell data moved" from "only
+            // the block grid moved", which is the difference the eye reports as the gas's
+            // edge stepping while the cloud stays still.
+            GasFieldDiagnostics.Put("halo.deltaMean", compared > 0 ? (float)(haloSum / compared) : -1f);
             GasFieldDiagnostics.Put("screen.prevEqualsCur", ReferenceEquals(gasCurrent, gasPrevious));
             GasFieldDiagnostics.Put("align.dx", alignX);
             GasFieldDiagnostics.Put("align.dz", alignZ);
@@ -3894,11 +4259,21 @@ namespace VisualTweaks
             bool shifted = (Mathf.Abs(alignX) + Mathf.Abs(alignZ) >= 1) && alignGain > AlignGain;
             bool stepped = mean >= ScreenJumpMean;
             bool peak = GasFieldDiagnostics.IsPeak(mean);
-            if (shifted || stepped || peak)
+
+            // Second ranking, independent of the density: how big a step one of the *other*
+            // inputs took. A jump caused by the noise pattern or by a zoom lands here even
+            // though the density picture barely moves, and would otherwise never be written.
+            float other = Mathf.Max(
+                deltaOff / 0.05f,
+                Mathf.Max(Mathf.Abs(deltaCellPixels) / 2f, Mathf.Abs(deltaDetail) / 0.2f));
+            bool peakOther = GasFieldDiagnostics.IsPeak(mean) || other >= PeakOtherScore;
+
+            if (shifted || stepped || peak || peakOther)
             {
                 string description = DescribeFrame(
                     shifted ? "SHIFT" : "STEP", realtime, alignX, alignZ, alignGain, alignEdge,
-                    compared, mean, max, content, fade, sincePublish);
+                    compared, mean, max, content,
+                    compared > 0 ? (float)(curSum / compared) : 0f, fade, sincePublish);
 
                 if (shifted || stepped)
                 {
@@ -3908,10 +4283,12 @@ namespace VisualTweaks
                 // Worst frame of the last few seconds, kept even when it trips no threshold
                 // at all: that is what keeps a run from coming back with nothing to read.
                 GasFieldDiagnostics.Peak(mean, peak ? description : null);
+                GasFieldDiagnostics.PeakOther(other, peakOther ? description : null);
             }
             else
             {
                 GasFieldDiagnostics.Peak(mean, null);
+                GasFieldDiagnostics.PeakOther(other, null);
             }
 
             screenPrimed = true;
@@ -3951,6 +4328,32 @@ namespace VisualTweaks
             GasFieldDiagnostics.Put("project.y0", projectMinY);
             GasFieldDiagnostics.Put("project.w", projectMaxX - projectMinX);
             GasFieldDiagnostics.Put("project.h", projectMaxY - projectMinY);
+
+            // --- did the layer slide relative to the world? ------------------------
+            //
+            // This is a differential test and it is the only one here that cannot be
+            // fooled by the renderer's own bookkeeping: it compares how far the quad moved
+            // on screen with how far the *camera* moved, both in the same frame. The quad
+            // sits at fixed world coordinates, so its screen motion must be exactly the
+            // camera's motion, scaled by the zoom. Any leftover is the layer sliding over
+            // the terrain — which is precisely what "it jumps to another place for one
+            // frame" looks like, and it needs no assumption about textures, uniforms or
+            // window bookkeeping to measure.
+            //
+            // Zoom frames are excluded: a changing cell size also moves the projected box,
+            // so the difference would not be a slide.
+            // A "did the quad slide over the terrain" differential was tried here and thrown
+            // away: the projected box is computed *from* the camera, so the quad's screen
+            // motion is the camera's motion by construction and the difference can only
+            // ever be zero — or, as it did once, the quad's own world movement (a window
+            // recentre) misread as a two-cell slide. It was circular. The only non-circular
+            // question is what the shader samples at each pixel, which SampleComposite
+            // answers directly against the same arrays and mappings the shader uses.
+            Vector3 camPos = cam.transform.position;
+            float cellPx = (projectMaxX - projectMinX) / Mathf.Max(1, quadWidth);
+            GasFieldDiagnostics.Put("project.cellPx", cellPx);
+            GasFieldDiagnostics.Put("project.camX", camPos.x);
+            GasFieldDiagnostics.Put("project.camZ", camPos.z);
         }
 
         /// <summary>
@@ -3959,7 +4362,7 @@ namespace VisualTweaks
         /// </summary>
         private string DescribeFrame(
             string tag, float realtime, int dx, int dz, float gain, bool edge, int points,
-            float mean, float max, float content, float fade, double sincePublish)
+            float mean, float max, float content, float curDelta, float fade, double sincePublish)
         {
             return "frame=" + Time.frameCount.ToString(CultureInfo.InvariantCulture)
                 + " t=" + realtime.ToString("F2", CultureInfo.InvariantCulture)
@@ -3979,7 +4382,17 @@ namespace VisualTweaks
                 + " rectMoved=" + GasFieldDiagnostics.FlagValue("rectMoved")
                 + " cut=" + GasFieldDiagnostics.FlagValue("crossFadeCut")
                 + " timerDue=" + GasFieldDiagnostics.FlagValue("timerDue")
+                + " curD=" + curDelta.ToString("F4", CultureInfo.InvariantCulture)
+                + " inc=" + GasFieldDiagnostics.FlagValue("incremental")
+                + " cleared=" + GasFieldDiagnostics.FlagValue("knownCleared")
+                + " ref=" + GasFieldDiagnostics.FlagValue("refreshed")
                 + " uvStale=" + GasFieldDiagnostics.FlagValue("uvStale")
+                + " dFade=" + deltaFade.ToString("F2", CultureInfo.InvariantCulture)
+                + " dPx=" + deltaCellPixels.ToString("F2", CultureInfo.InvariantCulture)
+                + " dDet=" + deltaDetail.ToString("F3", CultureInfo.InvariantCulture)
+                + " dOff=" + deltaOff.ToString("F3", CultureInfo.InvariantCulture)
+                + " halo=" + lastHaloDelta.ToString("F4", CultureInfo.InvariantCulture)
+                + " curMismatch=" + GasFieldDiagnostics.FlagValue("curWindowMismatch")
                 + " prevMismatch=" + GasFieldDiagnostics.FlagValue("prevWindowMismatch")
                 + (projectValid
                     ? " proj=" + projectMinX.ToString("F1", CultureInfo.InvariantCulture)
