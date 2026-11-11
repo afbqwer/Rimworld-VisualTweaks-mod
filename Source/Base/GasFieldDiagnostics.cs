@@ -65,8 +65,16 @@ namespace VisualTweaks
             "uniform.params8OriginX", "uniform.params8OriginZ", "uniform.opacity",
             "noise.supportsLocalWind", "noise.animation", "noise.flowCellsX",
             "noise.flowCellsZ", "clock.paused", "clock.timeSpeed",
-            "clock.noisePublishTime", "clock.timerDue", "fade.fadeStart",
+            // clock.timerDue is deliberately absent: it is a per-publish 0/1 edge that
+            // already arrives as FLAG:event.timerDue, and watching the value as well just
+            // reported it twice (870 events out of 1531).
+            "clock.noisePublishTime", "fade.fadeStart",
             "upload.previousIsFresh", "layer.active",
+            // What the baked picture actually contains, as two scalars over the window.
+            // The tex.* keys only prove that a pointer swap happened; these prove whether
+            // the image underneath changed at all — the difference between a harmless
+            // re-bind and the flash itself.
+            "content.gasMean", "content.gasLit",
             "state.builtSmooth", "state.builtNoiseMode",
         };
 
@@ -425,14 +433,21 @@ namespace VisualTweaks
                 string key = WatchKeys[i];
                 string? a = before.Get(key);
                 string? b = now.Get(key);
-                if (a == null && b == null)
+
+                // An empty value means "this frame never put the key", i.e. the code path
+                // that measures it was not reached — not that the quantity became empty.
+                // Comparing it against the other frame invents a change every time a path
+                // alternates between short-circuiting and running: upload.previousIsFresh
+                // alone produced 1024 of 1531 events that way, all of them noise, because
+                // UploadTexture skips it on the frames it does not upload.
+                if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b))
                 {
                     continue;
                 }
 
                 if (!string.Equals(a, b, StringComparison.Ordinal))
                 {
-                    reasons.Add("CHG:" + key + "=" + (a ?? "-") + "->" + (b ?? "-"));
+                    reasons.Add("CHG:" + key + "=" + a + "->" + b);
                 }
             }
 
@@ -445,10 +460,20 @@ namespace VisualTweaks
                 }
             }
 
-            double fadeJump = Math.Abs(Number(now, "fade.fade") - Number(before, "fade.fade"));
-            if (fadeJump >= FadeJump)
+            // A drop *after* the blend reached 1 is the cross-fade restarting, which is the
+            // healthy case: the previous texture is whatever the screen was already
+            // showing, so the new 0 is the same picture the old 1 was. Only a drop that
+            // happens while the blend is still climbing is a cut — that is the flash.
+            // Reporting both is why 508 of 1531 events were flagged as candidates for a
+            // jump that the eye cannot see.
+            double fadeBefore = Number(before, "fade.fade");
+            double fadeNow = Number(now, "fade.fade");
+            double fadeDrop = fadeBefore - fadeNow;
+            if (fadeDrop >= FadeJump && fadeBefore < 1f)
             {
-                reasons.Add("FADE_JUMP:" + fadeJump.ToString("F2", CultureInfo.InvariantCulture));
+                reasons.Add("FADE_CUT:" + fadeBefore.ToString("F2", CultureInfo.InvariantCulture)
+                    + "->" + fadeNow.ToString("F2", CultureInfo.InvariantCulture)
+                    + " (" + fadeDrop.ToString("F2", CultureInfo.InvariantCulture) + ")");
             }
 
             double sinceNow = Number(now, "clock.sincePublish");
@@ -460,11 +485,19 @@ namespace VisualTweaks
                     sinceNow.ToString("F3", CultureInfo.InvariantCulture));
             }
 
+            // A fixed threshold is only correct at 1x. At 6x a perfectly ordinary frame
+            // advances the clock by 0.1 s, so *every* frame tripped this — 1153 of 1531
+            // events in the first real log — and the genuine jumps drowned in it. Scale
+            // with the previous frame's advance instead (the same 2.5x rule GasTrace uses
+            // to flag a speed change) and keep the absolute value as a floor for 1x.
             double clockDelta = Number(now, "clock.shaderClock") -
                 Number(before, "clock.shaderClock");
-            if (clockDelta >= ClockJump)
+            double clockJumpLimit = Math.Max(ClockJump,
+                Number(now, "clock.prevClockAdvance") * 2.5);
+            if (clockDelta >= clockJumpLimit)
             {
-                reasons.Add("CLOCK_JUMP:" + clockDelta.ToString("F3", CultureInfo.InvariantCulture));
+                reasons.Add("CLOCK_JUMP:" + clockDelta.ToString("F3", CultureInfo.InvariantCulture)
+                    + "/" + clockJumpLimit.ToString("F3", CultureInfo.InvariantCulture));
             }
 
             double flowJump = Math.Abs(Number(now, "noise.flowUMax") -
@@ -484,7 +517,7 @@ namespace VisualTweaks
                 string r = reasons[i];
                 if (r.StartsWith("DRAW_FLIP", StringComparison.Ordinal)
                     || r.StartsWith("SKIP", StringComparison.Ordinal)
-                    || r.StartsWith("FADE_JUMP", StringComparison.Ordinal)
+                    || r.StartsWith("FADE_CUT", StringComparison.Ordinal)
                     || r.StartsWith("SESSION_FIRST_FRAME", StringComparison.Ordinal)
                     || r.StartsWith("CHG:tex.", StringComparison.Ordinal)
                     || r.StartsWith("CHG:tex", StringComparison.Ordinal)
@@ -595,10 +628,30 @@ namespace VisualTweaks
             }
 
             sb.AppendLine("-- trigger frame: full snapshot --");
-            for (int i = 0; i < frame.Fields.Count; i++)
+            // One line per key, with its last non-empty value. The prefill in BeginFrame
+            // exists so Get() always has something to compare against, not so every report
+            // carries 96 lines of "key = " followed later by the same key with the value.
+            // It also removes the second way a report could be misread: the old output
+            // printed event.rectMoved = 0 near the top and = 1 near the bottom.
+            List<KeyValuePair<string, string>> snapshot =
+                new List<KeyValuePair<string, string>>(frame.Fields.Count);
+            HashSet<string> seenKeys = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = frame.Fields.Count - 1; i >= 0; i--)
             {
-                sb.Append("  ").Append(frame.Fields[i].Key)
-                    .Append(" = ").AppendLine(frame.Fields[i].Value);
+                KeyValuePair<string, string> field = frame.Fields[i];
+                if (field.Value.Length == 0 || !seenKeys.Add(field.Key))
+                {
+                    continue;
+                }
+
+                snapshot.Add(field);
+            }
+
+            snapshot.Reverse();
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                sb.Append("  ").Append(snapshot[i].Key)
+                    .Append(" = ").AppendLine(snapshot[i].Value);
             }
 
             if (frame.Notes.Count > 0)
@@ -642,7 +695,7 @@ namespace VisualTweaks
                 string r = reasons[i];
                 if (r.StartsWith("DRAW_FLIP", StringComparison.Ordinal)
                     || r.StartsWith("SKIP", StringComparison.Ordinal)
-                    || r.StartsWith("FADE_JUMP", StringComparison.Ordinal)
+                    || r.StartsWith("FADE_CUT", StringComparison.Ordinal)
                     || r.StartsWith("SINCE_RESET", StringComparison.Ordinal)
                     || r.StartsWith("CHG:tex.", StringComparison.Ordinal)
                     || r.StartsWith("CHG:uniform.params", StringComparison.Ordinal)
@@ -696,8 +749,15 @@ namespace VisualTweaks
             }
 
             sessionStarted = true;
+
+            // Append, never overwrite. This used to be File.WriteAllText, so starting the
+            // game wiped the previous run: between the 19:17 and 19:25 sessions, 19 MB of
+            // evidence was replaced by a 562 byte header before anyone read it. Rotation
+            // (MaxLogBytes) is what keeps the file bounded now, not clobbering.
             StringBuilder sb = new StringBuilder(1024);
-            sb.AppendLine("=== VisualTweaks gas-field flash diagnostics ===");
+            sb.AppendLine();
+            sb.AppendLine("=== SESSION " + DateTime.Now.ToString(
+                "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) + " ===");
             sb.AppendLine("started = " + DateTime.Now.ToString("O", CultureInfo.InvariantCulture));
             sb.AppendLine("path = " + path);
             sb.AppendLine("history = " + HistoryFrames + " frames");
@@ -715,7 +775,7 @@ namespace VisualTweaks
                 + "between two frames. Each report contains the full trigger-frame "
                 + "snapshot plus a compact history of preceding frames.");
             sb.AppendLine();
-            File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+            File.AppendAllText(path, sb.ToString(), Encoding.UTF8);
         }
 
         private static void Rotate(string path)

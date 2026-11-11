@@ -20,10 +20,22 @@ namespace VisualTweaks
         private const int RenderQueue = 2990;
         // Fallback cadence: AO's default of 6 ticks at 60 TPS. The live value comes from
         // CurrentPublishPeriod(), because AO lets the interval be 3..30 ticks and ticks
-        // themselves run faster at 2x/3x. Both the refresh timer and the cross-fade use
-        // it: two textures plus exactly one period of fade is the only combination that
-        // neither freezes between publishes nor lets a third snapshot overlap the pair.
+        // themselves run faster at 2x/3x. The refresh timer uses it as-is.
         private const float DefaultRefreshSeconds = 0.1f;
+
+        // The cross-fade, however, must be *shorter* than the period. It used to use the
+        // period itself, on the reasoning that two textures plus exactly one period of fade
+        // neither freezes nor lets a third snapshot overlap. What that missed is the
+        // boundary: fadeStart and lastTimedRefresh are both stamped with the same realtime
+        // on a publish frame, so fade reaches 1 on precisely the frame the next publish
+        // restarts it. The screen then never holds a fully faded frame — it runs
+        // 0 -> 0.98 -> 0 once per period, a whole-layer square wave at the publish rate
+        // (first real log: 379 fade restarts, 508 fade jumps, 762 flash candidates in four
+        // minutes). The leftover fraction below is the stable tail that turns the fade back
+        // into a transition. 0.6 keeps the blend soft (6 frames at 10 Hz) without ever
+        // touching 1 only on the restart frame.
+        private const float FadeFraction = 0.6f;
+        private const float MinFadeSeconds = 0.02f;
 
         // Below ~50 ms the bake cost stops paying for itself (the screen cannot show more
         // than one update per frame anyway); above a second the delay becomes obvious.
@@ -89,6 +101,22 @@ namespace VisualTweaks
         // FlowStepLimit); this floor only matters at the fast end.
         private const float FlowMinStep = 0.25f;
 
+        // Ceiling on how fast the visual clock may run, as a multiple of real time.
+        //
+        // TickRateMultiplier is not bounded. RimWorld 1.7 returns 20000 when
+        // UltraSpeedBoost is on and 150 for a map-less Ultrafast; speed mods push it into
+        // the thousands as well. The noise offset is integrated from this clock, so an
+        // unclamped multiplier made the renderer advance ~100 game-seconds per frame while
+        // FlowStepLimit stayed at 0.25 s — the second log shows exactly that:
+        // lastClockAdvance = 102.5 with deltaTime = 0.0625, i.e. x1640. Every publish then
+        // moved the pattern by the difference, and the whole layer flickered.
+        //
+        // 4x keeps every vanilla speed up to Fast exactly as it was, lets Superfast and
+        // Ultrafast run the noise at a quarter and a fifteenth of the density's rate, and
+        // makes an unbounded multiplier harmless. Above a few frames per second the eye
+        // cannot follow the advection anyway, so nothing is lost visually.
+        private const float MaxVisualRate = 4f;
+
         // Time constant of the continuous-path smoothing lives in the settings, since
         // the cross-fade already hides the 10 Hz cadence and only the size of the jump
         // between publishes is left for the smoothing to absorb.
@@ -117,6 +145,14 @@ namespace VisualTweaks
         // frame" into "one upload per 8 cells", which matters because every upload
         // rebuilds the GPU image.
         private const int WindowQuantum = 8;
+
+        // A window may grow on contact, but it may only shrink after the surplus has held
+        // for this many rendered frames. Grow-on-contact is safe (the extra ring is simply
+        // baked and never sampled); shrinking is not, because it moves the window back and
+        // forth under a view width that jitters by a cell or two. The first log had the
+        // window walking 250 -> 240 -> 248 -> 250 -> 224 -> 208 -> 184 -> 168 -> 176 in
+        // 0.9 s, and every step was a full rebake: one flash per step.
+        private const int WindowShrinkDelayFrames = 30;
 
         // Capacity is recycled only after this many rendered frames of "half of it is
         // surplus". Reallocating six textures is a GPU image rebuild plus a ~2.3 ms fence
@@ -245,6 +281,12 @@ namespace VisualTweaks
 
         private int capacitySurplusFrames;
 
+        // Frames the window has been wider than it needs to be, per axis. Reset by any
+        // grow or by the surplus falling back inside one quantum (see
+        // WindowShrinkDelayFrames).
+        private int windowSurplusWFrames;
+        private int windowSurplusHFrames;
+
         // Temporary diagnostic (window trace setting): proves whether the bytes in the
         // density texture are the solver values for the window they claim to cover.
         private float traceRealtime;
@@ -301,6 +343,18 @@ namespace VisualTweaks
         // Previous frame's clock advance, in game-seconds. Only used to tell a speed change
         // or a hitch apart from the ordinary advance (which is 0.25 s per frame at 15x).
         private double lastClockAdvance;
+
+        // The advance of the frame *before* lastClockAdvance was overwritten. The
+        // diagnostic needs it: `clock.lastClockAdvance` is put into the frame snapshot
+        // after this frame's advance is already stored, so comparing a frame's delta
+        // against it always compares a number with itself. One generation back is what
+        // makes "this frame moved the clock 3x more than the last one" observable.
+        private double previousClockAdvance;
+
+        // The clamped game speed this frame's clock advance used. FlowStepLimit is derived
+        // from it (real seconds). Read here rather than by calling CurrentVisualRate() from
+        // the property, to keep the reflective TickRateMultiplier read at one per frame.
+        private float visualRate = 1f;
 
         // Staging buffers for the flow texture. The velocity written to the shader is the
         // *realized* displacement of the last interval divided by the interval, not the
@@ -374,6 +428,12 @@ namespace VisualTweaks
         private float lastTimedRefresh = float.NegativeInfinity;
         private float fadeStart = float.NegativeInfinity;
 
+        // How long the blend from the previous snapshot to the current one takes. Read on
+        // every frame, so a change to the publish period (game speed, AO interval) shifts
+        // it together with the timer instead of letting one outrun the other.
+        private float FadeDuration =>
+            Mathf.Max(MinFadeSeconds, refreshPeriod * FadeFraction);
+
         // Ambient drift history, in noise units. The offset is a path integral of the
         // wind, not wind * absolute time: the latter teleported the whole pattern
         // whenever the wind vector changed (weather transitions, AO's ambient wind),
@@ -442,6 +502,7 @@ namespace VisualTweaks
             GasFieldDiagnostics.Put("clock.noisePublishTime", noisePublishTime);
             GasFieldDiagnostics.Put("clock.sincePublishRaw", shaderClock - noisePublishTime);
             GasFieldDiagnostics.Put("clock.lastClockAdvance", lastClockAdvance);
+            GasFieldDiagnostics.Put("clock.prevClockAdvance", previousClockAdvance);
             GasFieldDiagnostics.Put("noise.ambientDx", ambientDx);
             GasFieldDiagnostics.Put("noise.ambientDz", ambientDz);
             GasFieldDiagnostics.Put("noise.ambientVelX", ambientVelX);
@@ -459,10 +520,11 @@ namespace VisualTweaks
                 GasFieldBridge.EffectiveNoiseMode != builtNoiseMode;
 
             // Cross-fade progress. Both channels empty and fully faded means every fragment
-            // would be discarded, so there is nothing to bake, upload or draw.
+            // would be discarded, so there is nothing to bake, upload or draw. FadeDuration
+            // is shorter than refreshPeriod on purpose; see the constant.
             float fade = paused || fadeStart < 0f
                 ? 1f
-                : Mathf.Clamp01((realtime - fadeStart) / refreshPeriod);
+                : Mathf.Clamp01((realtime - fadeStart) / FadeDuration);
 
             if (gasClean
                 && mistClean
@@ -656,22 +718,29 @@ namespace VisualTweaks
             // value computed above is stale. Recompute before deciding whether to draw.
             fade = paused || fadeStart < 0f
                 ? 1f
-                : Mathf.Clamp01((realtime - fadeStart) / refreshPeriod);
+                : Mathf.Clamp01((realtime - fadeStart) / FadeDuration);
 
             // Hand-restored fade guard (A/B). A cross-fade is only meaningful between two
-            // pictures of the same window: on a frame that moved it, fade < 1 draws the
-            // whole layer from the previous texture, baked at the old origin — one frame
-            // of "the layer jumped back to where the camera was, then snapped forward".
-            // The frame-rate gate was the failed fix (it flashed on every speed change);
-            // the deterministic condition is the window itself, and the overlap holds the
-            // same picture anyway, so a hard step here costs nothing.
+            // pictures of the same window: on a frame that moved its *origin*, fade < 1
+            // draws the whole layer from the previous texture, baked at the old origin —
+            // one frame of "the layer jumped back to where the camera was, then snapped
+            // forward". The frame-rate gate was the failed fix (it flashed on every speed
+            // change); the deterministic condition is the origin, not the window.
+            //
+            // A window that only changed *size* keeps its origin, so the uv mapping is
+            // shared and the blend stays sound. Forcing fade to 1 there was the second
+            // source of flashes: ZoomBucket hysteresis hops the window by one quantum
+            // while the camera zooms (measured 14 hops in 0.9 s), and every hop was a
+            // full bake plus a hard cut, i.e. one flash per hop. UploadTexture already
+            // cuts the pair itself when the previous picture does not cover the new
+            // window (PrevCoversView), so the guard does not have to.
             float fadeBeforeGuard = fade;
-            if (rectMoved)
+            if (rectMoved && originMoved)
             {
                 fade = 1f;
             }
 
-            GasFieldDiagnostics.Flag("fadeGuardApplied", rectMoved);
+            GasFieldDiagnostics.Flag("fadeGuardApplied", rectMoved && originMoved);
             GasFieldDiagnostics.Put("fade.fadeBeforeGuard", fadeBeforeGuard);
             GasFieldDiagnostics.Put("fade.fadeAfterGuard", fade);
 
@@ -947,13 +1016,27 @@ namespace VisualTweaks
         }
 
         /// <summary>
+        /// The game speed the *visuals* are allowed to run at. Same as the simulation rate
+        /// below MaxVisualRate, and clamped above it — see the constant for why an
+        /// unclamped multiplier destroys the field.
+        /// </summary>
+        private static float CurrentVisualRate()
+        {
+            return Mathf.Min(CurrentSimulationRate(), MaxVisualRate);
+        }
+
+        /// <summary>
         /// Most time one publish may integrate and the shader may extrapolate. It tracks
         /// the publish period because AO allows a 30-tick interval (0.5 s at 1x); a fixed
         /// 0.25 s bound would park the pattern halfway between those publishes. The 1.5
         /// factor absorbs frame jitter.
+        ///
+        /// The period is in *real* seconds, so it has to be scaled by the visual rate to
+        /// stay in the same units as the shader clock. Without that factor the limit is
+        /// correct at 1x and wrong by the whole speed multiplier above it.
         /// </summary>
         private float FlowStepLimit =>
-            Mathf.Min(1f, Mathf.Max(FlowMinStep, refreshPeriod * 1.5f));
+            Mathf.Min(1f, Mathf.Max(FlowMinStep, refreshPeriod * 1.5f * visualRate));
 
         /// <summary>
         /// Advances the renderer-local game-time clock by one frame. Double precision and
@@ -963,6 +1046,12 @@ namespace VisualTweaks
         private void AdvanceShaderClock(bool paused)
         {
             double now = Time.realtimeSinceStartupAsDouble;
+
+            // Clamped here, not in CurrentSimulationRate: the constant applies to what the
+            // field *shows*, and the solver's own cadence is AO's business. Hold the value
+            // even while paused so FlowStepLimit keeps describing the current setting.
+            visualRate = CurrentVisualRate();
+
             if (lastClockReal > 0.0 && !paused)
             {
                 double delta = now - lastClockReal;
@@ -975,8 +1064,7 @@ namespace VisualTweaks
                         delta = 0.25;
                     }
 
-                    float rate = CurrentSimulationRate();
-                    double advance = delta * rate;
+                    double advance = delta * visualRate;
 
                     // Only a *jump* is interesting. At 15x a perfectly normal frame advances
                     // 0.25 s of game time, so an absolute threshold would log every frame and
@@ -994,10 +1082,11 @@ namespace VisualTweaks
                         // speed changes", and it only fires on a hitch or a speed change.
                         VisualTweaksLog.GasTrace(
                             "clock jump"
-                            + $" delta={delta:F4}s rate={rate:F1} advance={advance:F3}s"
+                            + $" delta={delta:F4}s rate={visualRate:F1} advance={advance:F3}s"
                             + $" previous={lastClockAdvance:F3}s clock={shaderClock:F2}");
                     }
 
+                    previousClockAdvance = lastClockAdvance;
                     lastClockAdvance = advance;
                     shaderClock += advance;
                 }
@@ -1141,18 +1230,52 @@ namespace VisualTweaks
             // no dead band turns that into an adjacent-bucket hop almost every frame when
             // the jitter straddles a bucket edge (measured 72 <-> 80 on 70% of frames at
             // some zoom levels). Every hop was a full rebake plus a GPU image rebuild, and
-            // it also moved the window origin. Grow on contact, shrink only once the
-            // surplus is a whole bucket.
-            if (wantWinW > winW || wantWinW + WindowQuantum < winW)
+            // it also moved the window origin.
+            //
+            // Growing is immediate: the freshly exposed ring is outside the view, so
+            // baking it costs nothing visually. Shrinking waits, because it is the half
+            // that oscillates — a pan that alternates a view width between 152 and 168
+            // hops the window between 144 and 168 every frame, and each hop is a full
+            // rebake. The delay makes the shrink follow a real zoom gesture instead of the
+            // jitter riding on top of it.
+            if (wantWinW > winW)
             {
                 winW = wantWinW;
+                windowSurplusWFrames = 0;
                 rectMoved = true;
             }
+            else if (wantWinW + WindowQuantum < winW)
+            {
+                if (++windowSurplusWFrames >= WindowShrinkDelayFrames)
+                {
+                    winW = wantWinW;
+                    windowSurplusWFrames = 0;
+                    rectMoved = true;
+                }
+            }
+            else
+            {
+                windowSurplusWFrames = 0;
+            }
 
-            if (wantWinH > winH || wantWinH + WindowQuantum < winH)
+            if (wantWinH > winH)
             {
                 winH = wantWinH;
+                windowSurplusHFrames = 0;
                 rectMoved = true;
+            }
+            else if (wantWinH + WindowQuantum < winH)
+            {
+                if (++windowSurplusHFrames >= WindowShrinkDelayFrames)
+                {
+                    winH = wantWinH;
+                    windowSurplusHFrames = 0;
+                    rectMoved = true;
+                }
+            }
+            else
+            {
+                windowSurplusHFrames = 0;
             }
 
             // Invariants the bakes rely on:
@@ -1472,6 +1595,11 @@ namespace VisualTweaks
 
             if (gasWritten)
             {
+                // Before UploadTexture swaps the pair: this samples the pixels that were
+                // just baked, which is what the report needs to tell "the picture changed"
+                // apart from "the binding changed".
+                PutGasContentSignature();
+
                 // The wide texture only has to follow the gas texture; if the density did
                 // not change there is nothing new to halate either.
                 BakeWide();
@@ -1515,6 +1643,61 @@ namespace VisualTweaks
 
             forceUpload = false;
             return gasWritten || mistWritten;
+        }
+
+        /// <summary>
+        /// Reduces the freshly baked window to two scalars and puts them in the frame
+        /// snapshot.
+        ///
+        /// The tex.* keys in a report prove which texture name is bound; they say nothing
+        /// about whether the pixels underneath moved. Two frames that swap A and B while
+        /// both numbers here stay put are a re-bind of the same picture, which looks like
+        /// nothing. A hard cut that also moves them is the flash. That distinction is
+        /// exactly what the first log could not make, so every window hop looked identical
+        /// to a real flash.
+        ///
+        /// Sampling at most 32 x 32 texels keeps it cheap enough to leave on while the
+        /// diagnostics switch is on — this never runs otherwise.
+        /// </summary>
+        private void PutGasContentSignature()
+        {
+            if (!GasFieldDiagnostics.Enabled
+                || gasSmoothPixels.Length == 0
+                || winW <= 0
+                || winH <= 0)
+            {
+                return;
+            }
+
+            int w = width;
+            int step = Mathf.Max(1, Mathf.Max(winW, winH) / 32);
+            long luma = 0;
+            int lit = 0;
+            int count = 0;
+
+            for (int z = 0; z < winH; z += step)
+            {
+                int row = (height - 1 - z) * w;
+                for (int x = 0; x < winW; x += step)
+                {
+                    Color32 c = gasSmoothPixels[row + x];
+                    // Alpha carries the visibility mask and rgb the density phase, so the
+                    // sum moves both when the gas shifts and when it thickens.
+                    int v = c.r + c.g + c.b + c.a;
+                    luma += v;
+                    if (v != 0)
+                    {
+                        lit++;
+                    }
+
+                    count++;
+                }
+            }
+
+            GasFieldDiagnostics.Put("content.gasMean",
+                count > 0 ? (double)luma / count : 0.0);
+            GasFieldDiagnostics.Put("content.gasLit",
+                count > 0 ? (double)lit / count : 0.0);
         }
 
         /// <summary>
