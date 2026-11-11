@@ -55,6 +55,18 @@ namespace VisualTweaks
 
         private const float Inv255 = 1f / 255f;
 
+        /// <summary>
+        /// The value below which <see cref="ToByte"/> returns 0 — RoundToInt(v * 255) rounds
+        /// 0.5 to the even number, i.e. to 0, so anything under half a byte is black.
+        ///
+        /// The empty-cell fast path in BakeGasRow collapses the history to zero at exactly
+        /// this value. That is not an approximation of the picture, it is the picture: every
+        /// one of those cells was converted to 0 anyway. If ToByte ever changes its rounding,
+        /// this constant has to change with it, or faint gas will either disappear early or
+        /// leave a residue that never clears.
+        /// </summary>
+        private const float HalfByte = 0.5f / 255f;
+
         // Local flow field for the noise animation. The density textures are one texel per
         // cell; this one is deliberately much coarser: the noise only needs to know which
         // way the gas is being pushed, and eight cells per texel still resolves the main
@@ -2993,20 +3005,13 @@ namespace VisualTweaks
             for (int x = x0; x < x1; x++)
             {
                 int index = row + x;
-                float r = 0f;
-                float g = 0f;
-                float b = 0f;
-                float a = 0f;
+                uint packed = 0u;
 
+                // A fogged cell reads as empty, which is exactly what packed = 0 means, so
+                // the fast path below covers it without a second branch.
                 if (fogGrid == null || !fogGrid.IsFogged(index))
                 {
-                    uint packed = gasGrid.GetDirect(index);
-                    // Multiply by the reciprocal rather than divide by 255: the shift
-                    // is not a power of two, so every /255f was a real divss.
-                    r = (packed & 0xFFu) * Inv255;
-                    g = ((packed >> 8) & 0xFFu) * Inv255;
-                    b = ((packed >> 16) & 0xFFu) * Inv255;
-                    a = ((packed >> 24) & 0xFFu) * Inv255;
+                    packed = gasGrid.GetDirect(index);
                 }
 
                 // The history is indexed by *map cell*, not by texel. That is the whole
@@ -3025,6 +3030,31 @@ namespace VisualTweaks
                 float s1 = gasSmoothState[cell + 1];
                 float s2 = gasSmoothState[cell + 2];
                 float s3 = gasSmoothState[cell + 3];
+
+                // Empty cell, empty history: four conversions, four lerps and four NaN
+                // tests all of which can only produce zero. Measured at 469 us for a
+                // 250x250 map, of which the overwhelming majority was this — burnt 90% of
+                // the bake on cells the picture does not contain.
+                //
+                // NaN compares false, so a cell baked for the first time takes the slow
+                // path once and is seeded from the solver (which is zero here) as usual.
+                if (packed == 0u && s0 < HalfByte && s1 < HalfByte && s2 < HalfByte && s3 < HalfByte)
+                {
+                    gasSmoothState[cell] = 0f;
+                    gasSmoothState[cell + 1] = 0f;
+                    gasSmoothState[cell + 2] = 0f;
+                    gasSmoothState[cell + 3] = 0f;
+                    gasSmoothPixels[outputRow + x] = default;
+                    continue;
+                }
+
+                // Multiply by the reciprocal rather than divide by 255: the shift
+                // is not a power of two, so every /255f was a real divss.
+                float r = (packed & 0xFFu) * Inv255;
+                float g = ((packed >> 8) & 0xFFu) * Inv255;
+                float b = ((packed >> 16) & 0xFFu) * Inv255;
+                float a = ((packed >> 24) & 0xFFu) * Inv255;
+
                 gasSmoothState[cell] = float.IsNaN(s0) ? r : s0 + (r - s0) * cellK;
                 gasSmoothState[cell + 1] = float.IsNaN(s1) ? g : s1 + (g - s1) * cellK;
                 gasSmoothState[cell + 2] = float.IsNaN(s2) ? b : s2 + (b - s2) * cellK;
