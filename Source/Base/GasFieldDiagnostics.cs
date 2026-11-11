@@ -383,6 +383,14 @@ namespace VisualTweaks
 
         internal static void Flag(string key, bool on = true)
         {
+            // The Enabled test is here rather than left to Put: the key is built with a
+            // string concatenation, so without this every Flag call allocated a string
+            // every frame even with the diagnostics switched off. There are 35 of them.
+            if (!Enabled)
+            {
+                return;
+            }
+
             Put("event." + key, on);
         }
 
