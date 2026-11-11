@@ -138,21 +138,25 @@ namespace VisualTweaks
         // blocks are anchored at the origin, so the origin must be a whole number of blocks.
         private const int WideDownsample = 8;
 
-        // Cells baked beyond the view on each side. The slack is what stops the bake
-        // from running on every frame of a slow pan: the view can drift
-        // BakeMargin - PanSlack cells before the rect has to move.
+        // INERT. These describe the "window follows the camera" design that no longer runs:
+        // the density texture is the whole map, so there is no margin, no slack and no
+        // recentre to space out. They are kept only because the degenerate recentre block
+        // still reads them (it always computes the same 0), and because deleting them in
+        // the same pass as the behavioural change would mix two kinds of edit. If that
+        // block is ever removed, remove these with it.
         private const int BakeMargin = 17;
         private const int PanSlack = 9;
 
-        // Capacity is rounded up to this many cells so sub-cell camera jitter never
-        // changes it, and doubled instead of matched exactly so a zoom-out gesture
-        // needs a couple of allocations at most.
+        // INERT. Capacity is the map size now, so there is nothing to round and no
+        // geometric growth left to do.
         private const int CapacityQuantum = 16;
 
         // The window only steps in 8-cell increments. Rounding *up* is free (the extra
         // ring is outside the view), and it turns a zoom tween from "one upload per
         // frame" into "one upload per 8 cells", which matters because every upload
         // rebuilds the GPU image.
+        //
+        // INERT for the same reason as BakeMargin: the window never changes size any more.
         private const int WindowQuantum = 8;
 
         // A window may grow on contact, but it may only shrink after the surplus has held
@@ -787,6 +791,14 @@ namespace VisualTweaks
 
             bool scrolled = false;
 
+            // UNREACHABLE — keep the reasoning, it is the reason the window is pinned.
+            //
+            // `originMoved` is set only where the window origin changes, and the origin is
+            // 0 for the lifetime of the map now. If this ever fires again it means the
+            // window started moving again, and everything it does below becomes wrong:
+            // the smoothing state is map-anchored (see BakeGasRow), so shifting it here
+            // would corrupt it, and the staging pixels no longer need a scroll because the
+            // texture no longer moves under them.
             if (originMoved)
             {
                 // The smoothing state and the staging pixels are indexed by the cell's
@@ -1539,10 +1551,21 @@ namespace VisualTweaks
                 }
                 // Map-sized, not capacity-sized: see BakeGasRow. Reallocated only when the
                 // map itself changes, and every entry starts as NaN ("no history").
+                // Reallocate when the map size changes, and *also* whenever the smoothing
+                // was already invalidated (`DisposeTextures` clears that flag). The length
+                // test alone misses a map change onto a map of the same size — the array is
+                // then still the right size but full of the previous map's history, which
+                // shows up as gas that is not there for the first few publishes. Resetting
+                // costs one pass over the array, and with the window pinned to the map this
+                // branch only runs on a map change.
                 int smoothCells = mapWidth * mapHeight;
-                if (gasSmoothState.Length != smoothCells * 4)
+                if (gasSmoothState.Length != smoothCells * 4 || !smoothInitialized)
                 {
-                    gasSmoothState = new float[smoothCells * 4];
+                    if (gasSmoothState.Length != smoothCells * 4)
+                    {
+                        gasSmoothState = new float[smoothCells * 4];
+                    }
+
                     for (int i = 0; i < gasSmoothState.Length; i++)
                     {
                         gasSmoothState[i] = float.NaN;
@@ -1736,6 +1759,10 @@ namespace VisualTweaks
                 // back. It also explains the frame-rate dependence: at 30 fps the camera
                 // travels twice as far per recentre as at 60, so the block offset changes by
                 // more and does so on more of the frames.
+                // INERT: minX and minZ are clamped to 0 by the map-sized window, so both
+                // grows are 0 and this block never does anything. It stays because it is the
+                // fix for the wide-block misalignment, and if the window ever becomes a
+                // moving rectangle again this has to be here (and to stay unconditional).
                 int growX = minX - snappedX;
                 int growZ = minZ - snappedZ;
                 if ((growX != 0 || growZ != 0)
@@ -3427,6 +3454,13 @@ namespace VisualTweaks
         /// per-cell rebake it replaces, and it keeps the smoothing state instead of
         /// snapping the freshly exposed strip to the raw solver value.
         /// </summary>
+        /// <summary>
+        /// UNREACHABLE: the only caller is the `originMoved` branch, and the window origin
+        /// is pinned to 0. Left in place because it documents why the scrolling design was
+        /// fragile in the first place, and because deleting it is a separate, riskier edit.
+        /// If it is ever revived, note that the gas smoothing state is map-anchored now and
+        /// must NOT be shifted — only the staging pixels ever needed scrolling.
+        /// </summary>
         private void ScrollBuffers(int windowDx, int windowDz)
         {
             forceUpload = true;
@@ -3496,6 +3530,13 @@ namespace VisualTweaks
         /// overwritten. Columns are handled by Array.Copy, which memmoves when the ranges
         /// overlap.
         /// </summary>
+        /// <summary>
+        /// UNREACHABLE. Only ScrollBuffers calls this, and ScrollBuffers is itself
+        /// unreachable. Kept because the row convention it encodes (`height - 1 - z`, with
+        /// the copy direction chosen by the sign of dz) is the same convention BakeWide had
+        /// wrong for months — it is useful documentation of the convention, not dead weight
+        /// to be dropped carelessly.
+        /// </summary>
         private void ShiftWindow<T>(T[] source, T[] target, int stride, int dx, int dz)
         {
             int count = winW - Math.Abs(dx);
@@ -3550,8 +3591,10 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// A window resize keeps the origin, so the index of a given world cell is
-        /// unchanged and the history is still valid — only the far edges went away.
+        /// DEGENERATE, not dead: it runs once after a resize (and on the first frame), when
+        /// the window size changes but the origin does not. With both dimensions pinned to
+        /// the map, that only happens when the map itself changes, and clamping a rect that
+        /// is already the full map is a no-op.
         /// </summary>
         private void ClampKnown()
         {
