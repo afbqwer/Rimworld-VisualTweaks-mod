@@ -2931,6 +2931,11 @@ namespace VisualTweaks
                 // cells, so it takes the solver value directly (see the field comment).
                 bool rowKnown = z >= knownZ0 && z < knownZ1;
 
+                // INERT: `incremental` is false for the lifetime of the map (it needs
+                // `scrolled`, which needs `originMoved`, which needs a window origin that
+                // moves). Kept because it is the cheap version of this loop and would be
+                // the right thing to restore if the window ever becomes a moving rectangle
+                // again.
                 if (incremental)
                 {
                     // A movement-only publish: only the strip the window move exposed is
