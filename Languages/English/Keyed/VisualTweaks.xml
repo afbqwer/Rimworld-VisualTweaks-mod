@@ -108,95 +108,95 @@
   <VisualTweaks_Ripple_Duration>Base duration</VisualTweaks_Ripple_Duration>
   <VisualTweaks_Ripple_DurationTip>How long the shockwave lasts. The default is 0.5 s, adjustable from about 0.05 s to 2 s. Larger explosions last up to about 1.5 times longer; the effect also finishes sooner when the game is running fast.</VisualTweaks_Ripple_DurationTip>
 
-  <!-- Shield hit ripples: borrows the shockwave shader, switches independently -->
-  <VisualTweaks_ShieldRipple_Group>Shield hits</VisualTweaks_ShieldRipple_Group>
-  <VisualTweaks_ShieldRipple_Enable>Ripple when a shield stops a shot</VisualTweaks_ShieldRipple_Enable>
-  <VisualTweaks_ShieldRipple_EnableTip>A ring spreads across the shield surface when it stops a bullet. Intercepted bombardment does the same.</VisualTweaks_ShieldRipple_EnableTip>
-  <VisualTweaks_ShieldRipple_Intensity>Base strength</VisualTweaks_ShieldRipple_Intensity>
-  <VisualTweaks_ShieldRipple_IntensityTip>Baseline ripple strength; the actual value scales with damage. Too high and the ground under the shield looks torn.</VisualTweaks_ShieldRipple_IntensityTip>
-  <VisualTweaks_ShieldRipple_Duration>Base duration</VisualTweaks_ShieldRipple_Duration>
-  <VisualTweaks_ShieldRipple_DurationTip>How long a ring lives when hit for 12 damage. Harder hits last longer, up to the right end of this slider.</VisualTweaks_ShieldRipple_DurationTip>
-  <VisualTweaks_ShieldRipple_DamageScale>Damage scale</VisualTweaks_ShieldRipple_DamageScale>
-  <VisualTweaks_ShieldRipple_DamageScaleTip>How much damage translates into ripple size. Lower makes every hit look alike; higher makes heavy weapons stand out.</VisualTweaks_ShieldRipple_DamageScaleTip>
-
-  <VisualTweaks_ShieldAlways_Group>Shield display</VisualTweaks_ShieldAlways_Group>
-  <VisualTweaks_ShieldAlways_Enable>Always show shields</VisualTweaks_ShieldAlways_Enable>
-  <VisualTweaks_ShieldAlways_EnableTip>Active shields stay faintly visible when not selected, so their coverage is easy to read.</VisualTweaks_ShieldAlways_EnableTip>
-
-  <VisualTweaks_ShieldDome_Group>Shield drawing</VisualTweaks_ShieldDome_Group>
+  <!-- Shields: common switches, large shields, personal belts, then hit ripple -->
+  <VisualTweaks_Shield_GroupCommon>General</VisualTweaks_Shield_GroupCommon>
   <VisualTweaks_ShieldDome_Enable>Replace shield drawing</VisualTweaks_ShieldDome_Enable>
-  <VisualTweaks_ShieldDome_EnableTip>Redraws shields with a custom shader — projector domes and personal shield belts alike. Each chooses its own crisp, hexagonal or stock-like style below. Turn it off to get vanilla's drawing back for comparison.</VisualTweaks_ShieldDome_EnableTip>
-  <VisualTweaks_ShieldDome_DomeStyle>Dome surface</VisualTweaks_ShieldDome_DomeStyle>
+  <VisualTweaks_ShieldDome_EnableTip>Redraws projector domes and personal shield belts with a shader; turn it off to restore the stock look.</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_OffNote>The stock drawing is restored; the dome and belt style settings below are inactive.</VisualTweaks_ShieldDome_OffNote>
+  <VisualTweaks_ShieldAlways_Enable>Always show shields</VisualTweaks_ShieldAlways_Enable>
+  <VisualTweaks_ShieldAlways_EnableTip>Keeps active shields faintly visible when not selected, so their coverage is easy to read.</VisualTweaks_ShieldAlways_EnableTip>
+
+  <VisualTweaks_ShieldDome_Group>Large shields</VisualTweaks_ShieldDome_Group>
+  <VisualTweaks_ShieldDome_LookGroup>Appearance</VisualTweaks_ShieldDome_LookGroup>
+  <VisualTweaks_ShieldDome_DomeStyle>Surface</VisualTweaks_ShieldDome_DomeStyle>
   <VisualTweaks_ShieldDome_StyleCrisp>Crisp</VisualTweaks_ShieldDome_StyleCrisp>
-  <VisualTweaks_ShieldDome_StyleCrispTip>The analytic dome: its edge is a sharp ring that stops exactly on the intercept radius instead of smearing out like the stock texture. Outline thickness and brightness are the sliders below.</VisualTweaks_ShieldDome_StyleCrispTip>
+  <VisualTweaks_ShieldDome_StyleCrispTip>A sharp ring that stops exactly on the intercept radius. Outline thickness and brightness are below.</VisualTweaks_ShieldDome_StyleCrispTip>
   <VisualTweaks_ShieldDome_RidgeWidth>Outline thickness</VisualTweaks_ShieldDome_RidgeWidth>
-  <VisualTweaks_ShieldDome_RidgeWidthTip>The outline is a band, not a stroke; this is its half-width in screen pixels. The thickness stays the same at any zoom and on any shield radius. Want it thicker? Raise this, not the brightness.</VisualTweaks_ShieldDome_RidgeWidthTip>
+  <VisualTweaks_ShieldDome_RidgeWidthTip>Half-width of the outline band in screen pixels; unchanged by zoom or shield size.</VisualTweaks_ShieldDome_RidgeWidthTip>
   <VisualTweaks_ShieldDome_RidgeBrightness>Outline brightness</VisualTweaks_ShieldDome_RidgeBrightness>
-  <VisualTweaks_ShieldDome_RidgeBrightnessTip>Brightness of the outline band. At 0 only the thin hot core and the inner glow are left, and the edge looks thin again — use the thickness slider above for that.</VisualTweaks_ShieldDome_RidgeBrightnessTip>
-  <VisualTweaks_ShieldDome_FlareAlpha>Impact strength</VisualTweaks_ShieldDome_FlareAlpha>
-  <VisualTweaks_ShieldDome_FlareAlphaTip>Peak brightness of the hit a single interception produces. The crisp style paints a flare on the impact side; the stock-like style brightens the dome itself in that sector, the way vanilla's cone is the same shield rather than a second sector-shaped decal. Both share this setting. Vanilla's cone reaches 0.82, which reads as an opaque slice laid on the dome; the default here is a third of that. Several simultaneous hits each draw their own and add up. The hexagonal style has its own hit flash strength and reach.</VisualTweaks_ShieldDome_FlareAlphaTip>
-  <VisualTweaks_ShieldDome_FlareSize>Flare size</VisualTweaks_ShieldDome_FlareSize>
-  <VisualTweaks_ShieldDome_FlareSizeTip>Overall angular size multiplier for the flare only (the brighten sector is fixed at 30°). The width itself follows the projectile's damage, but is capped at 45% of the shield radius: on a small shield it tops out quickly (a wider wedge would cover the whole dome), while on a large one heavier weapons do show. Shield ripples are a separate feature and their settings do not affect the hit effect.</VisualTweaks_ShieldDome_FlareSizeTip>
-  <VisualTweaks_ShieldDome_FlareDamage>Impact damage influence</VisualTweaks_ShieldDome_FlareDamage>
-  <VisualTweaks_ShieldDome_FlareDamageTip>How much the hit's brightness follows the damage, shared by both styles. 0 makes every weapon look alike; higher makes heavy weapons stand out. The result is always clamped to 0.55-1.8x, so a charge lance cannot wash out the whole dome and a small-calibre round cannot disappear.</VisualTweaks_ShieldDome_FlareDamageTip>
+  <VisualTweaks_ShieldDome_RidgeBrightnessTip>Brightness of the outline band. At 0 only the hot core and inner glow remain; use thickness to make it bolder.</VisualTweaks_ShieldDome_RidgeBrightnessTip>
   <VisualTweaks_ShieldDome_Hex>Hexagonal</VisualTweaks_ShieldDome_Hex>
-  <VisualTweaks_ShieldDome_HexTip>Replaces the shield surface with a spherical hex/pentagon shell: cells compress toward the silhouette and each panel carries its own flat shading, so it reads as half a sphere rather than a honeycomb pasted on a circle. A closed surface cannot be tiled by hexagons alone — exactly twelve pentagons are required, and those are where the curvature lives. They are a geometric compromise and are given no special colouring or emphasis. The default break is Hex dissipate: a breaking shell loses panels from the failure point outward; the Break animation section below can switch it to Dissolve or Vanilla. The default hit reaction is Hex wave — panels around the impact flash white and the light walks outward; the Hit animation section below can switch it to Brighten sector instead. No draw call is added. Requires the Replace shield drawing toggle above.</VisualTweaks_ShieldDome_HexTip>
+  <VisualTweaks_ShieldDome_HexTip>Spherical hex/pentagon panels with flat per-cell shading, so it reads as half a sphere. The defaults are Hex wave for hits and Hex dissipate for breaks; both can be changed below.</VisualTweaks_ShieldDome_HexTip>
   <VisualTweaks_ShieldDome_StyleVanilla>Stock-like</VisualTweaks_ShieldDome_StyleVanilla>
-  <VisualTweaks_ShieldDome_StyleVanillaTip>Rebuilds the soft stock look: a wide blurred rim, an almost clear interior, and — like vanilla — a glow allowed to spill slightly past the intercept radius. Built entirely in the shader; no game texture is read or extracted, so it imitates the stock look rather than copying it pixel for pixel. It is the one style without outline sliders.</VisualTweaks_ShieldDome_StyleVanillaTip>
-  <VisualTweaks_ShieldDome_VanillaNote>The stock-like style keeps the stock texture's proportions in shader constants: rim width and interior haze scale with the shield radius, so there is no pixel-width or brightness slider.</VisualTweaks_ShieldDome_VanillaNote>
+  <VisualTweaks_ShieldDome_StyleVanillaTip>Imitates the stock soft glow: a wide blurred rim, an almost clear interior, and glow spilling slightly past the intercept radius.</VisualTweaks_ShieldDome_StyleVanillaTip>
+  <VisualTweaks_ShieldDome_VanillaNote>The stock-like style uses fixed rim and haze proportions, so it has no outline sliders.</VisualTweaks_ShieldDome_VanillaNote>
+  <VisualTweaks_ShieldDome_HexFace>Panel brightness</VisualTweaks_ShieldDome_HexFace>
+  <VisualTweaks_ShieldDome_HexFaceTip>Fill brightness of each panel; too high drowns the cell lines.</VisualTweaks_ShieldDome_HexFaceTip>
+  <VisualTweaks_ShieldDome_HexLine>Cell line brightness</VisualTweaks_ShieldDome_HexLine>
+  <VisualTweaks_ShieldDome_HexLineTip>Strength of the bright line between panels; its width stays constant at any zoom.</VisualTweaks_ShieldDome_HexLineTip>
+  <VisualTweaks_ShieldDome_HexDensity>Cell density</VisualTweaks_ShieldDome_HexDensity>
+  <VisualTweaks_ShieldDome_HexDensityTip>Panels over the sphere grow with k: 2 ≈ 42, 5 ≈ 252, 12 ≈ 1442. The slider is a draft; press the button to bake it.</VisualTweaks_ShieldDome_HexDensityTip>
+  <VisualTweaks_ShieldDome_HexBake>Apply and bake</VisualTweaks_ShieldDome_HexBake>
+  <VisualTweaks_ShieldDome_HexPending>Showing k={0}; draft k={1}. Press the button above to bake (brief hitch).</VisualTweaks_ShieldDome_HexPending>
+
   <VisualTweaks_ShieldDome_ImpactGroup>Hit animation</VisualTweaks_ShieldDome_ImpactGroup>
   <VisualTweaks_ShieldDome_ImpactFlare>Flare</VisualTweaks_ShieldDome_ImpactFlare>
-  <VisualTweaks_ShieldDome_ImpactFlareTip>Paints a wedge toward the incoming shot. On the stock-like surface it fades out through the outer half of the soft rim (about 1.0-1.05R), so it cannot spill into the outer glow. Available for the crisp and stock-like surfaces.</VisualTweaks_ShieldDome_ImpactFlareTip>
+  <VisualTweaks_ShieldDome_ImpactFlareTip>Paints a wedge toward the incoming shot.</VisualTweaks_ShieldDome_ImpactFlareTip>
   <VisualTweaks_ShieldDome_ImpactBrighten>Brighten sector</VisualTweaks_ShieldDome_ImpactBrighten>
-  <VisualTweaks_ShieldDome_ImpactBrightenTip>The shield itself becomes more opaque in the impact's angular sector. The light thins toward the centre and reaches zero only at the centre, and its outer light is contracted inside the visual rim so the shield does not look thicker. The sector angle is the slider below (vanilla default 30°). Available for all three dome styles; it is the stock-like style's default.</VisualTweaks_ShieldDome_ImpactBrightenTip>
+  <VisualTweaks_ShieldDome_ImpactBrightenTip>The shield brightens in the impact's angular sector, fading toward the centre.</VisualTweaks_ShieldDome_ImpactBrightenTip>
   <VisualTweaks_ShieldDome_ImpactHexWave>Hex wave</VisualTweaks_ShieldDome_ImpactHexWave>
-  <VisualTweaks_ShieldDome_ImpactHexWaveTip>The panels around the impact light up, then the light travels outward through the spherical lattice. Hexagonal surface only; it is that surface's default reaction.</VisualTweaks_ShieldDome_ImpactHexWaveTip>
-  <VisualTweaks_ShieldDome_BrightenAngle>Brighten sector angle (°)</VisualTweaks_ShieldDome_BrightenAngle>
-  <VisualTweaks_ShieldDome_BrightenAngleTip>Full angular width of the brighten sector. Vanilla's cone is 30°; damage changes brightness, not the angle. This slider appears only when the hit animation is set to Brighten sector.</VisualTweaks_ShieldDome_BrightenAngleTip>
+  <VisualTweaks_ShieldDome_ImpactHexWaveTip>Panels near the impact light up and the light spreads outward through the lattice. Hexagonal surface only.</VisualTweaks_ShieldDome_ImpactHexWaveTip>
+  <VisualTweaks_ShieldDome_FlareAlpha>Impact brightness</VisualTweaks_ShieldDome_FlareAlpha>
+  <VisualTweaks_ShieldDome_FlareAlphaTip>Peak brightness of one interception; shared by Flare and Brighten sector.</VisualTweaks_ShieldDome_FlareAlphaTip>
+  <VisualTweaks_ShieldDome_FlareSize>Flare size</VisualTweaks_ShieldDome_FlareSize>
+  <VisualTweaks_ShieldDome_FlareSizeTip>Angular size multiplier for the flare; width still follows damage, capped at 45% of the shield radius.</VisualTweaks_ShieldDome_FlareSizeTip>
+  <VisualTweaks_ShieldDome_FlareDamage>Impact damage influence</VisualTweaks_ShieldDome_FlareDamage>
+  <VisualTweaks_ShieldDome_FlareDamageTip>How much hit brightness follows damage. 0 makes all weapons alike; higher makes heavy weapons stand out.</VisualTweaks_ShieldDome_FlareDamageTip>
+  <VisualTweaks_ShieldDome_BrightenAngle>Brighten angle (°)</VisualTweaks_ShieldDome_BrightenAngle>
+  <VisualTweaks_ShieldDome_BrightenAngleTip>Full width of the brighten sector, 30° in vanilla. Damage changes brightness, not the angle.</VisualTweaks_ShieldDome_BrightenAngleTip>
+  <VisualTweaks_ShieldDome_HexImpact>Hit flash strength</VisualTweaks_ShieldDome_HexImpact>
+  <VisualTweaks_ShieldDome_HexImpactTip>Peak brightness of the panels lit by Hex wave.</VisualTweaks_ShieldDome_HexImpactTip>
+  <VisualTweaks_ShieldDome_HexImpactReach>Hit flash reach</VisualTweaks_ShieldDome_HexImpactReach>
+  <VisualTweaks_ShieldDome_HexImpactReachTip>How far the light travels from the impact, as a share of the distance to the far rim.</VisualTweaks_ShieldDome_HexImpactReachTip>
+
   <VisualTweaks_ShieldDome_BreakGroup>Break animation</VisualTweaks_ShieldDome_BreakGroup>
   <VisualTweaks_ShieldDome_BreakVanilla>Vanilla</VisualTweaks_ShieldDome_BreakVanilla>
-  <VisualTweaks_ShieldDome_BreakVanillaTip>No custom break animation: the dome disappears in one frame, leaving vanilla's break flash and sound.</VisualTweaks_ShieldDome_BreakVanillaTip>
+  <VisualTweaks_ShieldDome_BreakVanillaTip>No custom animation: the shield vanishes at once, keeping vanilla's flash and sound.</VisualTweaks_ShieldDome_BreakVanillaTip>
   <VisualTweaks_ShieldDome_BreakDissolve>Dissolve</VisualTweaks_ShieldDome_BreakDissolve>
-  <VisualTweaks_ShieldDome_BreakDissolveTip>Continuous dissolve: the surface is erased from the failure point along a noise-driven tear, with a hot edge and fine cracks.</VisualTweaks_ShieldDome_BreakDissolveTip>
+  <VisualTweaks_ShieldDome_BreakDissolveTip>Erodes along a noise-driven tear with a hot edge and fine cracks.</VisualTweaks_ShieldDome_BreakDissolveTip>
   <VisualTweaks_ShieldDome_BreakHexDissipate>Hex dissipate</VisualTweaks_ShieldDome_BreakHexDissipate>
-  <VisualTweaks_ShieldDome_BreakHexDissipateTip>Hexagonal surface only: panels are lost one by one outward from the failure point instead of the surface being torn open.</VisualTweaks_ShieldDome_BreakHexDissipateTip>
-  <VisualTweaks_ShieldDome_HexFace>Panel brightness</VisualTweaks_ShieldDome_HexFace>
-  <VisualTweaks_ShieldDome_HexFaceTip>How brightly each hexagonal panel is filled. Shading is flat per face (from its own normal), which is what makes this a shell rather than a smooth sphere with a net drawn over it. Too high and it drowns the rim.</VisualTweaks_ShieldDome_HexFaceTip>
-  <VisualTweaks_ShieldDome_HexLine>Cell line brightness</VisualTweaks_ShieldDome_HexLine>
-  <VisualTweaks_ShieldDome_HexLineTip>Strength of the bright line between panels. The default is deliberately high so the line clearly outshines the shading step between two adjacent faces, instead of reading as two parallel edges. Its width is measured in screen pixels, so it stays the same at every zoom and on every shield size.</VisualTweaks_ShieldDome_HexLineTip>
-  <VisualTweaks_ShieldDome_HexDensity>Cell density (domes)</VisualTweaks_ShieldDome_HexDensity>
-  <VisualTweaks_ShieldDome_HexDensityTip>Panels over the whole sphere = 10k^2+2: 2 = 42 (looks like a football), 5 = 252, 8 = 642, 12 = 1442 (a fine energy mesh). Exactly twelve are always pentagons, but they are not marked in any way. This is a draft value only — dragging it does not rebuild the texture; the button below bakes and applies it. Personal shield belts use their own density under Personal belt look below.</VisualTweaks_ShieldDome_HexDensityTip>
-  <VisualTweaks_ShieldDome_HexBake>Apply density and rebake</VisualTweaks_ShieldDome_HexBake>
-  <VisualTweaks_ShieldDome_HexPending>Showing k={0}; the slider is now at k={1}. Press the button above to apply it (rebuilds the 2048^2 texture — a few hundred ms of hitching, once).</VisualTweaks_ShieldDome_HexPending>
-  <VisualTweaks_ShieldDome_PersonalHexGroup>Personal belt lattice</VisualTweaks_ShieldDome_PersonalHexGroup>
-  <VisualTweaks_ShieldDome_PersonalHexDensity>Cell density (belts)</VisualTweaks_ShieldDome_PersonalHexDensity>
-  <VisualTweaks_ShieldDome_PersonalHexDensityTip>Personal shield belts are only 1.2–1.55 cells across and cover far fewer screen pixels than a projector dome, so they use a separately baked lattice instead of inheriting the dome's density. The default k=4 (162 cells) is slightly sparser than the dome's k=5; lower it to keep the cell lines readable when zoomed out, raise it for a finer mesh — the lines fade out on their own below about 5 pixels per cell. Belts only; the dome keeps its own density above. Panel and cell-line brightness are still shared by both. The belt texture is fixed at 512² (about 2 MiB); there is no separate resolution option.</VisualTweaks_ShieldDome_PersonalHexDensityTip>
-  <VisualTweaks_ShieldDome_PersonalHexBake>Apply belt settings</VisualTweaks_ShieldDome_PersonalHexBake>
-  <VisualTweaks_ShieldDome_PersonalHexPending>Active: k={0}; draft: k={1}. Press the button above to rebake (a 512² texture, so it is quick).</VisualTweaks_ShieldDome_PersonalHexPending>
-  <VisualTweaks_ShieldDome_PersonalLookGroup>Personal belt look</VisualTweaks_ShieldDome_PersonalLookGroup>
-  <VisualTweaks_ShieldDome_PersonalStyle>Belt surface</VisualTweaks_ShieldDome_PersonalStyle>
-  <VisualTweaks_ShieldDome_PersonalStyleNote>Belts choose their surface independently of the dome above — crisp, hexagonal or stock-like. Hit feedback uses its own jitter settings below, and the break animation has its own choice below too (stored per surface, so both families share that choice when they use the same surface).</VisualTweaks_ShieldDome_PersonalStyleNote>
-  <VisualTweaks_ShieldDome_PersonalOpacity>Overall opacity</VisualTweaks_ShieldDome_PersonalOpacity>
-  <VisualTweaks_ShieldDome_PersonalOpacityTip>An interceptor dome's opacity comes from vanilla's GetCurrentAlpha, which pulses roughly between 0.2 and 0.62 when selected. A belt has no such rule, and drawing it at 1.0 made it look far more solid than every nearby dome. The default 0.4 sits in the middle of that range. Belts only and completely independent of the dome.</VisualTweaks_ShieldDome_PersonalOpacityTip>
-  <VisualTweaks_ShieldDome_PersonalBreakGroup>Belt break animation</VisualTweaks_ShieldDome_PersonalBreakGroup>
-  <VisualTweaks_ShieldDome_PersonalHitGroup>Personal belt impacts</VisualTweaks_ShieldDome_PersonalHitGroup>
-  <VisualTweaks_ShieldDome_PersonalHitNote>These settings affect personal shield belts only and are completely independent of the dome hit animation above (flare, brighten sector, hex wave). With the custom drawing off, vanilla supplies its own unconfigurable jitter.</VisualTweaks_ShieldDome_PersonalHitNote>
-  <VisualTweaks_ShieldDome_PersonalJitter>Hit jitter</VisualTweaks_ShieldDome_PersonalJitter>
-  <VisualTweaks_ShieldDome_PersonalJitterTip>Reproduces vanilla's absorption reaction: a blocked ranged or explosive hit pushes the bubble along the shot and shrinks it by the same amount, then fades to zero over the configured duration. Vanilla's absorb sound, flash and dust are unaffected; turning this off leaves the bubble completely still.</VisualTweaks_ShieldDome_PersonalJitterTip>
-  <VisualTweaks_ShieldDome_PersonalJitterDistance>Jitter strength</VisualTweaks_ShieldDome_PersonalJitterDistance>
-  <VisualTweaks_ShieldDome_PersonalJitterDistanceTip>Maximum displacement in cells; the bubble shrinks by the same amount. Vanilla uses 0.05. A belt is only 1.2–1.55 cells across, so values above 0.1 read as a violent shove.</VisualTweaks_ShieldDome_PersonalJitterDistanceTip>
-  <VisualTweaks_ShieldDome_PersonalJitterTicks>Jitter duration</VisualTweaks_ShieldDome_PersonalJitterTicks>
-  <VisualTweaks_ShieldDome_PersonalJitterTicksTip>Ticks over which the full displacement fades linearly to zero; 60 ticks = 1 second. Vanilla uses 8. The animation freezes with game time when paused.</VisualTweaks_ShieldDome_PersonalJitterTicksTip>
-  <VisualTweaks_ShieldDome_HexImpact>Hit flash strength</VisualTweaks_ShieldDome_HexImpact>
-  <VisualTweaks_ShieldDome_HexImpactTip>Peak brightness of the panels lit by an interception when the hexagonal surface uses Hex wave. Separate from the impact strength above: this is the final brightness, with no internal multiplier.</VisualTweaks_ShieldDome_HexImpactTip>
-  <VisualTweaks_ShieldDome_HexImpactReach>Hit flash reach</VisualTweaks_ShieldDome_HexImpactReach>
-  <VisualTweaks_ShieldDome_HexImpactReachTip>How far the light travels from the impact, measured as a share of the distance to the far rim. Being a share, it does not shrink when the cell density is raised.</VisualTweaks_ShieldDome_HexImpactReachTip>
-  <VisualTweaks_ShieldDome_Dissolve>Break dissolve</VisualTweaks_ShieldDome_Dissolve>
-  <VisualTweaks_ShieldDome_DissolveTip>When a shield is shot down, EMP-disabled, lost with its mech lord, or switched off, the dome cracks from the point of failure and erodes away instead of vanishing in a single frame. Vanilla's break flash and sound still play underneath.</VisualTweaks_ShieldDome_DissolveTip>
+  <VisualTweaks_ShieldDome_BreakHexDissipateTip>Loses panels one by one outward from the failure point. Hexagonal surface only.</VisualTweaks_ShieldDome_BreakHexDissipateTip>
   <VisualTweaks_ShieldDome_DissolveTime>Break duration</VisualTweaks_ShieldDome_DissolveTime>
-  <VisualTweaks_ShieldDome_DissolveTimeTip>Ticks from the first crack to a fully gone dome (60 ticks is one second at normal speed). Follows game speed and freezes when paused.</VisualTweaks_ShieldDome_DissolveTimeTip>
+  <VisualTweaks_ShieldDome_DissolveTimeTip>Ticks from the first crack to fully gone; 60 ticks = 1 second.</VisualTweaks_ShieldDome_DissolveTimeTip>
   <VisualTweaks_ShieldDome_DissolveBrightness>Break brightness</VisualTweaks_ShieldDome_DissolveBrightness>
-  <VisualTweaks_ShieldDome_DissolveBrightnessTip>Brightness of the dome as it breaks. Vanilla visibility is already zero by then, so the dissolve carries its own brightness; it is independent of the outline brightness above.</VisualTweaks_ShieldDome_DissolveBrightnessTip>
+  <VisualTweaks_ShieldDome_DissolveBrightnessTip>Brightness as it breaks; vanilla visibility is already zero, so the animation carries its own.</VisualTweaks_ShieldDome_DissolveBrightnessTip>
+  <VisualTweaks_ShieldDome_DissolveSharedNote>Timing and brightness are shared by both shield types.</VisualTweaks_ShieldDome_DissolveSharedNote>
+
+  <VisualTweaks_ShieldDome_PersonalGroup>Personal shields</VisualTweaks_ShieldDome_PersonalGroup>
+  <VisualTweaks_ShieldDome_PersonalStyle>Belt surface</VisualTweaks_ShieldDome_PersonalStyle>
+  <VisualTweaks_ShieldDome_PersonalHexDensity>Cell density (belts)</VisualTweaks_ShieldDome_PersonalHexDensity>
+  <VisualTweaks_ShieldDome_PersonalHexDensityTip>Belts are much smaller than domes, so they use their own density. Default k=4, slightly sparser than the dome.</VisualTweaks_ShieldDome_PersonalHexDensityTip>
+  <VisualTweaks_ShieldDome_PersonalHexBake>Apply and bake</VisualTweaks_ShieldDome_PersonalHexBake>
+  <VisualTweaks_ShieldDome_PersonalHexPending>Showing k={0}; draft k={1}. Press the button above to bake.</VisualTweaks_ShieldDome_PersonalHexPending>
+  <VisualTweaks_ShieldDome_PersonalOpacity>Opacity</VisualTweaks_ShieldDome_PersonalOpacity>
+  <VisualTweaks_ShieldDome_PersonalOpacityTip>Belts lack vanilla's pulsing alpha; the default 0.4 matches nearby shields.</VisualTweaks_ShieldDome_PersonalOpacityTip>
+  <VisualTweaks_ShieldDome_PersonalHitGroup>Hit jitter</VisualTweaks_ShieldDome_PersonalHitGroup>
+  <VisualTweaks_ShieldDome_PersonalJitter>Enable hit jitter</VisualTweaks_ShieldDome_PersonalJitter>
+  <VisualTweaks_ShieldDome_PersonalJitterTip>A blocked hit pushes the bubble along the shot and shrinks it, then fades. Off leaves it completely still.</VisualTweaks_ShieldDome_PersonalJitterTip>
+  <VisualTweaks_ShieldDome_PersonalJitterDistance>Jitter strength</VisualTweaks_ShieldDome_PersonalJitterDistance>
+  <VisualTweaks_ShieldDome_PersonalJitterDistanceTip>Maximum displacement in cells; the bubble shrinks by the same amount. Vanilla uses 0.05.</VisualTweaks_ShieldDome_PersonalJitterDistanceTip>
+  <VisualTweaks_ShieldDome_PersonalJitterTicks>Jitter duration</VisualTweaks_ShieldDome_PersonalJitterTicks>
+  <VisualTweaks_ShieldDome_PersonalJitterTicksTip>Ticks for the displacement to fade to zero; 60 ticks = 1 second. Vanilla uses 8.</VisualTweaks_ShieldDome_PersonalJitterTicksTip>
+
+  <VisualTweaks_ShieldRipple_Group>Hit ripple</VisualTweaks_ShieldRipple_Group>
+  <VisualTweaks_ShieldRipple_Enable>Ripple when a hit is blocked</VisualTweaks_ShieldRipple_Enable>
+  <VisualTweaks_ShieldRipple_EnableTip>A ring spreads across the shield when it stops a shot or intercepts bombardment.</VisualTweaks_ShieldRipple_EnableTip>
+  <VisualTweaks_ShieldRipple_Intensity>Strength</VisualTweaks_ShieldRipple_Intensity>
+  <VisualTweaks_ShieldRipple_IntensityTip>Baseline ripple strength; actual strength scales with damage. Too high and the ground looks torn.</VisualTweaks_ShieldRipple_IntensityTip>
+  <VisualTweaks_ShieldRipple_Duration>Duration</VisualTweaks_ShieldRipple_Duration>
+  <VisualTweaks_ShieldRipple_DurationTip>How long the ring lives; harder hits last longer.</VisualTweaks_ShieldRipple_DurationTip>
+  <VisualTweaks_ShieldRipple_DamageScale>Damage influence</VisualTweaks_ShieldRipple_DamageScale>
+  <VisualTweaks_ShieldRipple_DamageScaleTip>How much damage drives ripple size. Lower is more uniform; higher makes heavy weapons stand out.</VisualTweaks_ShieldRipple_DamageScaleTip>
 
   <!-- Temperature: heat haze and cold mist share one page -->
   <VisualTweaks_Temp_GroupHeat>Heat</VisualTweaks_Temp_GroupHeat>

@@ -108,95 +108,95 @@
   <VisualTweaks_Ripple_Duration>基础持续时间</VisualTweaks_Ripple_Duration>
   <VisualTweaks_Ripple_DurationTip>冲击波的基础存活时间，默认 0.5 秒，范围约 0.05 秒到 2 秒。爆炸越大持续越久，最多约 1.5 倍；游戏加速时也会相应更快结束。</VisualTweaks_Ripple_DurationTip>
 
-  <!-- 护盾受击涟漪：借用冲击波着色器，但开关独立 -->
-  <VisualTweaks_ShieldRipple_Group>护盾受击</VisualTweaks_ShieldRipple_Group>
-  <VisualTweaks_ShieldRipple_Enable>护盾被击中时产生涟漪</VisualTweaks_ShieldRipple_Enable>
-  <VisualTweaks_ShieldRipple_EnableTip>护盾挡下子弹时，表面扩散一圈涟漪。空中轰炸被拦截时同样生效。</VisualTweaks_ShieldRipple_EnableTip>
-  <VisualTweaks_ShieldRipple_Intensity>基础强度</VisualTweaks_ShieldRipple_Intensity>
-  <VisualTweaks_ShieldRipple_IntensityTip>涟漪的基准强度，实际强度随伤害浮动。过高会让护盾下方的地面看起来被扯动。</VisualTweaks_ShieldRipple_IntensityTip>
-  <VisualTweaks_ShieldRipple_Duration>基础持续时间</VisualTweaks_ShieldRipple_Duration>
-  <VisualTweaks_ShieldRipple_DurationTip>普通子弹（12 点伤害）打中时的存活时间，伤害越高持续越久，上限即此滑条的右端。</VisualTweaks_ShieldRipple_DurationTip>
-  <VisualTweaks_ShieldRipple_DamageScale>伤害比例</VisualTweaks_ShieldRipple_DamageScale>
-  <VisualTweaks_ShieldRipple_DamageScaleTip>伤害换算成涟漪大小的倍率。调低让各种武器看起来更接近，调高让重武器更醒目。</VisualTweaks_ShieldRipple_DamageScaleTip>
-
-  <VisualTweaks_ShieldAlways_Group>护盾显示</VisualTweaks_ShieldAlways_Group>
-  <VisualTweaks_ShieldAlways_Enable>总是显示护盾</VisualTweaks_ShieldAlways_Enable>
-  <VisualTweaks_ShieldAlways_EnableTip>运作中的护盾即使没有选中也会淡淡显示，方便看清覆盖范围。</VisualTweaks_ShieldAlways_EnableTip>
-
-  <VisualTweaks_ShieldDome_Group>护盾绘制</VisualTweaks_ShieldDome_Group>
+  <!-- 护盾：通用开关 → 大型护盾 → 个人护盾 → 受击涟漪 -->
+  <VisualTweaks_Shield_GroupCommon>通用</VisualTweaks_Shield_GroupCommon>
   <VisualTweaks_ShieldDome_Enable>替换护盾绘制</VisualTweaks_ShieldDome_Enable>
-  <VisualTweaks_ShieldDome_EnableTip>用自定义着色器重画护盾，包括投射器穹顶和个人护盾腰带；两者可各自选择清晰、六边形或类原版样式。关闭即刻恢复原版绘制，可直接对比。</VisualTweaks_ShieldDome_EnableTip>
-  <VisualTweaks_ShieldDome_DomeStyle>大型护盾样式</VisualTweaks_ShieldDome_DomeStyle>
+  <VisualTweaks_ShieldDome_EnableTip>用着色器重画投射器穹顶和个人护盾腰带；关闭后立即恢复原版外观。</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_OffNote>已恢复原版绘制，大型护盾与个人护盾的样式设置暂不生效。</VisualTweaks_ShieldDome_OffNote>
+  <VisualTweaks_ShieldAlways_Enable>总是显示护盾</VisualTweaks_ShieldAlways_Enable>
+  <VisualTweaks_ShieldAlways_EnableTip>未选中时也让运作中的护盾淡淡显示，便于看清覆盖范围。</VisualTweaks_ShieldAlways_EnableTip>
+
+  <VisualTweaks_ShieldDome_Group>大型护盾</VisualTweaks_ShieldDome_Group>
+  <VisualTweaks_ShieldDome_LookGroup>外观</VisualTweaks_ShieldDome_LookGroup>
+  <VisualTweaks_ShieldDome_DomeStyle>样式</VisualTweaks_ShieldDome_DomeStyle>
   <VisualTweaks_ShieldDome_StyleCrisp>清晰</VisualTweaks_ShieldDome_StyleCrisp>
-  <VisualTweaks_ShieldDome_StyleCrispTip>自定义解析式护盾：边缘是一道锐利的环，严格停在拦截判定半径上，不会像原版那样糊成一片。轮廓粗细与亮度就是下面的滑条。</VisualTweaks_ShieldDome_StyleCrispTip>
+  <VisualTweaks_ShieldDome_StyleCrispTip>边缘是一道锐利的环，正好停在拦截判定半径上。轮廓粗细与亮度见下方滑条。</VisualTweaks_ShieldDome_StyleCrispTip>
   <VisualTweaks_ShieldDome_RidgeWidth>轮廓粗细</VisualTweaks_ShieldDome_RidgeWidth>
-  <VisualTweaks_ShieldDome_RidgeWidthTip>外轮廓是一条带，不是一条线；这里是它的半宽（屏幕像素）。任何缩放、任何护盾半径下厚度都一样。嫌细就加这个，不是加亮度。</VisualTweaks_ShieldDome_RidgeWidthTip>
+  <VisualTweaks_ShieldDome_RidgeWidthTip>轮廓带的半宽（屏幕像素），不随缩放或护盾大小变化。</VisualTweaks_ShieldDome_RidgeWidthTip>
   <VisualTweaks_ShieldDome_RidgeBrightness>轮廓亮度</VisualTweaks_ShieldDome_RidgeBrightness>
-  <VisualTweaks_ShieldDome_RidgeBrightnessTip>外轮廓那条带的亮度。调到 0 只剩一条细热芯和内辉，轮廓会重新显得薄——要更厚请调上面的粗细。</VisualTweaks_ShieldDome_RidgeBrightnessTip>
-  <VisualTweaks_ShieldDome_FlareAlpha>受击效果强度</VisualTweaks_ShieldDome_FlareAlpha>
-  <VisualTweaks_ShieldDome_FlareAlphaTip>一次拦截产生的峰值亮度。清晰样式在受击方向画一道火舌；类原版样式则让扇形区域内的护盾本体变亮（和原版一样是同一层护盾，不是另一块扇形贴片）。两者共用这一项。原版锥形最高 0.82，看起来像一块实心扇形压在护盾上；这里默认只有它的三分之一。多发射击会各自画一份并叠加变亮。六边形样式有自己的「受击闪光强度」与「受击扩散范围」。</VisualTweaks_ShieldDome_FlareAlphaTip>
-  <VisualTweaks_ShieldDome_FlareSize>火舌大小</VisualTweaks_ShieldDome_FlareSize>
-  <VisualTweaks_ShieldDome_FlareSizeTip>火舌角宽的整体倍率（仅火舌；增亮扇区固定 30°）。宽度本身跟随弹道伤害，但受「不超过护盾半径 45%」的上限约束：小护盾上很快就到顶（否则扇形会盖住整个穹顶），大护盾上重武器才会明显更宽。护盾涟漪是另一个功能，它的设置不会影响受击效果。</VisualTweaks_ShieldDome_FlareSizeTip>
-  <VisualTweaks_ShieldDome_FlareDamage>受击伤害影响</VisualTweaks_ShieldDome_FlareDamage>
-  <VisualTweaks_ShieldDome_FlareDamageTip>受击亮度跟随击中伤害的程度，两种样式共用。0 时各种武器一样亮；越大重武器越醒目。结果始终限制在 0.55–1.8 倍之间，所以电荷长枪不会糊满整个穹顶，小口径子弹也不会看不见。</VisualTweaks_ShieldDome_FlareDamageTip>
+  <VisualTweaks_ShieldDome_RidgeBrightnessTip>轮廓带的亮度。调到 0 只剩细芯和内辉；要更厚请调粗细。</VisualTweaks_ShieldDome_RidgeBrightnessTip>
   <VisualTweaks_ShieldDome_Hex>六边形</VisualTweaks_ShieldDome_Hex>
-  <VisualTweaks_ShieldDome_HexTip>把护盾面换成球面的六边形/五边形面板：格子越靠边缘越被压扁，每一格有独立的明暗，看起来像半个球壳而不是平贴的蜂窝。球面上纯六边形铺不满，所以必然有十二个五边形——它们只是球面铺不满时的几何妥协，因此不额外着色、不强调。破裂默认是「六边消散」：面板按从受击点向外的顺序逐块熄灭；也可在下方「破裂动画」改为「溶解」或「原版」。受击默认是「六边扩散」：命中点附近的面板闪白光并向外传导；也可以在下方「受击动画」改为「扇区增亮」。绘制次数不变。需要先开启上面的「替换护盾绘制」。</VisualTweaks_ShieldDome_HexTip>
+  <VisualTweaks_ShieldDome_HexTip>球面的六边/五边形面板，逐格明暗，看起来像半个球壳。受击默认「六边扩散」，破裂默认「六边消散」，可在下方更改。</VisualTweaks_ShieldDome_HexTip>
   <VisualTweaks_ShieldDome_StyleVanilla>类原版</VisualTweaks_ShieldDome_StyleVanilla>
-  <VisualTweaks_ShieldDome_StyleVanillaTip>模仿原版护盾的柔和光晕：宽而模糊的边缘、几乎透明的内部，并且和原版一样允许辉光略微溢出拦截判定半径。完全由着色器重建，不读取、不提取游戏贴图，因此只是「类原版」而非逐像素复刻。三种样式里只有它不使用轮廓粗细与亮度滑条。</VisualTweaks_ShieldDome_StyleVanillaTip>
-  <VisualTweaks_ShieldDome_VanillaNote>类原版样式把原版贴图的比例固定在着色器里：边缘宽度与内部雾气都按护盾半径缩放，因此没有像素级粗细或亮度滑条。</VisualTweaks_ShieldDome_VanillaNote>
+  <VisualTweaks_ShieldDome_StyleVanillaTip>模仿原版的柔和光晕：宽而模糊的边缘、近乎透明的内部，辉光略微溢出拦截半径。</VisualTweaks_ShieldDome_StyleVanillaTip>
+  <VisualTweaks_ShieldDome_VanillaNote>类原版样式使用固定的边缘与雾气比例，没有轮廓滑条。</VisualTweaks_ShieldDome_VanillaNote>
+  <VisualTweaks_ShieldDome_HexFace>格面亮度</VisualTweaks_ShieldDome_HexFace>
+  <VisualTweaks_ShieldDome_HexFaceTip>每格面板的填充亮度；调太高会盖住格线。</VisualTweaks_ShieldDome_HexFaceTip>
+  <VisualTweaks_ShieldDome_HexLine>格线亮度</VisualTweaks_ShieldDome_HexLine>
+  <VisualTweaks_ShieldDome_HexLineTip>面板之间亮线的强度，线宽不随缩放变化。</VisualTweaks_ShieldDome_HexLineTip>
+  <VisualTweaks_ShieldDome_HexDensity>格子密度</VisualTweaks_ShieldDome_HexDensity>
+  <VisualTweaks_ShieldDome_HexDensityTip>整球面板数随 k 增加：2≈42，5≈252，12≈1442。拖动只改草稿，按下方按钮烘焙后生效。</VisualTweaks_ShieldDome_HexDensityTip>
+  <VisualTweaks_ShieldDome_HexBake>应用并烘焙</VisualTweaks_ShieldDome_HexBake>
+  <VisualTweaks_ShieldDome_HexPending>当前 k={0}，草稿 k={1}。按上方按钮烘焙后生效（会有短暂卡顿）。</VisualTweaks_ShieldDome_HexPending>
+
   <VisualTweaks_ShieldDome_ImpactGroup>受击动画</VisualTweaks_ShieldDome_ImpactGroup>
   <VisualTweaks_ShieldDome_ImpactFlare>火舌</VisualTweaks_ShieldDome_ImpactFlare>
-  <VisualTweaks_ShieldDome_ImpactFlareTip>在受击方向画一道楔形火舌，指向来袭方向。类原版样式下会在亮环外半段（约 1.0–1.05R）淡出，不会伸进外圈辉光。清晰与类原版可选。</VisualTweaks_ShieldDome_ImpactFlareTip>
+  <VisualTweaks_ShieldDome_ImpactFlareTip>在受击方向画一道楔形火舌。</VisualTweaks_ShieldDome_ImpactFlareTip>
   <VisualTweaks_ShieldDome_ImpactBrighten>扇区增亮</VisualTweaks_ShieldDome_ImpactBrighten>
-  <VisualTweaks_ShieldDome_ImpactBrightenTip>让受击方向的角度扇区内的护盾本体变亮（不透明度提高），越靠近圆心越弱，到圆心处消失；外缘收缩在亮环视觉边缘以内。扇区角度在下方的「增亮扇区角度」中调整，原版默认 30°。三种样式都可选；类原版默认使用它。</VisualTweaks_ShieldDome_ImpactBrightenTip>
+  <VisualTweaks_ShieldDome_ImpactBrightenTip>受击方向的角度扇区变亮，越靠近中心越弱。</VisualTweaks_ShieldDome_ImpactBrightenTip>
   <VisualTweaks_ShieldDome_ImpactHexWave>六边扩散</VisualTweaks_ShieldDome_ImpactHexWave>
-  <VisualTweaks_ShieldDome_ImpactHexWaveTip>命中点附近的面板先亮起，再沿球面六边形网格向外逐圈扩散。只有六边形样式可用，也是它的默认受击动画。</VisualTweaks_ShieldDome_ImpactHexWaveTip>
-  <VisualTweaks_ShieldDome_BrightenAngle>增亮扇区角度 (°)</VisualTweaks_ShieldDome_BrightenAngle>
-  <VisualTweaks_ShieldDome_BrightenAngleTip>增亮扇区的总角度。原版锥形为 30°；伤害只影响亮度，不改变角度。该滑条只在受击动画选择「扇区增亮」时出现。</VisualTweaks_ShieldDome_BrightenAngleTip>
+  <VisualTweaks_ShieldDome_ImpactHexWaveTip>命中点附近的面板亮起，并沿网格向外逐圈扩散。仅六边形样式可用。</VisualTweaks_ShieldDome_ImpactHexWaveTip>
+  <VisualTweaks_ShieldDome_FlareAlpha>受击亮度</VisualTweaks_ShieldDome_FlareAlpha>
+  <VisualTweaks_ShieldDome_FlareAlphaTip>一次拦截的峰值亮度。火舌与扇区增亮共用这一项。</VisualTweaks_ShieldDome_FlareAlphaTip>
+  <VisualTweaks_ShieldDome_FlareSize>火舌大小</VisualTweaks_ShieldDome_FlareSize>
+  <VisualTweaks_ShieldDome_FlareSizeTip>火舌角宽的倍率；宽度仍随伤害增加，但不超过护盾半径的 45%。</VisualTweaks_ShieldDome_FlareSizeTip>
+  <VisualTweaks_ShieldDome_FlareDamage>受击伤害影响</VisualTweaks_ShieldDome_FlareDamage>
+  <VisualTweaks_ShieldDome_FlareDamageTip>受击亮度跟随伤害的程度。0 时各种武器一样亮，调高让重武器更醒目。</VisualTweaks_ShieldDome_FlareDamageTip>
+  <VisualTweaks_ShieldDome_BrightenAngle>增亮角度 (°)</VisualTweaks_ShieldDome_BrightenAngle>
+  <VisualTweaks_ShieldDome_BrightenAngleTip>增亮扇区的总角度，原版为 30°。伤害只影响亮度。</VisualTweaks_ShieldDome_BrightenAngleTip>
+  <VisualTweaks_ShieldDome_HexImpact>受击闪光强度</VisualTweaks_ShieldDome_HexImpact>
+  <VisualTweaks_ShieldDome_HexImpactTip>六边扩散点亮面板的峰值亮度。</VisualTweaks_ShieldDome_HexImpactTip>
+  <VisualTweaks_ShieldDome_HexImpactReach>受击扩散范围</VisualTweaks_ShieldDome_HexImpactReach>
+  <VisualTweaks_ShieldDome_HexImpactReachTip>光从命中点向外传播的距离，按到对侧边缘的比例计算。</VisualTweaks_ShieldDome_HexImpactReachTip>
+
   <VisualTweaks_ShieldDome_BreakGroup>破裂动画</VisualTweaks_ShieldDome_BreakGroup>
   <VisualTweaks_ShieldDome_BreakVanilla>原版</VisualTweaks_ShieldDome_BreakVanilla>
-  <VisualTweaks_ShieldDome_BreakVanillaTip>不播放自定义破裂动画：穹顶在一帧内消失，只保留原版的破裂闪光与音效。</VisualTweaks_ShieldDome_BreakVanillaTip>
+  <VisualTweaks_ShieldDome_BreakVanillaTip>不播放自定义动画：护盾立即消失，只保留原版闪光和音效。</VisualTweaks_ShieldDome_BreakVanillaTip>
   <VisualTweaks_ShieldDome_BreakDissolve>溶解</VisualTweaks_ShieldDome_BreakDissolve>
-  <VisualTweaks_ShieldDome_BreakDissolveTip>连续溶解：从破裂点开始，表面沿噪声撕裂前沿逐渐被擦除，并带热边与细裂纹。</VisualTweaks_ShieldDome_BreakDissolveTip>
+  <VisualTweaks_ShieldDome_BreakDissolveTip>沿噪声撕裂前沿逐渐溶解，带热边和细裂纹。</VisualTweaks_ShieldDome_BreakDissolveTip>
   <VisualTweaks_ShieldDome_BreakHexDissipate>六边消散</VisualTweaks_ShieldDome_BreakHexDissipate>
-  <VisualTweaks_ShieldDome_BreakHexDissipateTip>六边形专属：从破裂点向外逐块失去面板，而不是把表面撕开一个软洞。</VisualTweaks_ShieldDome_BreakHexDissipateTip>
-  <VisualTweaks_ShieldDome_HexFace>格面亮度</VisualTweaks_ShieldDome_HexFace>
-  <VisualTweaks_ShieldDome_HexFaceTip>每一格面板的填充亮度。按格子的朝向固定明暗（平面着色），这是「球壳」而不是「光滑球上贴网格」的关键。调太高会盖住轮廓。</VisualTweaks_ShieldDome_HexFaceTip>
-  <VisualTweaks_ShieldDome_HexLine>格线亮度</VisualTweaks_ShieldDome_HexLine>
-  <VisualTweaks_ShieldDome_HexLineTip>面板之间那条亮线的强度，默认偏亮是为了让线明确压过两侧格面的明暗差，避免看成两条并排的边。线宽按屏幕像素计算，任何缩放和任何护盾尺寸下都一样粗。</VisualTweaks_ShieldDome_HexLineTip>
-  <VisualTweaks_ShieldDome_HexDensity>格子密度（大型护盾）</VisualTweaks_ShieldDome_HexDensity>
-  <VisualTweaks_ShieldDome_HexDensityTip>大型投射器穹顶的整球面板数 = 10k²+2：2 = 42 格（像足球），5 = 252 格，8 = 642 格，12 = 1442 格（细密能量网）。其中始终恰好 12 个是五边形，但不作任何特殊标记。这里只是草稿值，拖动不会重建贴图——按下面的按钮才会烘焙并生效。个人护盾腰带使用下方“个人护盾外观”里独立的一组密度。</VisualTweaks_ShieldDome_HexDensityTip>
-  <VisualTweaks_ShieldDome_HexBake>应用密度并重新烘焙</VisualTweaks_ShieldDome_HexBake>
-  <VisualTweaks_ShieldDome_HexPending>当前显示的是 k={0}；滑条已改为 k={1}，按上面的按钮应用（重建 2048² 贴图，会有几百毫秒的卡顿，只发生一次）。</VisualTweaks_ShieldDome_HexPending>
-  <VisualTweaks_ShieldDome_PersonalHexGroup>个人护盾六边形</VisualTweaks_ShieldDome_PersonalHexGroup>
-  <VisualTweaks_ShieldDome_PersonalHexDensity>格子密度（个人护盾）</VisualTweaks_ShieldDome_PersonalHexDensity>
-  <VisualTweaks_ShieldDome_PersonalHexDensityTip>个人护盾腰带只有 1.2~1.55 格宽，屏幕像素远少于大型穹顶，所以使用独立烘焙的贴图，而不是继承大型的密度。默认 k=4（162 格）比大型的 k=5 略疏；调低能让低缩放下的格线更清楚，调高则更细密，但每格低于约 5 像素时格线会按设计自动淡出。只影响腰带，大型穹顶仍用上面自己的密度；格面亮度与格线亮度仍由两种护盾共用。腰带贴图固定为 512²（约 2 MiB），不再单独提供分辨率选项。</VisualTweaks_ShieldDome_PersonalHexDensityTip>
-  <VisualTweaks_ShieldDome_PersonalHexBake>应用个人护盾设置</VisualTweaks_ShieldDome_PersonalHexBake>
-  <VisualTweaks_ShieldDome_PersonalHexPending>当前生效：k={0}；草稿：k={1}，按上面的按钮重新烘焙后生效（512² 贴图，烘焙很快）。</VisualTweaks_ShieldDome_PersonalHexPending>
-  <VisualTweaks_ShieldDome_PersonalLookGroup>个人护盾外观</VisualTweaks_ShieldDome_PersonalLookGroup>
-  <VisualTweaks_ShieldDome_PersonalStyle>个人护盾样式</VisualTweaks_ShieldDome_PersonalStyle>
-  <VisualTweaks_ShieldDome_PersonalStyleNote>个人护盾的样式独立于上方大型护盾，可分别选择清晰、六边形或类原版。受击反馈使用下方独立的抖动设置；破裂动画也在下方单独选择（按表面存储，与大型护盾使用同一表面时共用该表面的选择）。</VisualTweaks_ShieldDome_PersonalStyleNote>
-  <VisualTweaks_ShieldDome_PersonalOpacity>整体不透明度</VisualTweaks_ShieldDome_PersonalOpacity>
-  <VisualTweaks_ShieldDome_PersonalOpacityTip>大型护盾的不透明度来自原版 GetCurrentAlpha：选中的穹顶大约在 0.2~0.62 之间脉动。个人护盾没有这种脉动，直接按 1.0 绘制会显得比周围的穹顶实得多。这里默认 0.4，取该范围的中段；只影响个人护盾，与大型护盾完全独立。</VisualTweaks_ShieldDome_PersonalOpacityTip>
-  <VisualTweaks_ShieldDome_PersonalBreakGroup>个人护盾破裂</VisualTweaks_ShieldDome_PersonalBreakGroup>
-  <VisualTweaks_ShieldDome_PersonalHitGroup>个人护盾受击</VisualTweaks_ShieldDome_PersonalHitGroup>
-  <VisualTweaks_ShieldDome_PersonalHitNote>以下设置只影响个人护盾腰带，与上方大型护盾的受击动画（扇形/增亮/六边形波）完全独立。关闭替换护盾绘制时，由原版提供不可调的抖动。</VisualTweaks_ShieldDome_PersonalHitNote>
-  <VisualTweaks_ShieldDome_PersonalJitter>受击抖动</VisualTweaks_ShieldDome_PersonalJitter>
-  <VisualTweaks_ShieldDome_PersonalJitterTip>复刻原版腰带的吸收反馈：被挡下的远程或爆炸伤害会让气泡沿弹道方向轻推，同时按相同幅度收缩，随后在设定时长内衰减到零。原版的吸收音效、闪光和尘土不受影响；关闭后气泡完全静止。</VisualTweaks_ShieldDome_PersonalJitterTip>
-  <VisualTweaks_ShieldDome_PersonalJitterDistance>抖动幅度</VisualTweaks_ShieldDome_PersonalJitterDistance>
-  <VisualTweaks_ShieldDome_PersonalJitterDistanceTip>最大位移，单位格，气泡同时按相同数值收缩。原版是 0.05 格；腰带只有 1.2~1.55 格宽，调到 0.1 以上会显得夸张。</VisualTweaks_ShieldDome_PersonalJitterDistanceTip>
-  <VisualTweaks_ShieldDome_PersonalJitterTicks>抖动时长</VisualTweaks_ShieldDome_PersonalJitterTicks>
-  <VisualTweaks_ShieldDome_PersonalJitterTicksTip>从满幅度线性衰减到 0 的 tick 数，60 tick = 1 秒。原版是 8 tick；暂停时随游戏时间一起冻结。</VisualTweaks_ShieldDome_PersonalJitterTicksTip>
-  <VisualTweaks_ShieldDome_HexImpact>受击闪光强度</VisualTweaks_ShieldDome_HexImpact>
-  <VisualTweaks_ShieldDome_HexImpactTip>六边形样式选择「六边扩散」时，一次拦截点亮面板的峰值亮度。与上面的「受击效果强度」是两回事：这里直接就是最终亮度，没有额外的内部倍数。</VisualTweaks_ShieldDome_HexImpactTip>
-  <VisualTweaks_ShieldDome_HexImpactReach>受击扩散范围</VisualTweaks_ShieldDome_HexImpactReach>
-  <VisualTweaks_ShieldDome_HexImpactReachTip>光从命中点向外走多远，以「到对侧边缘的距离」为 1。这个比例与格子密度无关，所以调高密度时闪光的大小不会跟着缩小。</VisualTweaks_ShieldDome_HexImpactReachTip>
-  <VisualTweaks_ShieldDome_Dissolve>护盾破裂溶解</VisualTweaks_ShieldDome_Dissolve>
-  <VisualTweaks_ShieldDome_DissolveTip>护盾被打爆、被 EMP 击毁、随机械族首领失效或手动关闭时，穹顶会从受击点开始裂开、逐块消散，而不是一帧内凭空消失。原版的破裂闪光与音效仍然保留。</VisualTweaks_ShieldDome_DissolveTip>
-  <VisualTweaks_ShieldDome_DissolveTime>破裂动画时长</VisualTweaks_ShieldDome_DissolveTime>
-  <VisualTweaks_ShieldDome_DissolveTimeTip>从开始破裂到完全消失的 tick 数（正常速度下 60 tick 为 1 秒）。跟随游戏速度，暂停时冻结。</VisualTweaks_ShieldDome_DissolveTimeTip>
+  <VisualTweaks_ShieldDome_BreakHexDissipateTip>从破裂点向外逐块失去面板。仅六边形样式可用。</VisualTweaks_ShieldDome_BreakHexDissipateTip>
+  <VisualTweaks_ShieldDome_DissolveTime>破裂时长</VisualTweaks_ShieldDome_DissolveTime>
+  <VisualTweaks_ShieldDome_DissolveTimeTip>从开始破裂到完全消失的 tick 数，60 tick = 1 秒。</VisualTweaks_ShieldDome_DissolveTimeTip>
   <VisualTweaks_ShieldDome_DissolveBrightness>破裂亮度</VisualTweaks_ShieldDome_DissolveBrightness>
-  <VisualTweaks_ShieldDome_DissolveBrightnessTip>破裂瞬间穹顶的亮度。破裂后原版的可见度已经归零，所以溶解必须自带亮度，与上方的轮廓亮度互不影响。</VisualTweaks_ShieldDome_DissolveBrightnessTip>
+  <VisualTweaks_ShieldDome_DissolveBrightnessTip>破裂瞬间的亮度；原版此时已不可见，因此动画自带亮度。</VisualTweaks_ShieldDome_DissolveBrightnessTip>
+  <VisualTweaks_ShieldDome_DissolveSharedNote>大型护盾与个人护盾共用此时长和亮度。</VisualTweaks_ShieldDome_DissolveSharedNote>
+
+  <VisualTweaks_ShieldDome_PersonalGroup>个人护盾</VisualTweaks_ShieldDome_PersonalGroup>
+  <VisualTweaks_ShieldDome_PersonalStyle>腰带样式</VisualTweaks_ShieldDome_PersonalStyle>
+  <VisualTweaks_ShieldDome_PersonalHexDensity>格子密度（个人护盾）</VisualTweaks_ShieldDome_PersonalHexDensity>
+  <VisualTweaks_ShieldDome_PersonalHexDensityTip>腰带尺寸远小于穹顶，使用独立密度。默认 k=4，比大型护盾略疏。</VisualTweaks_ShieldDome_PersonalHexDensityTip>
+  <VisualTweaks_ShieldDome_PersonalHexBake>应用并烘焙</VisualTweaks_ShieldDome_PersonalHexBake>
+  <VisualTweaks_ShieldDome_PersonalHexPending>当前 k={0}，草稿 k={1}。按上方按钮烘焙后生效。</VisualTweaks_ShieldDome_PersonalHexPending>
+  <VisualTweaks_ShieldDome_PersonalOpacity>不透明度</VisualTweaks_ShieldDome_PersonalOpacity>
+  <VisualTweaks_ShieldDome_PersonalOpacityTip>腰带没有原版的亮暗脉动，默认 0.4 以匹配周围的护盾。</VisualTweaks_ShieldDome_PersonalOpacityTip>
+  <VisualTweaks_ShieldDome_PersonalHitGroup>受击抖动</VisualTweaks_ShieldDome_PersonalHitGroup>
+  <VisualTweaks_ShieldDome_PersonalJitter>启用受击抖动</VisualTweaks_ShieldDome_PersonalJitter>
+  <VisualTweaks_ShieldDome_PersonalJitterTip>挡下攻击时气泡沿弹道方向轻推并收缩，随后衰减。关闭后完全静止。</VisualTweaks_ShieldDome_PersonalJitterTip>
+  <VisualTweaks_ShieldDome_PersonalJitterDistance>抖动幅度</VisualTweaks_ShieldDome_PersonalJitterDistance>
+  <VisualTweaks_ShieldDome_PersonalJitterDistanceTip>最大位移（格），气泡同时收缩。原版为 0.05。</VisualTweaks_ShieldDome_PersonalJitterDistanceTip>
+  <VisualTweaks_ShieldDome_PersonalJitterTicks>抖动时长</VisualTweaks_ShieldDome_PersonalJitterTicks>
+  <VisualTweaks_ShieldDome_PersonalJitterTicksTip>衰减到零所需的 tick 数，60 tick = 1 秒。原版为 8。</VisualTweaks_ShieldDome_PersonalJitterTicksTip>
+
+  <VisualTweaks_ShieldRipple_Group>受击涟漪</VisualTweaks_ShieldRipple_Group>
+  <VisualTweaks_ShieldRipple_Enable>挡下攻击时产生涟漪</VisualTweaks_ShieldRipple_Enable>
+  <VisualTweaks_ShieldRipple_EnableTip>护盾挡下子弹或拦截轰炸时，表面扩散一圈涟漪。</VisualTweaks_ShieldRipple_EnableTip>
+  <VisualTweaks_ShieldRipple_Intensity>强度</VisualTweaks_ShieldRipple_Intensity>
+  <VisualTweaks_ShieldRipple_IntensityTip>涟漪的基础强度，实际强度随伤害提高；过高会显得地面被扯动。</VisualTweaks_ShieldRipple_IntensityTip>
+  <VisualTweaks_ShieldRipple_Duration>持续时间</VisualTweaks_ShieldRipple_Duration>
+  <VisualTweaks_ShieldRipple_DurationTip>涟漪的存活时间；伤害越高持续越久。</VisualTweaks_ShieldRipple_DurationTip>
+  <VisualTweaks_ShieldRipple_DamageScale>伤害影响</VisualTweaks_ShieldRipple_DamageScale>
+  <VisualTweaks_ShieldRipple_DamageScaleTip>伤害对涟漪大小的影响程度。调低更统一，调高让重武器更明显。</VisualTweaks_ShieldRipple_DamageScaleTip>
 
   <!-- 温度：热效应（高温空气热浪）与冷效应（低温房间寒气）共用一页 -->
   <VisualTweaks_Temp_GroupHeat>热效应</VisualTweaks_Temp_GroupHeat>

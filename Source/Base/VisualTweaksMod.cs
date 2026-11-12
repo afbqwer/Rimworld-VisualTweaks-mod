@@ -702,16 +702,45 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Every shield visual lives here. The groups used to sit under the ripple tab
-        /// only because the hit ripple borrows the shockwave shader, but the display and
-        /// dome settings have nothing to do with explosions and were easy to miss there.
-        /// Each group stays a section of its own: they replace different parts of the
-        /// stock shield drawing and are switched on independently.
+        /// Every shield visual lives here, ordered by what the player is configuring:
+        /// the two global switches, the projector dome, the personal belt, then the
+        /// hit ripple. The two style sections build on the replacement switch, so
+        /// they are hidden while it is off.
         /// </summary>
         private static void DoShieldTab(Listing_Standard listing)
         {
-            // Borrows the shockwave shader but keeps its own switch: this is feedback
-            // on the shield, not air distortion, so it does not follow the ripple toggle.
+            SettingsLayout.Header(listing, "VisualTweaks_Shield_GroupCommon".Translate());
+
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_Enable".Translate(),
+                ref VisualTweaksSettings.crispShieldDome,
+                "VisualTweaks_ShieldDome_EnableTip".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldAlways_Enable".Translate(),
+                ref VisualTweaksSettings.alwaysShowShields,
+                "VisualTweaks_ShieldAlways_EnableTip".Translate());
+
+            // Both style sections configure the replacement drawing. Always-show and
+            // the hit ripple also work on vanilla's drawing, so they stay available.
+            if (VisualTweaksSettings.crispShieldDome)
+            {
+                DrawDomeSection(listing);
+                DrawPersonalSection(listing);
+            }
+            else
+            {
+                SettingsLayout.Note(
+                    listing,
+                    "VisualTweaks_ShieldDome_OffNote".Translate());
+            }
+
+            DrawShieldRippleSection(listing);
+            SettingsLayout.Finish(listing);
+        }
+
+        /// <summary>Feedback on the shield surface; independent of the shockwave tab.</summary>
+        private static void DrawShieldRippleSection(Listing_Standard listing)
+        {
             SettingsLayout.Header(listing, "VisualTweaks_ShieldRipple_Group".Translate());
             listing.CheckboxLabeled(
                 "VisualTweaks_ShieldRipple_Enable".Translate(),
@@ -738,29 +767,17 @@ namespace VisualTweaks
                 VisualTweaksSettings.MinShieldRippleDamageScale,
                 VisualTweaksSettings.MaxShieldRippleDamageScale,
                 "VisualTweaks_ShieldRipple_DamageScaleTip".Translate());
+        }
 
-            // Not a ripple: this one changes what the stock shield drawing does on every
-            // frame, so it gets its own section instead of riding along with the effects.
-            SettingsLayout.Header(listing, "VisualTweaks_ShieldAlways_Group".Translate());
-            listing.CheckboxLabeled(
-                "VisualTweaks_ShieldAlways_Enable".Translate(),
-                ref VisualTweaksSettings.alwaysShowShields,
-                "VisualTweaks_ShieldAlways_EnableTip".Translate());
-
-            // Also not a ripple, and not an addition either: this one replaces the
-            // stock drawing, so it reads as a separate decision from "show shields
-            // that vanilla hides".
+        /// <summary>
+        /// Projector domes. The surface row picks the drawing; the sliders below it
+        /// belong to that surface, and impact and break are independent choices.
+        /// </summary>
+        private static void DrawDomeSection(Listing_Standard listing)
+        {
             SettingsLayout.Header(listing, "VisualTweaks_ShieldDome_Group".Translate());
-            listing.CheckboxLabeled(
-                "VisualTweaks_ShieldDome_Enable".Translate(),
-                ref VisualTweaksSettings.crispShieldDome,
-                "VisualTweaks_ShieldDome_EnableTip".Translate());
+            SettingsLayout.SubHeader(listing, "VisualTweaks_ShieldDome_LookGroup".Translate());
 
-            // The style is a sub-choice of the custom dome, not a separate drawing
-            // path: the same quad and material. It used to be a checkbox for the hex
-            // shell alone; three mutually exclusive styles need a radio row, or two
-            // of them end up ticked at once.
-            listing.Gap(6f);
             listing.Label("VisualTweaks_ShieldDome_DomeStyle".Translate());
             int styleIndex = ShieldStyleIndexOf(VisualTweaksSettings.shieldDomeStyle);
             int pickedStyle = SettingsLayout.RadioRow(
@@ -773,74 +790,16 @@ namespace VisualTweaks
                 VisualTweaksSettings.shieldDomeStyle = ShieldStyleOrder[pickedStyle];
             }
 
-            // Cheap when the texture is already baked. This is also the moment a
-            // mid-game switch to the panel shell pays its one-off cost, instead of
-            // the first shield that happens to be drawn.
+            // Cheap when already baked, and the one-off bake belongs in the settings
+            // window rather than on the first shield drawn after a style switch.
             BakeHexIfNewlyDrawn();
-
-            // Face and line weights are shared by both families' materials; the
-            // lattice density and its rebake are per family, so they sit with the
-            // style they belong to.
-            if (VisualTweaksSettings.AnyHexShieldDome)
-            {
-                VisualTweaksSettings.shieldHexFaceStrength = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_HexFace".Translate(),
-                    VisualTweaksSettings.shieldHexFaceStrength,
-                    VisualTweaksSettings.MinShieldHexFace,
-                    VisualTweaksSettings.MaxShieldHexFace,
-                    "VisualTweaks_ShieldDome_HexFaceTip".Translate());
-                VisualTweaksSettings.shieldHexLineStrength = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_HexLine".Translate(),
-                    VisualTweaksSettings.shieldHexLineStrength,
-                    VisualTweaksSettings.MinShieldHexLine,
-                    VisualTweaksSettings.MaxShieldHexLine,
-                    "VisualTweaks_ShieldDome_HexLineTip".Translate());
-            }
 
             if (VisualTweaksSettings.HexShieldDome)
             {
-                VisualTweaksSettings.shieldHexDensity = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_HexDensity".Translate(),
-                    VisualTweaksSettings.shieldHexDensity,
-                    VisualTweaksSettings.MinShieldHexDensity,
-                    VisualTweaksSettings.MaxShieldHexDensity,
-                    "VisualTweaks_ShieldDome_HexDensityTip".Translate(),
-                    step: 1f);
-
-                // The slider above edits a DRAFT. A rebake at 2048^2 is a few hundred ms
-                // of main-thread work, and rebuilding on every integer step would stall
-                // the game over and over while the handle is dragged. So the only thing
-                // that commits the draft is this button, and the note under it says so
-                // whenever the two disagree.
-                int draftDensity = Mathf.RoundToInt(VisualTweaksSettings.shieldHexDensity);
-                int bakedDensity = VisualTweaksSettings.shieldHexDensityApplied;
-                if (SettingsLayout.ButtonRow(
-                        listing,
-                        new[] { "VisualTweaks_ShieldDome_HexBake".Translate().ToString() }) == 0)
-                {
-                    ShieldHexMap.Apply(ShieldHexTarget.Large, draftDensity);
-                    bakedDensity = VisualTweaksSettings.shieldHexDensityApplied;
-                }
-
-                if (draftDensity != bakedDensity)
-                {
-                    SettingsLayout.Note(
-                        listing,
-                        "VisualTweaks_ShieldDome_HexPending".Translate(
-                            bakedDensity,
-                            draftDensity));
-                }
+                DrawHexPanelSliders(listing);
+                DrawHexDensity(listing, false);
             }
-
-            // The stock-like style has no ridge line, a core or a fresnel exponent to
-            // tune: every width is a fraction of the radius, like the texture it
-            // imitates. The sliders are shared by both families, so they stay as long
-            // as at least one of them uses a surface that has a ridge.
-            if (VisualTweaksSettings.VanillaShieldDome
-                && VisualTweaksSettings.PersonalVanillaShieldDome)
+            else if (VisualTweaksSettings.VanillaShieldDome)
             {
                 SettingsLayout.Note(
                     listing,
@@ -848,81 +807,280 @@ namespace VisualTweaks
             }
             else
             {
-                // These read every frame, so a slider drag is visible while the game
-                // is paused on a selected shield — the same reason the style row above
-                // is live.
-                VisualTweaksSettings.shieldRidgeWidth = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_RidgeWidth".Translate(),
-                    VisualTweaksSettings.shieldRidgeWidth,
-                    VisualTweaksSettings.MinShieldRidgeWidth,
-                    VisualTweaksSettings.MaxShieldRidgeWidth,
-                    "VisualTweaks_ShieldDome_RidgeWidthTip".Translate());
-                VisualTweaksSettings.shieldRidgeBrightness = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_RidgeBrightness".Translate(),
-                    VisualTweaksSettings.shieldRidgeBrightness,
-                    0f,
-                    1f,
-                    "VisualTweaks_ShieldDome_RidgeBrightnessTip".Translate());
+                DrawRidgeSliders(listing);
             }
 
-            // The hit animation is a separate choice from the surface. Each surface
-            // keeps its own selection, because the valid sets differ: the panel shell
-            // can use its lattice wave, while the crisp and stock-like surfaces choose
-            // between a painted flare and a brightened sector.
             SettingsLayout.SubHeader(
                 listing,
                 "VisualTweaks_ShieldDome_ImpactGroup".Translate());
+            DrawDomeImpactChoice(listing);
 
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldDome_BreakGroup".Translate());
+            DrawBreakChoice(listing, false);
+
+            if (VisualTweaksSettings.CurrentShieldBreakStyle
+                != VisualTweaksSettings.ShieldBreakVanilla)
+            {
+                DrawDissolveSliders(listing);
+            }
+        }
+
+        /// <summary>
+        /// Personal shield belts. They choose their own surface, opacity, break and
+        /// hit feedback; only the hex panel weights and break timing are shared.
+        /// </summary>
+        private static void DrawPersonalSection(Listing_Standard listing)
+        {
+            SettingsLayout.Header(
+                listing,
+                "VisualTweaks_ShieldDome_PersonalGroup".Translate());
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldDome_LookGroup".Translate());
+
+            listing.Label("VisualTweaks_ShieldDome_PersonalStyle".Translate());
+            int styleIndex = ShieldStyleIndexOf(
+                VisualTweaksSettings.personalShieldDomeStyle);
+            int pickedStyle = SettingsLayout.RadioRow(
+                listing,
+                ShieldStyleLabels(),
+                styleIndex,
+                ShieldStyleTips());
+            if (pickedStyle != styleIndex)
+            {
+                VisualTweaksSettings.personalShieldDomeStyle =
+                    ShieldStyleOrder[pickedStyle];
+                BakeHexIfNewlyDrawn();
+            }
+
+            if (VisualTweaksSettings.PersonalHexShieldDome)
+            {
+                // Panel and line brightness are shared with the dome; show them
+                // here only when the dome's section did not already.
+                if (!VisualTweaksSettings.HexShieldDome)
+                {
+                    DrawHexPanelSliders(listing);
+                }
+
+                DrawHexDensity(listing, true);
+            }
+            else if (!VisualTweaksSettings.PersonalVanillaShieldDome
+                && !VisualTweaksSettings.HexShieldDome
+                && !VisualTweaksSettings.VanillaShieldDome)
+            {
+                // A crisp belt shares the dome's ridge sliders, so they are shown
+                // here only when the dome uses a different surface.
+                DrawRidgeSliders(listing);
+            }
+
+            VisualTweaksSettings.personalShieldOpacity = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_PersonalOpacity".Translate(),
+                VisualTweaksSettings.personalShieldOpacity,
+                VisualTweaksSettings.MinPersonalShieldOpacity,
+                VisualTweaksSettings.MaxPersonalShieldOpacity,
+                "VisualTweaks_ShieldDome_PersonalOpacityTip".Translate());
+
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldDome_BreakGroup".Translate());
+            DrawBreakChoice(listing, true);
+
+            // The timing sliders are shared, so show them here only when the dome
+            // section did not (its own break animation is Vanilla there).
+            if (VisualTweaksSettings.CurrentShieldBreakStyleFor(ShieldHexTarget.Personal)
+                    != VisualTweaksSettings.ShieldBreakVanilla
+                && VisualTweaksSettings.CurrentShieldBreakStyle
+                    == VisualTweaksSettings.ShieldBreakVanilla)
+            {
+                DrawDissolveSliders(listing);
+            }
+
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldDome_PersonalHitGroup".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_PersonalJitter".Translate(),
+                ref VisualTweaksSettings.personalShieldHitJitter,
+                "VisualTweaks_ShieldDome_PersonalJitterTip".Translate());
+
+            if (VisualTweaksSettings.personalShieldHitJitter)
+            {
+                VisualTweaksSettings.personalShieldJitterDistance =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_PersonalJitterDistance".Translate(),
+                        VisualTweaksSettings.personalShieldJitterDistance,
+                        VisualTweaksSettings.MinPersonalShieldJitterDistance,
+                        VisualTweaksSettings.MaxPersonalShieldJitterDistance,
+                        "VisualTweaks_ShieldDome_PersonalJitterDistanceTip".Translate(),
+                        step: 0.01f);
+                VisualTweaksSettings.personalShieldJitterTicks =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_PersonalJitterTicks".Translate(),
+                        VisualTweaksSettings.personalShieldJitterTicks,
+                        VisualTweaksSettings.MinPersonalShieldJitterTicks,
+                        VisualTweaksSettings.MaxPersonalShieldJitterTicks,
+                        "VisualTweaks_ShieldDome_PersonalJitterTicksTip".Translate(),
+                        step: 1f);
+            }
+        }
+
+        /// <summary>Ridge width and brightness, shared by every crisp surface.</summary>
+        private static void DrawRidgeSliders(Listing_Standard listing)
+        {
+            VisualTweaksSettings.shieldRidgeWidth = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_RidgeWidth".Translate(),
+                VisualTweaksSettings.shieldRidgeWidth,
+                VisualTweaksSettings.MinShieldRidgeWidth,
+                VisualTweaksSettings.MaxShieldRidgeWidth,
+                "VisualTweaks_ShieldDome_RidgeWidthTip".Translate());
+            VisualTweaksSettings.shieldRidgeBrightness = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_RidgeBrightness".Translate(),
+                VisualTweaksSettings.shieldRidgeBrightness,
+                0f,
+                1f,
+                "VisualTweaks_ShieldDome_RidgeBrightnessTip".Translate());
+        }
+
+        /// <summary>Panel and line brightness, shared by every hexagonal surface.</summary>
+        private static void DrawHexPanelSliders(Listing_Standard listing)
+        {
+            VisualTweaksSettings.shieldHexFaceStrength = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_HexFace".Translate(),
+                VisualTweaksSettings.shieldHexFaceStrength,
+                VisualTweaksSettings.MinShieldHexFace,
+                VisualTweaksSettings.MaxShieldHexFace,
+                "VisualTweaks_ShieldDome_HexFaceTip".Translate());
+            VisualTweaksSettings.shieldHexLineStrength = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_HexLine".Translate(),
+                VisualTweaksSettings.shieldHexLineStrength,
+                VisualTweaksSettings.MinShieldHexLine,
+                VisualTweaksSettings.MaxShieldHexLine,
+                "VisualTweaks_ShieldDome_HexLineTip".Translate());
+        }
+
+        /// <summary>
+        /// The density slider edits a draft; only the button rebakes, because a
+        /// rebuild is hundreds of milliseconds of main-thread work. Each family
+        /// has its own lattice and its own applied value.
+        /// </summary>
+        private static void DrawHexDensity(Listing_Standard listing, bool personal)
+        {
+            if (personal)
+            {
+                VisualTweaksSettings.personalShieldHexDensity =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_PersonalHexDensity".Translate(),
+                        VisualTweaksSettings.personalShieldHexDensity,
+                        VisualTweaksSettings.MinShieldHexDensity,
+                        VisualTweaksSettings.MaxShieldHexDensity,
+                        "VisualTweaks_ShieldDome_PersonalHexDensityTip".Translate(),
+                        step: 1f);
+
+                int draft = Mathf.RoundToInt(
+                    VisualTweaksSettings.personalShieldHexDensity);
+                int baked = VisualTweaksSettings.personalShieldHexDensityApplied;
+
+                if (SettingsLayout.ButtonRow(
+                        listing,
+                        new[]
+                        {
+                            "VisualTweaks_ShieldDome_PersonalHexBake".Translate()
+                                .ToString()
+                        }) == 0)
+                {
+                    ShieldHexMap.Apply(ShieldHexTarget.Personal, draft);
+                    baked = VisualTweaksSettings.personalShieldHexDensityApplied;
+                }
+
+                if (draft != baked)
+                {
+                    SettingsLayout.Note(
+                        listing,
+                        "VisualTweaks_ShieldDome_PersonalHexPending".Translate(
+                            baked,
+                            draft));
+                }
+
+                return;
+            }
+
+            VisualTweaksSettings.shieldHexDensity = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_HexDensity".Translate(),
+                VisualTweaksSettings.shieldHexDensity,
+                VisualTweaksSettings.MinShieldHexDensity,
+                VisualTweaksSettings.MaxShieldHexDensity,
+                "VisualTweaks_ShieldDome_HexDensityTip".Translate(),
+                step: 1f);
+
+            int domeDraft = Mathf.RoundToInt(VisualTweaksSettings.shieldHexDensity);
+            int domeBaked = VisualTweaksSettings.shieldHexDensityApplied;
+
+            if (SettingsLayout.ButtonRow(
+                    listing,
+                    new[] { "VisualTweaks_ShieldDome_HexBake".Translate().ToString() }) == 0)
+            {
+                ShieldHexMap.Apply(ShieldHexTarget.Large, domeDraft);
+                domeBaked = VisualTweaksSettings.shieldHexDensityApplied;
+            }
+
+            if (domeDraft != domeBaked)
+            {
+                SettingsLayout.Note(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexPending".Translate(
+                        domeBaked,
+                        domeDraft));
+            }
+        }
+
+        /// <summary>The dome's hit reaction, with the settings of the chosen style.</summary>
+        private static void DrawDomeImpactChoice(Listing_Standard listing)
+        {
             bool hexSurface = VisualTweaksSettings.HexShieldDome;
-            int[] impactOrder;
-            int currentImpact;
-            if (hexSurface)
-            {
-                impactOrder = HexImpactOrder;
-                currentImpact = VisualTweaksSettings.hexShieldImpactStyle;
-            }
-            else if (VisualTweaksSettings.VanillaShieldDome)
-            {
-                impactOrder = StandardImpactOrder;
-                currentImpact = VisualTweaksSettings.vanillaShieldImpactStyle;
-            }
-            else
-            {
-                impactOrder = StandardImpactOrder;
-                currentImpact = VisualTweaksSettings.crispShieldImpactStyle;
-            }
+            int[] order = hexSurface ? HexImpactOrder : StandardImpactOrder;
+            int current = hexSurface
+                ? VisualTweaksSettings.hexShieldImpactStyle
+                : VisualTweaksSettings.VanillaShieldDome
+                    ? VisualTweaksSettings.vanillaShieldImpactStyle
+                    : VisualTweaksSettings.crispShieldImpactStyle;
 
-            int impactIndex = ImpactIndexOf(impactOrder, currentImpact);
-            int pickedImpact = SettingsLayout.RadioRow(
+            int index = ImpactIndexOf(order, current);
+            int picked = SettingsLayout.RadioRow(
                 listing,
                 ImpactLabels(hexSurface),
-                impactIndex,
+                index,
                 ImpactTips(hexSurface));
-            if (pickedImpact != impactIndex)
+            if (picked != index)
             {
-                int pickedValue = impactOrder[pickedImpact];
+                int value = order[picked];
                 if (hexSurface)
                 {
-                    VisualTweaksSettings.hexShieldImpactStyle = pickedValue;
+                    VisualTweaksSettings.hexShieldImpactStyle = value;
                 }
                 else if (VisualTweaksSettings.VanillaShieldDome)
                 {
-                    VisualTweaksSettings.vanillaShieldImpactStyle = pickedValue;
+                    VisualTweaksSettings.vanillaShieldImpactStyle = value;
                 }
                 else
                 {
-                    VisualTweaksSettings.crispShieldImpactStyle = pickedValue;
+                    VisualTweaksSettings.crispShieldImpactStyle = value;
                 }
             }
 
             if (VisualTweaksSettings.CurrentShieldImpactStyle
                 == VisualTweaksSettings.ShieldImpactHexWave)
             {
-                // The wave's numbers have nothing in common with the flare's, so it
-                // keeps its own two controls rather than borrowing the flare's
-                // opacity and a hidden fudge factor.
                 VisualTweaksSettings.shieldHexImpactStrength = SettingsLayout.Slider(
                     listing,
                     "VisualTweaks_ShieldDome_HexImpact".Translate(),
@@ -937,288 +1095,112 @@ namespace VisualTweaks
                     VisualTweaksSettings.MinShieldHexImpactShare,
                     VisualTweaksSettings.MaxShieldHexImpactShare,
                     "VisualTweaks_ShieldDome_HexImpactReachTip".Translate());
-            }
-            else
-            {
-                // The flare and the brightened sector share strength and the damage
-                // response. Size belongs to the flare (its width follows damage);
-                // the brighten sector has a fixed, separately adjustable angle.
-                VisualTweaksSettings.shieldFlareAlpha = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_FlareAlpha".Translate(),
-                    VisualTweaksSettings.shieldFlareAlpha,
-                    VisualTweaksSettings.MinShieldFlareAlpha,
-                    VisualTweaksSettings.MaxShieldFlareAlpha,
-                    "VisualTweaks_ShieldDome_FlareAlphaTip".Translate());
-                VisualTweaksSettings.shieldFlareDamageInfluence = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_FlareDamage".Translate(),
-                    VisualTweaksSettings.shieldFlareDamageInfluence,
-                    0f,
-                    1f,
-                    "VisualTweaks_ShieldDome_FlareDamageTip".Translate());
-
-                if (VisualTweaksSettings.CurrentShieldImpactStyle
-                    == VisualTweaksSettings.ShieldImpactFlare)
-                {
-                    VisualTweaksSettings.shieldFlareSizeScale = SettingsLayout.Slider(
-                        listing,
-                        "VisualTweaks_ShieldDome_FlareSize".Translate(),
-                        VisualTweaksSettings.shieldFlareSizeScale,
-                        VisualTweaksSettings.MinShieldFlareSize,
-                        VisualTweaksSettings.MaxShieldFlareSize,
-                        "VisualTweaks_ShieldDome_FlareSizeTip".Translate());
-                }
-                else
-                {
-                    // The angle is the brighten reaction's own control. Vanilla's
-                    // stock value is 30 degrees total; it is adjustable because the
-                    // reaction is also available on the two custom surfaces.
-                    VisualTweaksSettings.shieldBrightenAngle = SettingsLayout.Slider(
-                        listing,
-                        "VisualTweaks_ShieldDome_BrightenAngle".Translate(),
-                        VisualTweaksSettings.shieldBrightenAngle,
-                        VisualTweaksSettings.MinShieldBrightenAngle,
-                        VisualTweaksSettings.MaxShieldBrightenAngle,
-                        "VisualTweaks_ShieldDome_BrightenAngleTip".Translate(),
-                        step: 1f);
-                }
+                return;
             }
 
-            // Personal belts get their own surface, lattice, opacity, break choice
-            // and hit reaction. Only the ridge/face/line weights are shared with the
-            // dome; every decision that reads differently at belt size is separate.
-            // Hidden while the custom drawing is off because vanilla then supplies
-            // its own look, break and unconfigurable jitter.
-            if (VisualTweaksSettings.crispShieldDome)
-            {
-                SettingsLayout.SubHeader(
-                    listing,
-                    "VisualTweaks_ShieldDome_PersonalLookGroup".Translate());
-                SettingsLayout.Note(
-                    listing,
-                    "VisualTweaks_ShieldDome_PersonalStyleNote".Translate());
-
-                listing.Label(
-                    "VisualTweaks_ShieldDome_PersonalStyle".Translate());
-                int personalStyleIndex = ShieldStyleIndexOf(
-                    VisualTweaksSettings.personalShieldDomeStyle);
-                int pickedPersonalStyle = SettingsLayout.RadioRow(
-                    listing,
-                    ShieldStyleLabels(),
-                    personalStyleIndex,
-                    ShieldStyleTips());
-                if (pickedPersonalStyle != personalStyleIndex)
-                {
-                    VisualTweaksSettings.personalShieldDomeStyle =
-                        ShieldStyleOrder[pickedPersonalStyle];
-                    BakeHexIfNewlyDrawn();
-                }
-
-                // The belt's lattice is a different optical problem: a quarter of
-                // the diameter and a twentieth of the screen area. It is baked
-                // separately, with its own cell count and a fixed 512² texture.
-                if (VisualTweaksSettings.PersonalHexShieldDome)
-                {
-                    SettingsLayout.SubHeader(
-                        listing,
-                        "VisualTweaks_ShieldDome_PersonalHexGroup".Translate());
-
-                    VisualTweaksSettings.personalShieldHexDensity =
-                        SettingsLayout.Slider(
-                            listing,
-                            "VisualTweaks_ShieldDome_PersonalHexDensity".Translate(),
-                            VisualTweaksSettings.personalShieldHexDensity,
-                            VisualTweaksSettings.MinShieldHexDensity,
-                            VisualTweaksSettings.MaxShieldHexDensity,
-                            "VisualTweaks_ShieldDome_PersonalHexDensityTip".Translate(),
-                            step: 1f);
-
-                    int personalDraftDensity = Mathf.RoundToInt(
-                        VisualTweaksSettings.personalShieldHexDensity);
-                    int personalBakedDensity =
-                        VisualTweaksSettings.personalShieldHexDensityApplied;
-
-                    if (SettingsLayout.ButtonRow(
-                            listing,
-                            new[]
-                            {
-                                "VisualTweaks_ShieldDome_PersonalHexBake".Translate()
-                                    .ToString()
-                            }) == 0)
-                    {
-                        ShieldHexMap.Apply(
-                            ShieldHexTarget.Personal,
-                            personalDraftDensity);
-                        personalBakedDensity =
-                            VisualTweaksSettings.personalShieldHexDensityApplied;
-                    }
-
-                    if (personalDraftDensity != personalBakedDensity)
-                    {
-                        SettingsLayout.Note(
-                            listing,
-                            "VisualTweaks_ShieldDome_PersonalHexPending".Translate(
-                                personalBakedDensity,
-                                personalDraftDensity));
-                    }
-                }
-
-                VisualTweaksSettings.personalShieldOpacity = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_PersonalOpacity".Translate(),
-                    VisualTweaksSettings.personalShieldOpacity,
-                    VisualTweaksSettings.MinPersonalShieldOpacity,
-                    VisualTweaksSettings.MaxPersonalShieldOpacity,
-                    "VisualTweaks_ShieldDome_PersonalOpacityTip".Translate());
-
-                // Break choices are stored per surface, not per family. This row
-                // edits the choice belonging to the belt's current surface, so a belt
-                // on hex can be told to dissolve instead of losing panels without
-                // forcing the dome onto hex as well. When both families use the same
-                // surface they intentionally share that surface's choice.
-                SettingsLayout.SubHeader(
-                    listing,
-                    "VisualTweaks_ShieldDome_PersonalBreakGroup".Translate());
-
-                bool personalHexSurface =
-                    VisualTweaksSettings.PersonalHexShieldDome;
-                int[] personalBreakOrder = personalHexSurface
-                    ? HexBreakOrder
-                    : StandardBreakOrder;
-                int personalBreakIndex = ImpactIndexOf(
-                    personalBreakOrder,
-                    VisualTweaksSettings.CurrentShieldBreakStyleFor(
-                        ShieldHexTarget.Personal));
-                int pickedPersonalBreak = SettingsLayout.RadioRow(
-                    listing,
-                    BreakLabels(personalHexSurface),
-                    personalBreakIndex,
-                    BreakTips(personalHexSurface));
-                if (pickedPersonalBreak != personalBreakIndex)
-                {
-                    int pickedBreakValue = personalBreakOrder[pickedPersonalBreak];
-                    if (personalHexSurface)
-                    {
-                        VisualTweaksSettings.hexShieldBreakStyle = pickedBreakValue;
-                    }
-                    else if (VisualTweaksSettings.PersonalVanillaShieldDome)
-                    {
-                        VisualTweaksSettings.vanillaShieldBreakStyle = pickedBreakValue;
-                    }
-                    else
-                    {
-                        VisualTweaksSettings.crispShieldBreakStyle = pickedBreakValue;
-                    }
-                }
-
-                SettingsLayout.SubHeader(
-                    listing,
-                    "VisualTweaks_ShieldDome_PersonalHitGroup".Translate());
-                SettingsLayout.Note(
-                    listing,
-                    "VisualTweaks_ShieldDome_PersonalHitNote".Translate());
-                listing.CheckboxLabeled(
-                    "VisualTweaks_ShieldDome_PersonalJitter".Translate(),
-                    ref VisualTweaksSettings.personalShieldHitJitter,
-                    "VisualTweaks_ShieldDome_PersonalJitterTip".Translate());
-
-                if (VisualTweaksSettings.personalShieldHitJitter)
-                {
-                    VisualTweaksSettings.personalShieldJitterDistance =
-                        SettingsLayout.Slider(
-                            listing,
-                            "VisualTweaks_ShieldDome_PersonalJitterDistance".Translate(),
-                            VisualTweaksSettings.personalShieldJitterDistance,
-                            VisualTweaksSettings.MinPersonalShieldJitterDistance,
-                            VisualTweaksSettings.MaxPersonalShieldJitterDistance,
-                            "VisualTweaks_ShieldDome_PersonalJitterDistanceTip".Translate(),
-                            step: 0.01f);
-                    VisualTweaksSettings.personalShieldJitterTicks =
-                        SettingsLayout.Slider(
-                            listing,
-                            "VisualTweaks_ShieldDome_PersonalJitterTicks".Translate(),
-                            VisualTweaksSettings.personalShieldJitterTicks,
-                            VisualTweaksSettings.MinPersonalShieldJitterTicks,
-                            VisualTweaksSettings.MaxPersonalShieldJitterTicks,
-                            "VisualTweaks_ShieldDome_PersonalJitterTicksTip".Translate(),
-                            step: 1f);
-                }
-            }
-
-            // The break animation is per surface for the same reason: a shell loses
-            // panels, a continuous surface tears, and Vanilla means do not animate.
-            SettingsLayout.SubHeader(
+            VisualTweaksSettings.shieldFlareAlpha = SettingsLayout.Slider(
                 listing,
-                "VisualTweaks_ShieldDome_BreakGroup".Translate());
+                "VisualTweaks_ShieldDome_FlareAlpha".Translate(),
+                VisualTweaksSettings.shieldFlareAlpha,
+                VisualTweaksSettings.MinShieldFlareAlpha,
+                VisualTweaksSettings.MaxShieldFlareAlpha,
+                "VisualTweaks_ShieldDome_FlareAlphaTip".Translate());
+            VisualTweaksSettings.shieldFlareDamageInfluence = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_FlareDamage".Translate(),
+                VisualTweaksSettings.shieldFlareDamageInfluence,
+                0f,
+                1f,
+                "VisualTweaks_ShieldDome_FlareDamageTip".Translate());
 
-            int[] breakOrder;
-            int currentBreak;
-            if (hexSurface)
+            if (VisualTweaksSettings.CurrentShieldImpactStyle
+                == VisualTweaksSettings.ShieldImpactFlare)
             {
-                breakOrder = HexBreakOrder;
-                currentBreak = VisualTweaksSettings.hexShieldBreakStyle;
-            }
-            else if (VisualTweaksSettings.VanillaShieldDome)
-            {
-                breakOrder = StandardBreakOrder;
-                currentBreak = VisualTweaksSettings.vanillaShieldBreakStyle;
+                VisualTweaksSettings.shieldFlareSizeScale = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_FlareSize".Translate(),
+                    VisualTweaksSettings.shieldFlareSizeScale,
+                    VisualTweaksSettings.MinShieldFlareSize,
+                    VisualTweaksSettings.MaxShieldFlareSize,
+                    "VisualTweaks_ShieldDome_FlareSizeTip".Translate());
             }
             else
             {
-                breakOrder = StandardBreakOrder;
-                currentBreak = VisualTweaksSettings.crispShieldBreakStyle;
+                VisualTweaksSettings.shieldBrightenAngle = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_BrightenAngle".Translate(),
+                    VisualTweaksSettings.shieldBrightenAngle,
+                    VisualTweaksSettings.MinShieldBrightenAngle,
+                    VisualTweaksSettings.MaxShieldBrightenAngle,
+                    "VisualTweaks_ShieldDome_BrightenAngleTip".Translate(),
+                    step: 1f);
             }
+        }
 
-            int breakIndex = ImpactIndexOf(breakOrder, currentBreak);
-            int pickedBreak = SettingsLayout.RadioRow(
+        /// <summary>
+        /// Break choice for one family. Choices are stored per surface, so the two
+        /// families can pick different animations for the same surface and switching
+        /// a surface back and forth keeps the earlier choice.
+        /// </summary>
+        private static void DrawBreakChoice(Listing_Standard listing, bool personal)
+        {
+            bool hexSurface = personal
+                ? VisualTweaksSettings.PersonalHexShieldDome
+                : VisualTweaksSettings.HexShieldDome;
+            int[] order = hexSurface ? HexBreakOrder : StandardBreakOrder;
+            int current = personal
+                ? VisualTweaksSettings.CurrentShieldBreakStyleFor(ShieldHexTarget.Personal)
+                : VisualTweaksSettings.CurrentShieldBreakStyle;
+
+            int index = ImpactIndexOf(order, current);
+            int picked = SettingsLayout.RadioRow(
                 listing,
                 BreakLabels(hexSurface),
-                breakIndex,
+                index,
                 BreakTips(hexSurface));
-            if (pickedBreak != breakIndex)
+            if (picked == index)
             {
-                int pickedValue = breakOrder[pickedBreak];
-                if (hexSurface)
-                {
-                    VisualTweaksSettings.hexShieldBreakStyle = pickedValue;
-                }
-                else if (VisualTweaksSettings.VanillaShieldDome)
-                {
-                    VisualTweaksSettings.vanillaShieldBreakStyle = pickedValue;
-                }
-                else
-                {
-                    VisualTweaksSettings.crispShieldBreakStyle = pickedValue;
-                }
+                return;
             }
 
-            // The sliders are shared by both families. Keep them visible when either
-            // one has a break animation, not only when the dome's chosen surface does.
-            if (VisualTweaksSettings.CurrentShieldBreakStyle
-                    != VisualTweaksSettings.ShieldBreakVanilla
-                || VisualTweaksSettings.CurrentShieldBreakStyleFor(
-                        ShieldHexTarget.Personal)
-                    != VisualTweaksSettings.ShieldBreakVanilla)
+            int value = order[picked];
+            if (hexSurface)
             {
-                VisualTweaksSettings.shieldDissolveTicks = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_DissolveTime".Translate(),
-                    VisualTweaksSettings.shieldDissolveTicks,
-                    VisualTweaksSettings.MinShieldDissolveTicks,
-                    VisualTweaksSettings.MaxShieldDissolveTicks,
-                    "VisualTweaks_ShieldDome_DissolveTimeTip".Translate(),
-                    step: 1f);
-                VisualTweaksSettings.shieldDissolveBrightness = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_DissolveBrightness".Translate(),
-                    VisualTweaksSettings.shieldDissolveBrightness,
-                    VisualTweaksSettings.MinShieldDissolveBrightness,
-                    VisualTweaksSettings.MaxShieldDissolveBrightness,
-                    "VisualTweaks_ShieldDome_DissolveBrightnessTip".Translate());
+                VisualTweaksSettings.hexShieldBreakStyle = value;
             }
+            else if (personal
+                ? VisualTweaksSettings.PersonalVanillaShieldDome
+                : VisualTweaksSettings.VanillaShieldDome)
+            {
+                VisualTweaksSettings.vanillaShieldBreakStyle = value;
+            }
+            else
+            {
+                VisualTweaksSettings.crispShieldBreakStyle = value;
+            }
+        }
 
-            SettingsLayout.Finish(listing);
+        /// <summary>Timing and brightness, shared by every custom break animation.</summary>
+        private static void DrawDissolveSliders(Listing_Standard listing)
+        {
+            VisualTweaksSettings.shieldDissolveTicks = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_DissolveTime".Translate(),
+                VisualTweaksSettings.shieldDissolveTicks,
+                VisualTweaksSettings.MinShieldDissolveTicks,
+                VisualTweaksSettings.MaxShieldDissolveTicks,
+                "VisualTweaks_ShieldDome_DissolveTimeTip".Translate(),
+                step: 1f);
+            VisualTweaksSettings.shieldDissolveBrightness = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_DissolveBrightness".Translate(),
+                VisualTweaksSettings.shieldDissolveBrightness,
+                VisualTweaksSettings.MinShieldDissolveBrightness,
+                VisualTweaksSettings.MaxShieldDissolveBrightness,
+                "VisualTweaks_ShieldDome_DissolveBrightnessTip".Translate());
+            SettingsLayout.Note(
+                listing,
+                "VisualTweaks_ShieldDome_DissolveSharedNote".Translate());
         }
 
         /// <summary>
