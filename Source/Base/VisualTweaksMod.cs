@@ -847,12 +847,13 @@ namespace VisualTweaks
             // window rather than on the first shield drawn after a style switch.
             BakeHexIfNewlyDrawn();
 
-            if (VisualTweaksSettings.HexShieldDome)
+            if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex)
             {
                 DrawHexPanelSliders(listing);
                 DrawHexDensity(listing, false);
             }
-            else if (VisualTweaksSettings.StockLikeShieldDome)
+            else if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
+                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
             {
                 SettingsLayout.Note(
                     listing,
@@ -924,20 +925,20 @@ namespace VisualTweaks
                 BakeHexIfNewlyDrawn();
             }
 
-            if (VisualTweaksSettings.PersonalHexShieldDome)
+            if (VisualTweaksSettings.personalShieldDomeStyle == ShieldDomeStyle.Hex)
             {
                 // Panel and line brightness are shared with the dome; show them
                 // here only when the dome's section did not already.
-                if (!VisualTweaksSettings.HexShieldDome)
+                if (VisualTweaksSettings.shieldDomeStyle != ShieldDomeStyle.Hex)
                 {
                     DrawHexPanelSliders(listing);
                 }
 
                 DrawHexDensity(listing, true);
             }
-            else if (!VisualTweaksSettings.PersonalVanillaShieldDome
-                && (VisualTweaksSettings.HexShieldDome
-                    || VisualTweaksSettings.StockLikeShieldDome))
+            else if (VisualTweaksSettings.personalShieldDomeStyle
+                    != ShieldDomeStyle.Vanilla
+                && VisualTweaksSettings.shieldDomeStyle != ShieldDomeStyle.Crisp)
             {
                 // A crisp belt shares the dome's ridge sliders. Show them here only
                 // when the dome's own section did not (it was hex or stock-like),
@@ -1181,13 +1182,15 @@ namespace VisualTweaks
         /// <summary>The dome's hit reaction, with the settings of the chosen style.</summary>
         private static void DrawDomeImpactChoice(Listing_Standard listing)
         {
-            bool hexSurface = VisualTweaksSettings.HexShieldDome;
+            bool hexSurface =
+                VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex;
             ShieldImpactStyle[] order = hexSurface
                 ? HexImpactOrder
                 : StandardImpactOrder;
             ShieldImpactStyle current = hexSurface
                 ? VisualTweaksSettings.hexShieldImpactStyle
-                : VisualTweaksSettings.StockLikeShieldDome
+                : (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
+                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
                     ? VisualTweaksSettings.vanillaShieldImpactStyle
                     : VisualTweaksSettings.crispShieldImpactStyle;
 
@@ -1204,7 +1207,8 @@ namespace VisualTweaks
                 {
                     VisualTweaksSettings.hexShieldImpactStyle = value;
                 }
-                else if (VisualTweaksSettings.StockLikeShieldDome)
+                else if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
+                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
                 {
                     VisualTweaksSettings.vanillaShieldImpactStyle = value;
                 }
@@ -1281,8 +1285,8 @@ namespace VisualTweaks
         private static void DrawBreakChoice(Listing_Standard listing, bool personal)
         {
             bool hexSurface = personal
-                ? VisualTweaksSettings.PersonalHexShieldDome
-                : VisualTweaksSettings.HexShieldDome;
+                ? VisualTweaksSettings.personalShieldDomeStyle == ShieldDomeStyle.Hex
+                : VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex;
             ShieldBreakStyle[] order = hexSurface
                 ? HexBreakOrder
                 : StandardBreakOrder;
@@ -1307,8 +1311,9 @@ namespace VisualTweaks
                 VisualTweaksSettings.hexShieldBreakStyle = value;
             }
             else if (personal
-                ? VisualTweaksSettings.PersonalVanillaShieldDome
-                : VisualTweaksSettings.StockLikeShieldDome)
+                ? VisualTweaksSettings.personalShieldDomeStyle == ShieldDomeStyle.Vanilla
+                : VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
+                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
             {
                 VisualTweaksSettings.vanillaShieldBreakStyle = value;
             }
@@ -1593,8 +1598,10 @@ namespace VisualTweaks
         /// </summary>
         private static void BakeHexIfNewlyDrawn()
         {
-            if (VisualTweaksSettings.AnyHexShieldDome
-                || VisualTweaksSettings.PersonalShieldHitUsesHexMap)
+            if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex
+                || VisualTweaksSettings.personalShieldDomeStyle == ShieldDomeStyle.Hex
+                || VisualTweaksSettings.personalShieldHitStyle
+                    == PersonalShieldHitStyle.HexWave)
             {
                 // Apply records the density for both families and bakes only the one
                 // that would sample the lattice — its surface or, for a belt, its

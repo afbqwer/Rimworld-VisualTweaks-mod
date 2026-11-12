@@ -195,10 +195,11 @@ namespace VisualTweaks
             // Crisp and panel silhouettes sit exactly on r == 1, so their quad is
             // exactly the diameter. The stock-like style's soft tail is meant to fade
             // past the rim, so it gets vanilla's own ForceField margin for that tail.
-            float quadMargin = VisualTweaksSettings.IsStockLikeShieldDome(
-                ShieldHexTarget.Personal)
-                ? ShieldDomeRenderer.VanillaQuadMargin
-                : 1f;
+            float quadMargin =
+                VisualTweaksSettings.personalShieldDomeStyle
+                    == ShieldDomeStyle.Vanilla
+                    ? ShieldDomeRenderer.VanillaQuadMargin
+                    : 1f;
 
             Matrix4x4 matrix = default;
             matrix.SetTRS(

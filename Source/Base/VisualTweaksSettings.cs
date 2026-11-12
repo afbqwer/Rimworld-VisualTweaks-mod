@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+﻿﻿using UnityEngine;
 using Verse;
 
 namespace VisualTweaks
@@ -232,54 +232,11 @@ namespace VisualTweaks
         // belt.
         public static ShieldDomeStyle personalShieldDomeStyle = ShieldDomeStyle.Vanilla;
 
-        /// <summary>True when the spherical panel shell is the chosen style.</summary>
-        public static bool HexShieldDome => shieldDomeStyle == ShieldDomeStyle.Hex;
-
-        /// <summary>True when the stock ForceField dome is the chosen style.</summary>
-        public static bool VanillaShieldDome => shieldDomeStyle == ShieldDomeStyle.Vanilla;
-
-        /// <summary>True when the belt's ShieldBubble is worn by the dome.</summary>
-        public static bool BubbleShieldDome => shieldDomeStyle == ShieldDomeStyle.Bubble;
-
-        /// <summary>
-        /// True when the large shield uses either stock-like surface. Both are soft,
-        /// use the enlarged quad and share the stock-like impact / break choices;
-        /// only their radial profile differs.
-        /// </summary>
-        public static bool StockLikeShieldDome => VanillaShieldDome || BubbleShieldDome;
-
-        /// <summary>True when the belt's independently chosen surface is the shell.</summary>
-        public static bool PersonalHexShieldDome =>
-            personalShieldDomeStyle == ShieldDomeStyle.Hex;
-
-        /// <summary>True when the belt's independently chosen surface is stock-like.</summary>
-        public static bool PersonalVanillaShieldDome =>
-            personalShieldDomeStyle == ShieldDomeStyle.Vanilla;
-
-        /// <summary>True when either kind of shield needs a baked lattice.</summary>
-        public static bool AnyHexShieldDome => HexShieldDome || PersonalHexShieldDome;
-
         /// <summary>The surface style chosen for one shield family.</summary>
         internal static ShieldDomeStyle ShieldDomeStyleFor(ShieldHexTarget target) =>
             target == ShieldHexTarget.Personal
                 ? personalShieldDomeStyle
                 : shieldDomeStyle;
-
-        /// <summary>True when this family's chosen surface samples the hex atlas.</summary>
-        internal static bool IsHexShieldDome(ShieldHexTarget target) =>
-            ShieldDomeStyleFor(target) == ShieldDomeStyle.Hex;
-
-        /// <summary>
-        /// True when this family's chosen surface is stock-like. A belt's stock
-        /// surface is always its ShieldBubble; a dome can choose either the ForceField
-        /// style or the Bubble style.
-        /// </summary>
-        internal static bool IsStockLikeShieldDome(ShieldHexTarget target)
-        {
-            ShieldDomeStyle style = ShieldDomeStyleFor(target);
-            return style == ShieldDomeStyle.Vanilla
-                || (target == ShieldHexTarget.Large && style == ShieldDomeStyle.Bubble);
-        }
 
         /// <summary>
         /// The break animation for one family. Break choices are stored per surface
@@ -291,9 +248,14 @@ namespace VisualTweaks
         internal static ShieldBreakStyle CurrentShieldBreakStyleFor(ShieldHexTarget target)
         {
             ShieldDomeStyle style = ShieldDomeStyleFor(target);
-            return style == ShieldDomeStyle.Hex ? hexShieldBreakStyle
-                : IsStockLikeShieldDome(target) ? vanillaShieldBreakStyle
-                : crispShieldBreakStyle;
+            if (style == ShieldDomeStyle.Hex)
+            {
+                return hexShieldBreakStyle;
+            }
+
+            bool stockLike = style == ShieldDomeStyle.Vanilla
+                || (target == ShieldHexTarget.Large && style == ShieldDomeStyle.Bubble);
+            return stockLike ? vanillaShieldBreakStyle : crispShieldBreakStyle;
         }
 
         // How a hit is answered. This is independent of the dome surface, but the
@@ -310,8 +272,10 @@ namespace VisualTweaks
         /// <summary>The impact animation that belongs to the selected dome style.</summary>
         public static ShieldImpactStyle CurrentShieldImpactStyle =>
             shieldDomeStyle == ShieldDomeStyle.Hex ? hexShieldImpactStyle
-            : StockLikeShieldDome ? vanillaShieldImpactStyle
-            : crispShieldImpactStyle;
+            : (shieldDomeStyle == ShieldDomeStyle.Vanilla
+                || shieldDomeStyle == ShieldDomeStyle.Bubble)
+                ? vanillaShieldImpactStyle
+                : crispShieldImpactStyle;
 
         // Vanilla's brighten cone is 30 degrees total. It used to be a constant in
         // the renderer; it is a slider now because 30 is only the stock value, and
@@ -343,8 +307,10 @@ namespace VisualTweaks
         /// <summary>The break animation that belongs to the selected dome style.</summary>
         public static ShieldBreakStyle CurrentShieldBreakStyle =>
             shieldDomeStyle == ShieldDomeStyle.Hex ? hexShieldBreakStyle
-            : StockLikeShieldDome ? vanillaShieldBreakStyle
-            : crispShieldBreakStyle;
+            : (shieldDomeStyle == ShieldDomeStyle.Vanilla
+                || shieldDomeStyle == ShieldDomeStyle.Bubble)
+                ? vanillaShieldBreakStyle
+                : crispShieldBreakStyle;
 
         public const float MinShieldHexFace = 0f;
         public const float MaxShieldHexFace = 0.6f;
@@ -409,10 +375,6 @@ namespace VisualTweaks
         // handles the only part of vanilla's feedback that is not wanted.
         public static PersonalShieldHitStyle personalShieldHitStyle =
             PersonalShieldHitStyle.Jitter;
-
-        /// <summary>True when the belt's hit effect needs the baked lattice.</summary>
-        internal static bool PersonalShieldHitUsesHexMap =>
-            personalShieldHitStyle == PersonalShieldHitStyle.HexWave;
 
         // Vanilla's absorbed-hit feedback includes a burst of DustPuff flecks on top
         // of the flash and the sound. They are unrelated to the surface and can bury

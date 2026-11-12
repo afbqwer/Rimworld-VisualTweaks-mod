@@ -254,9 +254,10 @@ namespace VisualTweaks
         /// shell while the dome stays crisp, and then only the belt's atlas is baked.
         /// </summary>
         private static bool CanBeDrawn(ShieldHexTarget target) =>
-            (VisualTweaksSettings.IsHexShieldDome(target)
+            (VisualTweaksSettings.ShieldDomeStyleFor(target) == ShieldDomeStyle.Hex
                 || (target == ShieldHexTarget.Personal
-                    && VisualTweaksSettings.PersonalShieldHitUsesHexMap))
+                    && VisualTweaksSettings.personalShieldHitStyle
+                        == PersonalShieldHitStyle.HexWave))
             && (target == ShieldHexTarget.Personal
                 ? VisualTweaksSettings.replacePersonalShields
                 : VisualTweaksSettings.replaceLargeShields)

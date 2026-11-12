@@ -86,7 +86,7 @@ namespace VisualTweaks
         /// spread may be chosen on a non-hex surface and checks the texture itself,
         /// because the surface it lights is the animation's whole point.
         internal bool HexActive =>
-            VisualTweaksSettings.IsHexShieldDome(target)
+            VisualTweaksSettings.ShieldDomeStyleFor(target) == ShieldDomeStyle.Hex
             && ShieldHexMap.Available(target);
 
         /// <summary>
@@ -178,9 +178,11 @@ namespace VisualTweaks
             // shader's gradient constant has to describe the texture that actually
             // exists, not the one being previewed in a UI.
             int density = ShieldHexMap.AppliedSubdivisions(target);
-            bool wantHex = VisualTweaksSettings.IsHexShieldDome(target)
+            bool wantHex =
+                VisualTweaksSettings.ShieldDomeStyleFor(target) == ShieldDomeStyle.Hex
                 || (target == ShieldHexTarget.Personal
-                    && VisualTweaksSettings.PersonalShieldHitUsesHexMap);
+                    && VisualTweaksSettings.personalShieldHitStyle
+                        == PersonalShieldHitStyle.HexWave);
             if (wantHex)
             {
                 ShieldHexMap.Bind(mat, target, density);
