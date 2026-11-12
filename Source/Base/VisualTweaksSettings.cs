@@ -137,11 +137,11 @@ namespace VisualTweaks
 
         public const float MinShieldRippleIntensity = 0.1f;
         public const float MaxShieldRippleIntensity = 3f;
-        public static float shieldRippleIntensity = 1.2f;
+        public static float shieldRippleIntensity = 1f;
 
         public const float MinShieldRippleDuration = 0.08f;
         public const float MaxShieldRippleDuration = 1f;
-        public static float shieldRippleDuration = 0.24f;
+        public static float shieldRippleDuration = 0.2f;
 
         // How strongly the incoming projectile's damage drives the ripple. Damage decides
         // size, strength and duration; the shield's own radius only caps the size. This
@@ -156,7 +156,7 @@ namespace VisualTweaks
         // (see ShieldVisibilityPatches), which makes a shield's coverage hard to read
         // until something is actually stopped. Off by default: the stock look is the
         // baseline, and this is an opt-in.
-        public static bool alwaysShowShields = false;
+        public static bool alwaysShowShields = true;
 
         // Large shields and personal belts replace vanilla's drawing independently
         // (see ShieldDomePatches and PersonalShieldPatches). Both default to on: the
@@ -166,10 +166,6 @@ namespace VisualTweaks
         // so turning either off is an instant A/B against the stock look.
         public static bool replaceLargeShields = true;
         public static bool replacePersonalShields = true;
-
-        // Legacy master switch from before the two independent toggles existed. Only
-        // read during ExposeData migration: old saves used it for both families.
-        public static bool crispShieldDome = true;
 
         // When on, only vanilla comp classes are replaced; mods that derive from them
         // keep their own drawing. Large shields use CompProjectileInterceptor, and the
@@ -187,9 +183,7 @@ namespace VisualTweaks
         // have their own choice just below.
         //
         // An int rather than four bools: the styles are mutually exclusive, and with
-        // checkboxes two of them could be on at once. The old hexShieldDome bool is
-        // still read below so an existing save keeps its choice, then migrated into
-        // shieldDomeStyle.
+        // checkboxes two of them could be on at once.
         public const int ShieldDomeStyleCrisp = 0;
         public const int ShieldDomeStyleHex = 1;
         public const int ShieldDomeStyleVanilla = 2;
@@ -200,11 +194,8 @@ namespace VisualTweaks
         // Belts choose their surface independently. They are a quarter of a dome's
         // diameter but are always shown at one steady level, so a style that reads
         // well on a 25-cell projector does not necessarily read well on a 1.2-cell
-        // belt. Migrated from shieldDomeStyle for saves written before this existed.
+        // belt.
         public static int personalShieldDomeStyle = ShieldDomeStyleCrisp;
-
-        // Legacy save value; only read during ExposeData migration.
-        private static bool hexShieldDome;
 
         /// <summary>True when the spherical panel shell is the chosen style.</summary>
         public static bool HexShieldDome => shieldDomeStyle == ShieldDomeStyleHex;
@@ -303,7 +294,8 @@ namespace VisualTweaks
         // Vanilla leaves the one-frame disappearance alone, Dissolve is the
         // continuous noise tear, HexDissipate loses whole panels on the shell. Each
         // surface family keeps its own choice for the same reason the hit animations
-        // do; the two stock-like profiles share one.
+        // do; the two stock-like profiles share one. Vanilla's Shield_Break effecter
+        // (flash + sound) always plays underneath either way.
         public const int ShieldBreakVanilla = 0;
         public const int ShieldBreakDissolve = 1;
         public const int ShieldBreakHexDissipate = 2;
@@ -482,12 +474,6 @@ namespace VisualTweaks
         public const float MinShieldFlareSize = 0.5f;
         public const float MaxShieldFlareSize = 2f;
         public static float shieldFlareSizeScale = 1f;
-
-        // Legacy save value: the old global dissolve switch. It is only read during
-        // ExposeData migration now; the per-style break choices above decide what
-        // actually plays. Vanilla's Shield_Break effecter (flash + sound) always
-        // plays underneath either way.
-        public static bool shieldDissolveEnabled = true;
 
         // In ticks. 60 ticks is one in-game second at normal speed; 90 gives the tear
         // time to cross a large dome without lingering into the recharge cycle.
@@ -725,26 +711,21 @@ namespace VisualTweaks
                 "explosionRippleDuration",
                 RippleDurationBaseline);
             Scribe_Values.Look(ref shieldRippleEnabled, "shieldRippleEnabled", true);
-            Scribe_Values.Look(ref shieldRippleIntensity, "shieldRippleIntensity", 1.2f);
-            Scribe_Values.Look(ref shieldRippleDuration, "shieldRippleDuration", 0.24f);
+            Scribe_Values.Look(ref shieldRippleIntensity, "shieldRippleIntensity", 1f);
+            Scribe_Values.Look(ref shieldRippleDuration, "shieldRippleDuration", 0.2f);
             Scribe_Values.Look(
                 ref shieldRippleDamageScale,
                 "shieldRippleDamageScale",
                 1f);
-            Scribe_Values.Look(ref alwaysShowShields, "alwaysShowShields", false);
-
-            // The legacy master switch is read first; both new flags default to its
-            // value, so a save written before the split keeps drawing exactly what it
-            // used to. New saves carry all three keys, and the two flags win.
-            Scribe_Values.Look(ref crispShieldDome, "crispShieldDome", true);
+            Scribe_Values.Look(ref alwaysShowShields, "alwaysShowShields", true);
             Scribe_Values.Look(
                 ref replaceLargeShields,
                 "replaceLargeShields",
-                crispShieldDome);
+                true);
             Scribe_Values.Look(
                 ref replacePersonalShields,
                 "replacePersonalShields",
-                crispShieldDome);
+                true);
             Scribe_Values.Look(
                 ref largeShieldsVanillaOnly,
                 "largeShieldsVanillaOnly",
@@ -754,40 +735,16 @@ namespace VisualTweaks
                 "personalShieldsVanillaOnly",
                 false);
 
-            // The old save only knows the boolean. -1 means the new key was absent,
-            // so its value decides the migrated style; otherwise the int wins even
-            // when the stale boolean disagrees.
-            Scribe_Values.Look(ref hexShieldDome, "hexShieldDome", false);
-            Scribe_Values.Look(ref shieldDomeStyle, "shieldDomeStyle", -1);
-            if (shieldDomeStyle < ShieldDomeStyleCrisp
-                || shieldDomeStyle > ShieldDomeStyleBubble)
-            {
-                shieldDomeStyle = hexShieldDome
-                    ? ShieldDomeStyleHex
-                    : ShieldDomeStyleCrisp;
-            }
-
-            // Saves written before belts had their own surface simply keep whatever
-            // the shared style was, so upgrading does not change how they look.
-            // From then on the two are independent.
+            Scribe_Values.Look(
+                ref shieldDomeStyle,
+                "shieldDomeStyle",
+                ShieldDomeStyleCrisp);
             Scribe_Values.Look(
                 ref personalShieldDomeStyle,
                 "personalShieldDomeStyle",
-                -1);
-            if (personalShieldDomeStyle < ShieldDomeStyleCrisp
-                || personalShieldDomeStyle > ShieldDomeStyleVanilla)
-            {
-                // The Bubble style has no separate value on a belt: its Vanilla
-                // choice already is that profile. Do not write an out-of-range 3
-                // into the belt style.
-                personalShieldDomeStyle = shieldDomeStyle == ShieldDomeStyleBubble
-                    ? ShieldDomeStyleVanilla
-                    : shieldDomeStyle;
-            }
+                ShieldDomeStyleCrisp);
 
-            // One choice per surface. Saves written before this setting existed take
-            // the defaults, which are exactly the reactions those styles had:
-            // crisp = flare, stock-like = sector brightening, hex = lattice wave.
+            // One choice per surface, defaulting to the reaction that style had.
             Scribe_Values.Look(
                 ref crispShieldImpactStyle,
                 "crispShieldImpactStyle",
@@ -802,38 +759,18 @@ namespace VisualTweaks
                 ShieldImpactHexWave);
             Scribe_Values.Look(ref shieldBrightenAngle, "shieldBrightenAngle", 30f);
 
-            // The old global switch decides the migrated break choice: saves that had
-            // it off start with Vanilla, saves that had it on keep the animation each
-            // surface used before (continuous for crisp/stock, panels for hex). After
-            // this read, only the per-style fields matter at runtime.
             Scribe_Values.Look(
-                ref shieldDissolveEnabled,
-                "shieldDissolveEnabled",
-                true);
-            Scribe_Values.Look(ref crispShieldBreakStyle, "crispShieldBreakStyle", -1);
-            Scribe_Values.Look(ref vanillaShieldBreakStyle, "vanillaShieldBreakStyle", -1);
-            Scribe_Values.Look(ref hexShieldBreakStyle, "hexShieldBreakStyle", -1);
-
-            if (crispShieldBreakStyle < 0)
-            {
-                crispShieldBreakStyle = shieldDissolveEnabled
-                    ? ShieldBreakDissolve
-                    : ShieldBreakVanilla;
-            }
-
-            if (vanillaShieldBreakStyle < 0)
-            {
-                vanillaShieldBreakStyle = shieldDissolveEnabled
-                    ? ShieldBreakDissolve
-                    : ShieldBreakVanilla;
-            }
-
-            if (hexShieldBreakStyle < 0)
-            {
-                hexShieldBreakStyle = shieldDissolveEnabled
-                    ? ShieldBreakHexDissipate
-                    : ShieldBreakVanilla;
-            }
+                ref crispShieldBreakStyle,
+                "crispShieldBreakStyle",
+                ShieldBreakDissolve);
+            Scribe_Values.Look(
+                ref vanillaShieldBreakStyle,
+                "vanillaShieldBreakStyle",
+                ShieldBreakDissolve);
+            Scribe_Values.Look(
+                ref hexShieldBreakStyle,
+                "hexShieldBreakStyle",
+                ShieldBreakHexDissipate);
 
             Scribe_Values.Look(
                 ref shieldHexFaceStrength,
@@ -868,9 +805,8 @@ namespace VisualTweaks
                 ref personalShieldOpacity,
                 "personalShieldOpacity",
                 0.2f);
-            // The effect switch has no "off" value any more. A save that wrote the old
-            // 0, or an older jitter-off boolean that used to migrate to 0, falls back
-            // to the jitter rather than to no reaction at all.
+            // The switch has no "off" value; anything out of range falls back to the
+            // jitter rather than to no reaction at all.
             Scribe_Values.Look(
                 ref personalShieldHitStyle,
                 "personalShieldHitStyle",
@@ -1279,14 +1215,12 @@ namespace VisualTweaks
             shieldRippleDuration = 0.24f;
             shieldRippleDamageScale = 1f;
             alwaysShowShields = false;
-            crispShieldDome = true;
             replaceLargeShields = true;
             replacePersonalShields = true;
             largeShieldsVanillaOnly = false;
             personalShieldsVanillaOnly = false;
             shieldDomeStyle = ShieldDomeStyleCrisp;
             personalShieldDomeStyle = ShieldDomeStyleCrisp;
-            hexShieldDome = false;
             crispShieldImpactStyle = ShieldImpactFlare;
             vanillaShieldImpactStyle = ShieldImpactBrighten;
             hexShieldImpactStyle = ShieldImpactHexWave;
@@ -1316,7 +1250,6 @@ namespace VisualTweaks
             shieldFlareAlpha = 0.30f;
             shieldFlareDamageInfluence = 0.5f;
             shieldFlareSizeScale = 1f;
-            shieldDissolveEnabled = true;
             shieldDissolveTicks = 90f;
             shieldDissolveBrightness = 0.6f;
             vacuumLeakEnabled = true;
