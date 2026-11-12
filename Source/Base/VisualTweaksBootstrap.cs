@@ -17,6 +17,7 @@ namespace VisualTweaks
                 ColdMistBridge.Initialize();
                 VacuumLeakBridge.Initialize();
                 ShieldDomeBridge.Initialize();
+                int culledDefsFixed = ShieldCullFix.Apply();
 
                 Harmony harmony = new Harmony("local.visualtweaks");
                 GasFieldPatches.Apply(harmony);
@@ -37,7 +38,9 @@ namespace VisualTweaks
                     + ", vacuum leak "
                     + (VacuumLeakBridge.ShaderReady ? "ready" : "disabled")
                     + ", shield dome "
-                    + (ShieldDomeBridge.ShaderReady ? "ready" : "disabled") + ").");
+                    + (ShieldDomeBridge.ShaderReady ? "ready" : "disabled")
+                    + ", off-screen shield culling fixed on "
+                    + culledDefsFixed + " def(s)).");
             }
             catch (Exception ex)
             {
