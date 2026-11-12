@@ -605,19 +605,24 @@ namespace VisualTweaks
             // stock drawing, so it reads as a separate decision from "show shields
             // that vanilla hides".
             SettingsLayout.Header(listing, "VisualTweaks_ShieldDome_Group".Translate());
+            bool domeWasOn = VisualTweaksSettings.crispShieldDome;
             listing.CheckboxLabeled(
                 "VisualTweaks_ShieldDome_Enable".Translate(),
                 ref VisualTweaksSettings.crispShieldDome,
                 "VisualTweaks_ShieldDome_EnableTip".Translate());
+            BakeHexIfNewlyDrawn(!domeWasOn);
 
             // Second replacement style. A sub-choice of the custom dome, not a
             // third drawing path: the same quad, the same material, one extra
             // texture sample. Turning the toggle above off still returns to stock.
             listing.Gap(6f);
+            bool hexWasOn = VisualTweaksSettings.hexShieldDome;
             listing.CheckboxLabeled(
                 "VisualTweaks_ShieldDome_Hex".Translate(),
                 ref VisualTweaksSettings.hexShieldDome,
                 "VisualTweaks_ShieldDome_HexTip".Translate());
+
+            BakeHexIfNewlyDrawn(!hexWasOn);
             VisualTweaksSettings.shieldHexFaceStrength = SettingsLayout.Slider(
                 listing,
                 "VisualTweaks_ShieldDome_HexFace".Translate(),
@@ -970,6 +975,20 @@ namespace VisualTweaks
                 "VisualTweaks_Leak_Trace".Translate(),
                 ref VisualTweaksSettings.vacuumLeakTrace,
                 "VisualTweaks_Leak_TraceTip".Translate());
+        }
+
+        /// <summary>
+        /// Bakes on the tick a box is ticked, not on the next shield that happens to be
+        /// drawn. A settings window is the one moment the player expects the pause, and
+        /// it keeps a mid-game style switch from hitching during a fight. No-op when the
+        /// hex map is already baked or the style is not actually drawable yet.
+        /// </summary>
+        private static void BakeHexIfNewlyDrawn(bool justEnabled)
+        {
+            if (justEnabled && VisualTweaksSettings.hexShieldDome)
+            {
+                ShieldHexMap.ApplyDensity(VisualTweaksSettings.shieldHexDensityApplied);
+            }
         }
     }
 }

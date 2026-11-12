@@ -17,6 +17,15 @@ namespace VisualTweaks
                 ColdMistBridge.Initialize();
                 VacuumLeakBridge.Initialize();
                 ShieldDomeBridge.Initialize();
+
+                // The hex lattice is baked HERE, not on the first shield that gets
+                // drawn. Mod settings are read in the Mod constructor (CreateModClasses,
+                // before static constructors), so the enabled flag and the density are
+                // already the saved values, and the cost lands on the loading screen
+                // instead of on a frame in the middle of a fight. No-ops when the
+                // style is off or the shader did not compile.
+                ShieldHexMap.Prewarm();
+
                 int culledDefsFixed = ShieldCullFix.Apply();
 
                 Harmony harmony = new Harmony("local.visualtweaks");

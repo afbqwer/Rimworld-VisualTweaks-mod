@@ -56,16 +56,30 @@ namespace VisualTweaks
     /// supported on desktop Vulkan — which matters because the lines are
     /// reconstructed by bilinear sampling.
     ///
+    /// ---- when the bake happens --------------------------------------------
+    ///
+    /// Never in the middle of gameplay, if it can be helped. Three entry points:
+    ///
+    ///   1. <see cref="Prewarm"/> from the mod's StaticConstructorOnStartup — the
+    ///      normal case. Mod settings are read in the Mod constructor, which runs
+    ///      before static constructors, so the enabled flag and the density are both
+    ///      already known here and the whole cost lands on the loading screen.
+    ///   2. The settings checkbox, the moment it is switched on, so enabling the
+    ///      style mid-game does not bill the first shield that happens to be drawn.
+    ///   3. The rebake button, when the density draft is committed.
+    ///
+    /// <see cref="Bind"/> keeps its own "texture missing" branch as a safety net for
+    /// anything that turns the style on without going through the UI, but in normal
+    /// play it never fires.
+    ///
     /// ---- cost -------------------------------------------------------------
     ///
-    /// Built lazily, only when the hexagonal style is actually enabled AND the player
-    /// presses the rebake button — the density slider is a draft value precisely so
-    /// that dragging it does not stall the game on every step. 2048^2 texels at
-    /// 25 dots each (bin guess + hill climb + wall set) measured 0.2 s in a Release
-    /// .NET build of the same loop, so the Mono JIT plus the SetPixels upload puts
-    /// the in-game cost at a fraction of a second, once. VRAM is 32 MiB for one
-    /// texture shared by every shield. No per-frame CPU work, no extra draw calls,
-    /// no extra geometry.
+    /// 2048^2 texels at 25 dots each (bin guess + hill climb + wall set) measured
+    /// 0.2 s in a Release .NET build of the same loop, so the Mono JIT plus the
+    /// SetPixels upload puts the in-game cost at a fraction of a second, once. VRAM
+    /// is 32 MiB for one texture shared by every shield. No per-frame CPU work, no
+    /// extra draw calls, no extra geometry, and nothing is baked at all while the
+    /// style is off.
     ///
     /// 2048 rather than 1024 because the ceiling moved: at k=12 a cell spans ~0.10 of
     /// the radius, so a 25-cell gravship dome magnified to 1500 px would put ~60 px
@@ -165,6 +179,52 @@ namespace VisualTweaks
         }
 
         /// <summary>
+        /// True when something would actually sample the texture: the hex style is
+        /// picked, the custom dome that draws it is on, and its shader compiled.
+        /// Baking otherwise costs 32 MiB and a fraction of a second for an image
+        /// nothing reads.
+        /// </summary>
+        private static bool CanBeDrawn =>
+            VisualTweaksSettings.hexShieldDome
+            && VisualTweaksSettings.crispShieldDome
+            && ShieldDomeBridge.ShaderReady;
+
+        /// <summary>
+        /// Bakes during startup, before any map exists, so no shield ever pays for
+        /// this in the middle of a fight. Called from the mod's
+        /// StaticConstructorOnStartup, which runs after mod settings are read (the Mod
+        /// constructor calls GetSettings) and before the first map loads.
+        /// </summary>
+        internal static void Prewarm()
+        {
+            if (!CanBeDrawn)
+            {
+                return;
+            }
+
+            int k = Mathf.Clamp(
+                VisualTweaksSettings.shieldHexDensityApplied,
+                MinSubdivisions,
+                MaxSubdivisions);
+
+            if (texture != null && builtFor == k)
+            {
+                return;
+            }
+
+            System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+            Build(k);
+            watch.Stop();
+
+            if (available)
+            {
+                VisualTweaksLog.Info("hex shield map baked at startup (k=" + k
+                    + ", " + Size + "x" + Size + ", " + watch.ElapsedMilliseconds
+                    + " ms).");
+            }
+        }
+
+        /// <summary>
         /// Rebakes for a new cell density immediately, so the stall lands on the
         /// button press that asked for it instead of on the next shield that happens
         /// to come into view. If the hex style is off nothing is baked: the texture is
@@ -176,7 +236,7 @@ namespace VisualTweaks
             int k = Mathf.Clamp(subdivisions, MinSubdivisions, MaxSubdivisions);
             VisualTweaksSettings.shieldHexDensityApplied = k;
 
-            if (!VisualTweaksSettings.hexShieldDome || failedFor == k)
+            if (!CanBeDrawn || failedFor == k)
             {
                 return;
             }
