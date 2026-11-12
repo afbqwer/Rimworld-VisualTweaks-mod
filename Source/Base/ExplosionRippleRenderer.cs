@@ -67,6 +67,28 @@ namespace VisualTweaks
         private bool loggedDraw;
         private bool loggedInstanced;
 
+        // Look-only constants, applied to this instance's own material. They are
+        // constructor arguments rather than hardcoded values because the shield ripple
+        // layer borrows this renderer with a tighter noise and a stronger lens; a
+        // second copy of the draw code would be 240 lines of duplicated GPU plumbing
+        // for four numbers.
+        private readonly Vector4 params3;
+        private readonly Vector4 params4;
+
+        /// <summary>Explosion shockwave look: broad warp, mild lens.</summary>
+        internal ExplosionRippleRenderer()
+            : this(
+                new Vector4(0.02f, 3.2f, 8f, 0f),
+                new Vector4(0.18f, 0.06f, 0f, 0f))
+        {
+        }
+
+        internal ExplosionRippleRenderer(Vector4 params3, Vector4 params4)
+        {
+            this.params3 = params3;
+            this.params4 = params4;
+        }
+
         internal void Draw(
             CellRect view,
             List<ExplosionRippleInstance> ripples,
@@ -222,8 +244,8 @@ namespace VisualTweaks
             // shared material. _Params3 = (noise amplitude, angular frequency,
             // angular softness); _Params4 = (refraction of the visual radius,
             // crest gain).
-            material.SetVector(Params3Id, new Vector4(0.02f, 3.2f, 8f, 0f));
-            material.SetVector(Params4Id, new Vector4(0.18f, 0.06f, 0f, 0f));
+            material.SetVector(Params3Id, params3);
+            material.SetVector(Params4Id, params4);
         }
 
         public void Dispose()

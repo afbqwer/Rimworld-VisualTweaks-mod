@@ -25,6 +25,7 @@ namespace VisualTweaks
         private readonly ColdMistLayer coldMist;
         private readonly HeatHazeLayer heatHaze;
         private readonly ExplosionRippleLayer explosions;
+        private readonly ShieldRippleLayer shieldRipples;
         private readonly VacuumLeakLayer vacuumLeak;
 
         // Structural events that refresh the port table early. Doors go through the
@@ -53,6 +54,7 @@ namespace VisualTweaks
             coldMist = new ColdMistLayer();
             heatHaze = new HeatHazeLayer();
             explosions = new ExplosionRippleLayer();
+            shieldRipples = new ShieldRippleLayer();
             vacuumLeak = new VacuumLeakLayer();
 
             structureChangedHandler = vacuumLeak.MarkStructureDirty;
@@ -111,6 +113,16 @@ namespace VisualTweaks
         internal void NotifyExplosion(Explosion explosion)
         {
             explosions.Spawn(explosion);
+        }
+
+        /// <summary>
+        /// Called by the interceptor patch, once per stopped projectile. The shield is
+        /// not a map component of its own, so the hit arrives here through the map it
+        /// was standing on.
+        /// </summary>
+        internal void NotifyShieldHit(CompProjectileInterceptor interceptor, Vector3 hitPos)
+        {
+            shieldRipples.Spawn(interceptor, hitPos);
         }
 
         public override void MapComponentDraw()
@@ -177,6 +189,11 @@ namespace VisualTweaks
             EnsureLeakEventSubscriptions();
             DrawLayer(vacuumLeak, in frame);
 
+            // Shield ripples share the shockwave render queue (3178). Submitting them
+            // first lets a blast that lands in the same frame draw over them, which is
+            // the correct read: the shield ripple is a surface event, the shockwave is
+            // in front of everything.
+            DrawLayer(shieldRipples, in frame);
             DrawLayer(explosions, in frame);
         }
 
@@ -242,6 +259,7 @@ namespace VisualTweaks
             deadlifeDust.Dispose();
             coldMist.Dispose();
             heatHaze.Dispose();
+            shieldRipples.Dispose();
             explosions.Dispose();
             vacuumLeak.Dispose();
             wind?.Dispose();

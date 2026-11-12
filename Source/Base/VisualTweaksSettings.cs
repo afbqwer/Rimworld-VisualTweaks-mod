@@ -125,6 +125,24 @@ namespace VisualTweaks
         // normal play, so this is only a safety bound, not a tuning knob.
         public const int MaxRippleCount = 256;
 
+        // Shield hit ripples. Separate from the shockwave switches above because the
+        // two answer different questions: one is "do explosions distort the air", the
+        // other is "do I get feedback that a shield stopped the shot". A player who
+        // finds explosion shockwaves noisy may still want the shield cue.
+        //
+        // The default life is deliberately short — a ripple on a dome should snap, not
+        // sweep. 0.24 s at 60 ticks/s is about 14 ticks, which is also roughly how long
+        // vanilla's own Interceptor_BlockedProjectile flash lasts.
+        public static bool shieldRippleEnabled = true;
+
+        public const float MinShieldRippleIntensity = 0.1f;
+        public const float MaxShieldRippleIntensity = 3f;
+        public static float shieldRippleIntensity = 1.2f;
+
+        public const float MinShieldRippleDuration = 0.08f;
+        public const float MaxShieldRippleDuration = 1f;
+        public static float shieldRippleDuration = 0.24f;
+
         // Vacuum leak airflow (Odyssey vacuum maps). Streams converge on ventilation
         // ports while air escapes; hull breaches add a short two-sided burst. The
         // intensity formula itself is state-driven, this slider only scales the look.
@@ -345,6 +363,9 @@ namespace VisualTweaks
                 ref explosionRippleDuration,
                 "explosionRippleDuration",
                 RippleDurationBaseline);
+            Scribe_Values.Look(ref shieldRippleEnabled, "shieldRippleEnabled", true);
+            Scribe_Values.Look(ref shieldRippleIntensity, "shieldRippleIntensity", 1.2f);
+            Scribe_Values.Look(ref shieldRippleDuration, "shieldRippleDuration", 0.24f);
             Scribe_Values.Look(ref vacuumLeakEnabled, "vacuumLeakEnabled", true);
             Scribe_Values.Look(ref vacuumLeakIntensity, "vacuumLeakIntensity", 1f);
             Scribe_Values.Look(ref vacuumLeakSpeed, "vacuumLeakSpeed", 1f);
@@ -420,6 +441,14 @@ namespace VisualTweaks
                 explosionRippleDuration,
                 MinRippleDuration,
                 MaxRippleDuration);
+            shieldRippleIntensity = Mathf.Clamp(
+                shieldRippleIntensity,
+                MinShieldRippleIntensity,
+                MaxShieldRippleIntensity);
+            shieldRippleDuration = Mathf.Clamp(
+                shieldRippleDuration,
+                MinShieldRippleDuration,
+                MaxShieldRippleDuration);
             vacuumLeakIntensity = Mathf.Clamp(
                 vacuumLeakIntensity,
                 MinLeakIntensity,
@@ -546,6 +575,9 @@ namespace VisualTweaks
             explosionRippleRadiusScale = 1f;
             explosionRippleRadiusInfluence = 0.35f;
             explosionRippleDuration = RippleDurationBaseline;
+            shieldRippleEnabled = true;
+            shieldRippleIntensity = 1.2f;
+            shieldRippleDuration = 0.24f;
             vacuumLeakEnabled = true;
             vacuumLeakIntensity = 1f;
             vacuumLeakSpeed = 1f;

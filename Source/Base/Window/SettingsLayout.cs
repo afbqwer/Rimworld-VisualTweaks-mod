@@ -22,6 +22,9 @@ namespace VisualTweaks
 
         public const float HeaderHeight = 28f;
 
+        /// <summary>Caption line inside a section, above a sub-group of controls.</summary>
+        public const float SubHeaderHeight = 20f;
+
         /// <summary>Label line plus slider rail.</summary>
         public const float SliderRowHeight = LabelLineHeight + RailHeight;
 
@@ -36,9 +39,13 @@ namespace VisualTweaks
         private const float ValueWidth = 60f;
         private const float HeaderIndent = 10f;
 
+        /// <summary>Half the caption line: tall enough to read as a mark, not a bar.</summary>
+        private const float TickHeight = 9f;
+
         private static readonly Color HeaderBack = new Color(1f, 1f, 1f, 0.07f);
         private static readonly Color HeaderAccent = new Color(0.52f, 0.63f, 0.8f, 0.9f);
         private static readonly Color HeaderText = new Color(0.93f, 0.93f, 0.93f);
+        private static readonly Color SubHeaderText = new Color(0.72f, 0.76f, 0.82f);
         private static readonly Color ValueText = new Color(0.78f, 0.81f, 0.86f);
         private static readonly Color NoteText = new Color(0.66f, 0.66f, 0.66f);
         private static readonly Color WarnText = new Color(0.93f, 0.6f, 0.52f);
@@ -63,6 +70,32 @@ namespace VisualTweaks
             Text.Anchor = anchor;
 
             listing.Gap(RowGap + 2f);
+        }
+
+        /// <summary>
+        /// Sub-group caption inside a section: a short accent tick plus a caption, no
+        /// band. Needed now that one tab holds two effects, because a caption such as
+        /// "Appearance" then appears twice and has to stay readable as belonging to the
+        /// section above it. A full band here would compete with that section header.
+        /// </summary>
+        public static void SubHeader(Listing_Standard listing, string label)
+        {
+            Rect rect = listing.GetRect(SubHeaderHeight);
+            float x = rect.x + HeaderIndent;
+
+            Widgets.DrawBoxSolid(
+                new Rect(x, rect.y + (SubHeaderHeight - TickHeight) / 2f, 2f, TickHeight),
+                HeaderAccent);
+
+            TextAnchor anchor = Text.Anchor;
+            Color color = GUI.color;
+            Text.Anchor = TextAnchor.MiddleLeft;
+            GUI.color = SubHeaderText;
+            Widgets.Label(new Rect(x + 10f, rect.y, rect.width - 10f, SubHeaderHeight), label);
+            GUI.color = color;
+            Text.Anchor = anchor;
+
+            listing.Gap(2f);
         }
 
         /// <summary>Small grey helper text. Used where a tooltip is too easy to miss.</summary>

@@ -20,6 +20,7 @@ namespace VisualTweaks
                 Harmony harmony = new Harmony("local.visualtweaks");
                 GasFieldPatches.Apply(harmony);
                 ExplosionRipplePatches.Apply(harmony);
+                ShieldRipplePatches.Apply(harmony);
                 VacuumBreachPatches.Apply(harmony);
 
                 VisualTweaksLog.Info("base initialized (gas field renderer "
