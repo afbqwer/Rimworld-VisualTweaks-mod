@@ -757,14 +757,43 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldPersonal_Enable".Translate(),
                 ref VisualTweaksSettings.replacePersonalShields,
                 "VisualTweaks_ShieldPersonal_EnableTip".Translate());
+
+            // VEF's repulsors are a third family: a different comp in a different
+            // assembly, so the vanilla-only switches cannot govern them. The group is
+            // hidden entirely when VEF is not loaded; its look follows the large
+            // shield style below.
+            if (VefRepulsorShieldCompat.Available)
+            {
+                listing.CheckboxLabeled(
+                    "VisualTweaks_ShieldRepulsor_Enable".Translate(),
+                    ref VisualTweaksSettings.replaceRepulsorShields,
+                    "VisualTweaks_ShieldRepulsor_EnableTip".Translate());
+
+                if (VisualTweaksSettings.replaceRepulsorShields)
+                {
+                    VisualTweaksSettings.repulsorShieldOpacity = SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldRepulsor_Opacity".Translate(),
+                        VisualTweaksSettings.repulsorShieldOpacity,
+                        VisualTweaksSettings.MinRepulsorShieldOpacity,
+                        VisualTweaksSettings.MaxRepulsorShieldOpacity,
+                        "VisualTweaks_ShieldRepulsor_OpacityTip".Translate());
+                }
+            }
+
             listing.CheckboxLabeled(
                 "VisualTweaks_ShieldAlways_Enable".Translate(),
                 ref VisualTweaksSettings.alwaysShowShields,
                 "VisualTweaks_ShieldAlways_EnableTip".Translate());
 
             // Each family owns its surface, style and break choices. Turning one off
-            // hides only that section and leaves the other drawing untouched.
-            if (VisualTweaksSettings.replaceLargeShields)
+            // hides only that section and leaves the other drawing untouched. The
+            // repulsor shares the large-shield section, so that section stays visible
+            // while either of the two is drawing.
+            bool repulsorDrawing = VefRepulsorShieldCompat.Available
+                && VisualTweaksSettings.replaceRepulsorShields;
+
+            if (VisualTweaksSettings.replaceLargeShields || repulsorDrawing)
             {
                 DrawDomeSection(listing);
             }
@@ -775,7 +804,8 @@ namespace VisualTweaks
             }
 
             if (!VisualTweaksSettings.replaceLargeShields
-                && !VisualTweaksSettings.replacePersonalShields)
+                && !VisualTweaksSettings.replacePersonalShields
+                && !repulsorDrawing)
             {
                 SettingsLayout.Note(
                     listing,

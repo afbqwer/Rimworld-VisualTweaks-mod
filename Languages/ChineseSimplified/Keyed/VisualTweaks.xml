@@ -114,7 +114,11 @@
   <VisualTweaks_ShieldLarge_EnableTip>用着色器重画投射器穹顶；关闭后大型护盾恢复原版绘制。</VisualTweaks_ShieldLarge_EnableTip>
   <VisualTweaks_ShieldPersonal_Enable>替换个人护盾</VisualTweaks_ShieldPersonal_Enable>
   <VisualTweaks_ShieldPersonal_EnableTip>用着色器重画个人护盾腰带；关闭后腰带恢复原版绘制。</VisualTweaks_ShieldPersonal_EnableTip>
-  <VisualTweaks_ShieldDome_OffNote>两种护盾都已恢复原版绘制，样式设置暂不生效。</VisualTweaks_ShieldDome_OffNote>
+  <VisualTweaks_ShieldRepulsor_Enable>替换 VFES 斥力护盾</VisualTweaks_ShieldRepulsor_Enable>
+  <VisualTweaks_ShieldRepulsor_EnableTip>用着色器重画 Vanilla Furniture Expanded - Security 的斥力器（Repulsor）护盾。它的护盾来自 Vanilla Expanded Framework（VEF 的护盾场组件），因此单独一个开关；样式与受击/破裂选项沿用下方的大型护盾设置。未安装 VEF 时不显示。</VisualTweaks_ShieldRepulsor_EnableTip>
+  <VisualTweaks_ShieldRepulsor_Opacity>斥力护盾不透明度</VisualTweaks_ShieldRepulsor_Opacity>
+  <VisualTweaks_ShieldRepulsor_OpacityTip>在斥力器随能量变化的不透明度上再乘一个倍率。VEF 的数值是按叠加发光材质调的，同样的 alpha 放到透明混合的穹顶上会显得更实；1.0 即原版 alpha。</VisualTweaks_ShieldRepulsor_OpacityTip>
+  <VisualTweaks_ShieldDome_OffNote>所有护盾都已恢复原版绘制，样式设置暂不生效。</VisualTweaks_ShieldDome_OffNote>
   <VisualTweaks_ShieldAlways_Enable>总是显示大型护盾</VisualTweaks_ShieldAlways_Enable>
   <VisualTweaks_ShieldAlways_EnableTip>未选中时也让运作中的大型护盾淡淡显示。个人护盾是否显示仍由原版规则决定。</VisualTweaks_ShieldAlways_EnableTip>
 

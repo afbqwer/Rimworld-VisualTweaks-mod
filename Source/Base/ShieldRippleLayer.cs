@@ -108,10 +108,15 @@ namespace VisualTweaks
         /// projectile's position after the step that crossed the shield, and
         /// <paramref name="damage"/> is what that projectile was going to deal — the
         /// shield stopped it, so this is the only measure of how hard the hit was.
+        ///
+        /// The host and radius are passed rather than a CompProjectileInterceptor
+        /// because the VEF repulsor reports the same event from a different comp. The
+        /// ripple only needs the silhouette, its centre and its size; neither of the
+        /// two comp types has to be known here.
         /// </summary>
-        internal void Spawn(CompProjectileInterceptor interceptor, Vector3 hitPos, float damage)
+        internal void Spawn(Thing? host, float shieldRadius, Vector3 hitPos, float damage)
         {
-            if (interceptor?.parent == null || !interceptor.parent.Spawned)
+            if (host == null || !host.Spawned)
             {
                 return;
             }
@@ -122,20 +127,19 @@ namespace VisualTweaks
                 return;
             }
 
-            float shieldRadius = interceptor.Props.radius;
             if (!(shieldRadius > 0.01f))
             {
                 return;
             }
 
             int now = tickManager.TicksGame;
-            int shieldId = interceptor.parent.thingIDNumber;
+            int shieldId = host.thingIDNumber;
             if (shieldId == lastSpawnShieldId && now == lastSpawnTick)
             {
                 return;
             }
 
-            Vector3 center = interceptor.parent.DrawPos;
+            Vector3 center = host.DrawPos;
             float dx = hitPos.x - center.x;
             float dz = hitPos.z - center.z;
             float distSq = dx * dx + dz * dz;

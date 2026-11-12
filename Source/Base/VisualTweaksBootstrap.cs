@@ -36,6 +36,7 @@ namespace VisualTweaks
                 ShieldDomePatches.Apply(harmony);
                 PersonalShieldPatches.Apply(harmony);
                 CombatExtendedShieldCompat.Apply(harmony);
+                VefRepulsorShieldCompat.Apply(harmony);
                 VacuumBreachPatches.Apply(harmony);
 
                 VisualTweaksLog.Info("base initialized (gas field renderer "

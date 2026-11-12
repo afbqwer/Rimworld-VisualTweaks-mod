@@ -125,7 +125,30 @@ namespace VisualTweaks
             Vector3 hitPos,
             float damage)
         {
-            shieldRipples.Spawn(interceptor, hitPos, damage);
+            if (interceptor?.parent == null)
+            {
+                return;
+            }
+
+            shieldRipples.Spawn(
+                interceptor.parent,
+                interceptor.Props.radius,
+                hitPos,
+                damage);
+        }
+
+        /// <summary>
+        /// The same event from a shield whose comp is not a vanilla interceptor —
+        /// today the VEF repulsor. The caller supplies the silhouette it actually
+        /// draws, because the comp types do not share a radius member.
+        /// </summary>
+        internal void NotifyShieldHit(
+            Thing host,
+            float shieldRadius,
+            Vector3 hitPos,
+            float damage)
+        {
+            shieldRipples.Spawn(host, shieldRadius, hitPos, damage);
         }
 
         public override void MapComponentDraw()

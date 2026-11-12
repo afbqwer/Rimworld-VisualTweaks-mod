@@ -49,6 +49,20 @@ namespace VisualTweaks
             && !ScreenshotModeGate.Active;
 
         /// <summary>
+        /// VEF's shield-field comp (used by the VFES repulsors) draws through its own
+        /// billboard instead of CompProjectileInterceptor, so it has its own switch.
+        /// It shares the large-shield surface and impact choices: a repulsor is a
+        /// projector dome, and giving it a second style family would mean a second
+        /// set of sliders for the same look.
+        /// </summary>
+        internal static bool RepulsorActive =>
+            initialized
+            && shaderReady
+            && !runtimeDisabled
+            && VisualTweaksSettings.replaceRepulsorShields
+            && !ScreenshotModeGate.Active;
+
+        /// <summary>
         /// True when this particular interceptor should be drawn by the mod. The
         /// vanilla-only switch compares the runtime type exactly, so modded subclasses
         /// keep their own drawing. Vanilla's own CompGravshipShieldGenerator is the one

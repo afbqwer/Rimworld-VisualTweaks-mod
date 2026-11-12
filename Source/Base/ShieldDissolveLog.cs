@@ -26,6 +26,9 @@ namespace VisualTweaks
     /// survived a save/load would need its start tick re-based against a clock that
     /// may have advanced by tens of thousands of ticks, for at most 1.5 seconds of
     /// an animation nobody is watching. Empty after load is correct.
+    ///
+    /// The key is the base <see cref="ThingComp"/>: the VEF repulsor ends its shield
+    /// through CompShieldField, not CompProjectileInterceptor, and both feed this log.
     /// </summary>
     internal static class ShieldDissolveLog
     {
@@ -51,14 +54,14 @@ namespace VisualTweaks
             public bool SawInactive;
         }
 
-        private static readonly ConditionalWeakTable<CompProjectileInterceptor, State>
-            States = new ConditionalWeakTable<CompProjectileInterceptor, State>();
+        private static readonly ConditionalWeakTable<ThingComp, State>
+            States = new ConditionalWeakTable<ThingComp, State>();
 
         /// <summary>
         /// Starts (or restarts) a dissolve. Called from the four shutdown entry points,
         /// and only when the custom dome is actually installed.
         /// </summary>
-        internal static void Begin(CompProjectileInterceptor comp)
+        internal static void Begin(ThingComp comp)
         {
             TickManager? tickManager = Find.TickManager;
             ThingWithComps? parent = comp.parent;
@@ -123,7 +126,7 @@ namespace VisualTweaks
         /// Only touches a dissolve that started on this exact tick.
         /// </summary>
         internal static void RefreshOrigin(
-            CompProjectileInterceptor comp,
+            ThingComp comp,
             float interceptAngle,
             int now)
         {
@@ -147,7 +150,7 @@ namespace VisualTweaks
         /// when the game is paused and speeds up with the game's own time controls —
         /// exactly like a vanilla mote.
         /// </summary>
-        internal static State? Progress(CompProjectileInterceptor comp, out float progress)
+        internal static State? Progress(ThingComp comp, out float progress)
         {
             progress = 0f;
             TickManager? tickManager = Find.TickManager;
@@ -174,7 +177,7 @@ namespace VisualTweaks
         /// has played out — a recharging generator must not keep showing a dome that
         /// is still falling apart.
         /// </summary>
-        internal static void Cancel(CompProjectileInterceptor comp)
+        internal static void Cancel(ThingComp comp)
         {
             States.Remove(comp);
         }

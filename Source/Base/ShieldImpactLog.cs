@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -33,6 +32,11 @@ namespace VisualTweaks
     /// Keyed by the comp through a <see cref="ConditionalWeakTable{TKey,TValue}"/>, so
     /// a shield that is destroyed takes its list with it and there is no per-map
     /// teardown to get wrong.
+    ///
+    /// The key is the base <see cref="ThingComp"/> rather than the vanilla interceptor:
+    /// the VEF repulsor drives its shield from a completely different comp type
+    /// (CompShieldField) and feeds the same impact list. A comp of either kind is a
+    /// distinct key, so the two families cannot read each other's bearings.
     /// </summary>
     internal static class ShieldImpactLog
     {
@@ -53,8 +57,8 @@ namespace VisualTweaks
         /// </summary>
         private const int MaxPerShield = 8;
 
-        private static readonly ConditionalWeakTable<CompProjectileInterceptor, List<Impact>>
-            Impacts = new ConditionalWeakTable<CompProjectileInterceptor, List<Impact>>();
+        private static readonly ConditionalWeakTable<ThingComp, List<Impact>>
+            Impacts = new ConditionalWeakTable<ThingComp, List<Impact>>();
 
         internal struct Impact
         {
@@ -71,7 +75,7 @@ namespace VisualTweaks
             public int Tick;
         }
 
-        internal static void Notify(CompProjectileInterceptor comp, float angle, float damage)
+        internal static void Notify(ThingComp comp, float angle, float damage)
         {
             TickManager? tickManager = Find.TickManager;
             if (tickManager == null)
@@ -97,7 +101,7 @@ namespace VisualTweaks
         /// mutate it — entries are dropped by <see cref="Notify"/>, and a stale one is
         /// filtered out by age at draw time anyway.
         /// </summary>
-        internal static List<Impact>? Peek(CompProjectileInterceptor comp)
+        internal static List<Impact>? Peek(ThingComp comp)
         {
             return Impacts.TryGetValue(comp, out List<Impact>? list) ? list : null;
         }
@@ -109,7 +113,7 @@ namespace VisualTweaks
         /// recently. At most <see cref="MaxPerShield"/> entries, and the lookup is
         /// only reached when the surface is already invisible.
         /// </summary>
-        internal static bool HasLive(CompProjectileInterceptor comp)
+        internal static bool HasLive(ThingComp comp)
         {
             TickManager? tickManager = Find.TickManager;
             if (tickManager == null

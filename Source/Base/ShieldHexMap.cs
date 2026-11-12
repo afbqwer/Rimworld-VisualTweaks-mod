@@ -260,7 +260,9 @@ namespace VisualTweaks
                         == PersonalShieldHitStyle.HexWave))
             && (target == ShieldHexTarget.Personal
                 ? VisualTweaksSettings.replacePersonalShields
-                : VisualTweaksSettings.replaceLargeShields)
+                : VisualTweaksSettings.replaceLargeShields
+                    || (VefRepulsorShieldCompat.Available
+                        && VisualTweaksSettings.replaceRepulsorShields))
             && ShieldDomeBridge.ShaderReady;
 
         /// <summary>

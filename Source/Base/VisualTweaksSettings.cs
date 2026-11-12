@@ -200,6 +200,23 @@ namespace VisualTweaks
         public static bool replaceLargeShields = true;
         public static bool replacePersonalShields = true;
 
+        // VEF's shield-field comp (the VFES repulsors) has its own switch. It is a
+        // separate family from vanilla projectors because it is a different comp in a
+        // different assembly, and pressing the repulsor switch must not silently
+        // enable or disable anything vanilla. Its surface, impact and break choices
+        // are the large-shield ones: a repulsor is a projector dome, and a second set
+        // of style sliders for the same look would just be two places to tune it.
+        public static bool replaceRepulsorShields = true;
+
+        // VEF stores the repulsor's opacity in the def's health colour alpha
+        // (roughly 0.35 at low energy to 1.0 at full). That number was authored for
+        // an additive MoteGlow billboard; the same alpha through an alpha-blended
+        // dome reads much more solid, so this multiplier brings it into the range
+        // the other shields use. 0.6 is about the selected dome's peak.
+        public const float MinRepulsorShieldOpacity = 0.05f;
+        public const float MaxRepulsorShieldOpacity = 1.5f;
+        public static float repulsorShieldOpacity = 0.6f;
+
         // When on, only vanilla comp classes are replaced; mods that derive from them
         // keep their own drawing. Large shields use CompProjectileInterceptor, and the
         // vanilla CompGravshipShieldGenerator is explicitly included as well. Personal
@@ -746,6 +763,14 @@ namespace VisualTweaks
                 "replacePersonalShields",
                 true);
             Scribe_Values.Look(
+                ref replaceRepulsorShields,
+                "replaceRepulsorShields",
+                true);
+            Scribe_Values.Look(
+                ref repulsorShieldOpacity,
+                "repulsorShieldOpacity",
+                0.6f);
+            Scribe_Values.Look(
                 ref largeShieldsVanillaOnly,
                 "largeShieldsVanillaOnly",
                 false);
@@ -1072,6 +1097,10 @@ namespace VisualTweaks
                 personalShieldOpacity,
                 MinPersonalShieldOpacity,
                 MaxPersonalShieldOpacity);
+            repulsorShieldOpacity = Mathf.Clamp(
+                repulsorShieldOpacity,
+                MinRepulsorShieldOpacity,
+                MaxRepulsorShieldOpacity);
             personalShieldJitterDistance = Mathf.Clamp(
                 personalShieldJitterDistance,
                 MinPersonalShieldJitterDistance,
@@ -1338,6 +1367,8 @@ namespace VisualTweaks
             alwaysShowShields = false;
             replaceLargeShields = true;
             replacePersonalShields = true;
+            replaceRepulsorShields = true;
+            repulsorShieldOpacity = 0.6f;
             largeShieldsVanillaOnly = false;
             personalShieldsVanillaOnly = false;
             largeShieldDisableHitDust = true;

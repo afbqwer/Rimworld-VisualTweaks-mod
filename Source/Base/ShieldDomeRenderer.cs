@@ -131,27 +131,78 @@ namespace VisualTweaks
         /// to vanilla instead of skipping it. Every early exit here is a reason the
         /// stock drawing is the better answer, and the calling patch treats false as
         /// exactly that — "I did not draw, so you draw".
+        ///
+        /// The vanilla projector adapter. Everything the draw needs is read from the
+        /// interceptor here and handed to <see cref="DrawCore"/>; a second adapter
+        /// (VefRepulsorShieldCompat) supplies the same numbers from VEF's shield-field
+        /// comp, so the shader path itself has no knowledge of either comp type.
         /// </summary>
         internal static bool Draw(CompProjectileInterceptor comp, float alpha)
+        {
+            if (comp == null)
+            {
+                return false;
+            }
+
+            ThingWithComps? parent = comp.parent;
+            if (parent == null)
+            {
+                return false;
+            }
+
+            return DrawCore(
+                comp,
+                parent,
+                comp.Props.radius,
+                comp.Props.color,
+                alpha,
+                comp.Active,
+                Find.Selector.IsSelected(parent));
+        }
+
+        /// <summary>
+        /// The VEF repulsor adapter. A repulsor is a building with its own shield
+        /// comp, and VEF's own draw has no alpha of its own: opacity lives in the
+        /// def's health colour. The adapter resolves that colour and alpha, and
+        /// <paramref name="present"/> says whether the stock draw would be up at all
+        /// (active and holding energy), because a dissolve must outlive that state.
+        /// </summary>
+        internal static bool Draw(
+            ThingComp comp,
+            Thing host,
+            float radius,
+            float alpha,
+            Color color,
+            bool present)
+        {
+            return DrawCore(comp, host, radius, color, alpha, present, selected: false);
+        }
+
+        private static bool DrawCore(
+            ThingComp comp,
+            Thing host,
+            float radius,
+            Color baseColor,
+            float alpha,
+            bool present,
+            bool selected)
         {
             if (!ShieldDomeBridge.ShaderReady)
             {
                 return false;
             }
 
-            ThingWithComps? parent = comp.parent;
-            if (parent == null || !parent.Spawned)
+            if (host == null || !host.Spawned)
             {
                 return false;
             }
 
-            float radius = comp.Props.radius;
             if (radius <= 0.01f)
             {
                 return false;
             }
 
-            Vector3 center = parent.DrawPos;
+            Vector3 center = host.DrawPos;
 
             // 2 * radius normally, with no texture-margin factor: the shader puts the
             // silhouette on r == 1.0, so the quad edge and the gameplay radius are the
@@ -207,7 +258,7 @@ namespace VisualTweaks
             // down before treating a true value as a reactivation.
             if (dissolve != null)
             {
-                if (comp.Active)
+                if (present)
                 {
                     if (dissolve.SawInactive)
                     {
@@ -242,12 +293,12 @@ namespace VisualTweaks
 
             // Vanilla paints a selected-but-inactive shield dark grey so "this is off"
             // is visible at a glance. A shield that is actively tearing itself apart is
-            // emitting light, not sitting idle, so it keeps the def's colour.
-            Color color = dissolve == null
-                && !comp.Active
-                && Find.Selector.IsSelected(parent)
+            // emitting light, not sitting idle, so it keeps the def's colour. The VEF
+            // adapter never asks for this dimming: a repulsor that is off is not drawn
+            // by VEF at all, so there is no "selected but idle" surface to recolour.
+            Color color = dissolve == null && !present && selected
                 ? InactiveColor
-                : comp.Props.color;
+                : baseColor;
 
             NVector4 tint = new NVector4(color.r, color.g, color.b, 1f);
             NVector4 centerParam = new NVector4(center.x, center.z, 0f, 0f);
@@ -368,7 +419,7 @@ namespace VisualTweaks
         /// lifetime can be tuned on the CPU without touching the shader.
         /// </summary>
         private static bool DrawHexImpacts(
-            CompProjectileInterceptor comp,
+            ThingComp comp,
             Material material,
             Matrix4x4 matrix,
             NVector4 tint,
@@ -447,7 +498,7 @@ namespace VisualTweaks
         /// path only when the player selects Brighten there.
         /// </summary>
         private static bool DrawFlares(
-            CompProjectileInterceptor comp,
+            ThingComp comp,
             Material material,
             Matrix4x4 matrix,
             NVector4 tint,
