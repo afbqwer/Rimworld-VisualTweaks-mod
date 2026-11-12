@@ -297,6 +297,15 @@ namespace VisualTweaks
         public const float MaxShieldBrightenAngle = 90f;
         public static float shieldBrightenAngle = 30f;
 
+        // How long one intercepted shot's reaction stays on screen on a large shield.
+        // The flare, the sector brightening and the hex lattice wave share this clock,
+        // so one hit reads as one event; 60 ticks = one second. The default 40 is
+        // vanilla's own cone fade. Belts have their own duration
+        // (personalShieldJitterTicks) because their hit effects are tuned separately.
+        public const float MinShieldImpactTicks = 10f;
+        public const float MaxShieldImpactTicks = 120f;
+        public static float shieldImpactTicks = 40f;
+
         // How a shield breaks. Independent of the surface, with per-style choices:
         // Vanilla leaves the one-frame disappearance alone, Dissolve is the
         // continuous noise tear, HexDissipate loses whole panels on the shell. Each
@@ -769,6 +778,7 @@ namespace VisualTweaks
                 "hexShieldImpactStyle",
                 ShieldImpactHexWave);
             Scribe_Values.Look(ref shieldBrightenAngle, "shieldBrightenAngle", 30f);
+            Scribe_Values.Look(ref shieldImpactTicks, "shieldImpactTicks", 40f);
 
             Scribe_Values.Look(
                 ref crispShieldBreakStyle,
@@ -1064,6 +1074,10 @@ namespace VisualTweaks
                 shieldBrightenAngle,
                 MinShieldBrightenAngle,
                 MaxShieldBrightenAngle));
+            shieldImpactTicks = Mathf.Clamp(
+                shieldImpactTicks,
+                MinShieldImpactTicks,
+                MaxShieldImpactTicks);
 
             // Same rule for the break choices. The shell additionally allows its own
             // panel-loss animation; the other surfaces only know vanilla or the
@@ -1237,6 +1251,7 @@ namespace VisualTweaks
             vanillaShieldImpactStyle = ShieldImpactBrighten;
             hexShieldImpactStyle = ShieldImpactHexWave;
             shieldBrightenAngle = 30f;
+            shieldImpactTicks = 40f;
             crispShieldBreakStyle = ShieldBreakDissolve;
             vanillaShieldBreakStyle = ShieldBreakDissolve;
             hexShieldBreakStyle = ShieldBreakHexDissipate;

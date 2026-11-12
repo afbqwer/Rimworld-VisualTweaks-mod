@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using RimWorld;
+using UnityEngine;
 using Verse;
 
 namespace VisualTweaks
@@ -26,8 +27,8 @@ namespace VisualTweaks
     ///
     /// Deliberately not scribed. A fade that survived a save/load would need its ticks
     /// re-based against a tick manager that may have advanced tens of thousands of
-    /// ticks, and the payoff is at most 40 ticks of a flare the player has already
-    /// stopped looking at. Empty after load is the correct state.
+    /// ticks, and the payoff is at most a couple of seconds of a flare the player has
+    /// already stopped looking at. Empty after load is the correct state.
     ///
     /// Keyed by the comp through a <see cref="ConditionalWeakTable{TKey,TValue}"/>, so
     /// a shield that is destroyed takes its list with it and there is no per-map
@@ -36,12 +37,14 @@ namespace VisualTweaks
     internal static class ShieldImpactLog
     {
         /// <summary>
-        /// Matches vanilla's own cone fade (GetCurrentConeAlpha_RecentlyIntercepted
-        /// divides by 40). Keeping the same number means the flare is gone on the tick
-        /// the stock one would have been, so switching this setting on and off does not
-        /// change how long a hit stays readable.
+        /// How long one interception stays drawn. The default 40 matches vanilla's own
+        /// cone fade (<c>GetCurrentConeAlpha_RecentlyIntercepted</c> divides by 40), so
+        /// at the default the flare is gone on the tick the stock one would have been.
+        /// The player can move it; a longer wave then reads as a slower spread rather
+        /// than as a second event.
         /// </summary>
-        internal const int LifetimeTicks = 40;
+        internal static int LifetimeTicks =>
+            Mathf.Max(1, Mathf.RoundToInt(VisualTweaksSettings.shieldImpactTicks));
 
         /// <summary>
         /// Hard cap, oldest dropped first. Eight simultaneous directions already covers

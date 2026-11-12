@@ -151,6 +151,8 @@
   <VisualTweaks_ShieldDome_ImpactBrightenTip>The shield brightens in the impact's angular sector, fading toward the centre.</VisualTweaks_ShieldDome_ImpactBrightenTip>
   <VisualTweaks_ShieldDome_ImpactHexWave>Hex wave</VisualTweaks_ShieldDome_ImpactHexWave>
   <VisualTweaks_ShieldDome_ImpactHexWaveTip>Panels near the impact light up and the light spreads outward through the lattice. Hexagonal surface only.</VisualTweaks_ShieldDome_ImpactHexWaveTip>
+  <VisualTweaks_ShieldDome_ImpactDuration>Hit animation duration</VisualTweaks_ShieldDome_ImpactDuration>
+  <VisualTweaks_ShieldDome_ImpactDurationTip>How long the flare, sector brightening or hex wave lasts on a large shield; 60 ticks = 1 second.</VisualTweaks_ShieldDome_ImpactDurationTip>
   <VisualTweaks_ShieldDome_FlareAlpha>Impact brightness</VisualTweaks_ShieldDome_FlareAlpha>
   <VisualTweaks_ShieldDome_FlareAlphaTip>Peak brightness of one interception; shared by Flare and Brighten sector.</VisualTweaks_ShieldDome_FlareAlphaTip>
   <VisualTweaks_ShieldDome_FlareSize>Flare size</VisualTweaks_ShieldDome_FlareSize>

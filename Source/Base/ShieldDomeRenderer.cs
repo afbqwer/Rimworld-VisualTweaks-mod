@@ -261,39 +261,43 @@ namespace VisualTweaks
 
             try
             {
-                // Hit reactions first: they are additive, so order does not change
-                // the picture, but submitting them under the dome keeps the rim the
-                // last thing written to the surface. A burst that was still fading
-                // when the shield broke should keep fading, not vanish with it.
-                //
-                // Which reaction is a player choice now, but not every surface can
-                // draw every one: the lattice wave needs the baked hex map, while the
-                // flare and the sector brightening are analytic. Each dome style keeps
-                // its own choice in the settings. A hex wave selected while the map is
-                // unavailable falls back to the flare, matching the dome's own fallback
-                // to the crisp surface in that case.
-                int impactStyle = VisualTweaksSettings.CurrentShieldImpactStyle;
-                if (impactStyle == VisualTweaksSettings.ShieldImpactHexWave && !HexActive)
+                // Hit reactions belong to a shield that is still standing. Once a
+                // dissolve is in flight the break animation owns the frame: the hex
+                // wave in particular can still be mid-spread when the shield fails,
+                // and letting it run over the tear reads as a second, longer animation.
+                // The personal belt already behaves this way (its dissolve returns
+                // before DrawImpact), so this also keeps the two families aligned.
+                if (dissolve == null)
                 {
-                    impactStyle = VisualTweaksSettings.ShieldImpactFlare;
-                }
+                    // Which reaction is a player choice now, but not every surface can
+                    // draw every one: the lattice wave needs the baked hex map, while the
+                    // flare and the sector brightening are analytic. Each dome style keeps
+                    // its own choice in the settings. A hex wave selected while the map is
+                    // unavailable falls back to the flare, matching the dome's own fallback
+                    // to the crisp surface in that case.
+                    int impactStyle = VisualTweaksSettings.CurrentShieldImpactStyle;
+                    if (impactStyle == VisualTweaksSettings.ShieldImpactHexWave && !HexActive)
+                    {
+                        impactStyle = VisualTweaksSettings.ShieldImpactFlare;
+                    }
 
-                if (impactStyle == VisualTweaksSettings.ShieldImpactHexWave)
-                {
-                    drew |= DrawHexImpacts(
-                        comp, mat, matrix, tint, centerParam, radius, time);
-                }
-                else
-                {
-                    drew |= DrawFlares(
-                        comp,
-                        mat,
-                        matrix,
-                        tint,
-                        centerParam,
-                        radius,
-                        time,
-                        impactStyle == VisualTweaksSettings.ShieldImpactBrighten);
+                    if (impactStyle == VisualTweaksSettings.ShieldImpactHexWave)
+                    {
+                        drew |= DrawHexImpacts(
+                            comp, mat, matrix, tint, centerParam, radius, time);
+                    }
+                    else
+                    {
+                        drew |= DrawFlares(
+                            comp,
+                            mat,
+                            matrix,
+                            tint,
+                            centerParam,
+                            radius,
+                            time,
+                            impactStyle == VisualTweaksSettings.ShieldImpactBrighten);
+                    }
                 }
 
                 if (dissolve != null)

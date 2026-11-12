@@ -151,6 +151,8 @@
   <VisualTweaks_ShieldDome_ImpactBrightenTip>受击方向的角度扇区变亮，越靠近中心越弱。</VisualTweaks_ShieldDome_ImpactBrightenTip>
   <VisualTweaks_ShieldDome_ImpactHexWave>六边扩散</VisualTweaks_ShieldDome_ImpactHexWave>
   <VisualTweaks_ShieldDome_ImpactHexWaveTip>命中点附近的面板亮起，并沿网格向外逐圈扩散。仅六边形样式可用。</VisualTweaks_ShieldDome_ImpactHexWaveTip>
+  <VisualTweaks_ShieldDome_ImpactDuration>受击动画时长</VisualTweaks_ShieldDome_ImpactDuration>
+  <VisualTweaks_ShieldDome_ImpactDurationTip>大型护盾的火舌、扇区增亮或六边扩散持续的时间，60 tick = 1 秒。</VisualTweaks_ShieldDome_ImpactDurationTip>
   <VisualTweaks_ShieldDome_FlareAlpha>受击亮度</VisualTweaks_ShieldDome_FlareAlpha>
   <VisualTweaks_ShieldDome_FlareAlphaTip>一次拦截的峰值亮度。火舌与扇区增亮共用这一项。</VisualTweaks_ShieldDome_FlareAlphaTip>
   <VisualTweaks_ShieldDome_FlareSize>火舌大小</VisualTweaks_ShieldDome_FlareSize>
