@@ -147,7 +147,7 @@
   <VisualTweaks_ShieldDome_ImpactFlare>火舌</VisualTweaks_ShieldDome_ImpactFlare>
   <VisualTweaks_ShieldDome_ImpactFlareTip>在受击方向画一道楔形火舌，指向来袭方向。类原版样式下会在亮环外半段（约 1.0–1.05R）淡出，不会伸进外圈辉光。清晰与类原版可选。</VisualTweaks_ShieldDome_ImpactFlareTip>
   <VisualTweaks_ShieldDome_ImpactBrighten>扇区增亮</VisualTweaks_ShieldDome_ImpactBrighten>
-  <VisualTweaks_ShieldDome_ImpactBrightenTip>让受击方向的角度扇区内的护盾本体变亮（不透明度提高），越靠近圆心越弱、到约一半半径处消失；外缘收缩在亮环视觉边缘以内。扇区角度在下方的「增亮扇区角度」中调整，原版默认 30°。三种样式都可选；类原版默认使用它。</VisualTweaks_ShieldDome_ImpactBrightenTip>
+  <VisualTweaks_ShieldDome_ImpactBrightenTip>让受击方向的角度扇区内的护盾本体变亮（不透明度提高），越靠近圆心越弱，到圆心处消失；外缘收缩在亮环视觉边缘以内。扇区角度在下方的「增亮扇区角度」中调整，原版默认 30°。三种样式都可选；类原版默认使用它。</VisualTweaks_ShieldDome_ImpactBrightenTip>
   <VisualTweaks_ShieldDome_ImpactHexWave>六边扩散</VisualTweaks_ShieldDome_ImpactHexWave>
   <VisualTweaks_ShieldDome_ImpactHexWaveTip>命中点附近的面板先亮起，再沿球面六边形网格向外逐圈扩散。只有六边形样式可用，也是它的默认受击动画。</VisualTweaks_ShieldDome_ImpactHexWaveTip>
   <VisualTweaks_ShieldDome_BrightenAngle>增亮扇区角度 (°)</VisualTweaks_ShieldDome_BrightenAngle>

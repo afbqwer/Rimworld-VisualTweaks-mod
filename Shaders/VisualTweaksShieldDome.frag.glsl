@@ -718,10 +718,11 @@ void main()
         }
 
         // The whole sector brightens, but the extra light thins toward the centre
-        // and is gone by 0.5R. Vanilla's cone does not flood the interior: it is a
-        // band of the surface that happens to be lit, strongest at the rim. Without
-        // this fade the sector reads as a filled wedge, not as a brighter shield.
-        float innerFade = smoothstep(0.5, 1.0, r);
+        // and reaches zero only at the centre. A constant full-strength wedge reads
+        // as a separate object; cutting it off at 0.5R was the opposite problem — it
+        // left almost nothing visible. The full-radius ramp keeps the interior
+        // readable while still leaving the centre untouched.
+        float innerFade = smoothstep(0.0, 1.0, r);
 
         // Additive, exactly like the dome: the same surface written a second time
         // inside the sector. Strong hits and overlapping directions accumulate.
