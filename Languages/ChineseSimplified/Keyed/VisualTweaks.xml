@@ -6,10 +6,11 @@
   <VisualTweaks_Version>版本 {0}</VisualTweaks_Version>
 
   <!-- 分页 -->
-  <VisualTweaks_Tab_Wind>流线</VisualTweaks_Tab_Wind>
   <VisualTweaks_Tab_Gas>气体</VisualTweaks_Tab_Gas>
   <VisualTweaks_Tab_Ripple>冲击波</VisualTweaks_Tab_Ripple>
   <VisualTweaks_Tab_Temperature>温度</VisualTweaks_Tab_Temperature>
+  <VisualTweaks_Tab_Shield>护盾</VisualTweaks_Tab_Shield>
+  <VisualTweaks_Tab_Wind>流线</VisualTweaks_Tab_Wind>
 
   <!-- 流线（仅 AO） -->
   <VisualTweaks_Wind_GroupRender>渲染</VisualTweaks_Wind_GroupRender>
@@ -53,6 +54,7 @@
   <VisualTweaks_Gas_GroupMotion>流动与平滑</VisualTweaks_Gas_GroupMotion>
   <VisualTweaks_Gas_GroupLook>外观</VisualTweaks_Gas_GroupLook>
   <VisualTweaks_Gas_GroupDebug>诊断</VisualTweaks_Gas_GroupDebug>
+  <VisualTweaks_Gas_GroupLeak>真空漏气（Odyssey）</VisualTweaks_Gas_GroupLeak>
 
   <VisualTweaks_Gas_ReplaceAOSprites>使用新的气体渲染（替换AO）</VisualTweaks_Gas_ReplaceAOSprites>
   <VisualTweaks_Gas_ReplaceVanillaSprites>使用新的气体渲染（替换原版）</VisualTweaks_Gas_ReplaceVanillaSprites>
@@ -194,9 +196,7 @@
   <VisualTweaks_Cold_Speed>浮动速度</VisualTweaks_Cold_Speed>
   <VisualTweaks_Cold_SpeedTip>雾气在原地翻滚、聚散和变形的快慢。寒气不会整体飘过画面，只在原地浓淡变化；数值越大翻涌越明显。</VisualTweaks_Cold_SpeedTip>
 
-  <!-- 真空漏气气流（Odyssey） -->
-  <VisualTweaks_Tab_Leak>真空漏气</VisualTweaks_Tab_Leak>
-  <VisualTweaks_Leak_GroupSwitch>总开关</VisualTweaks_Leak_GroupSwitch>
+  <!-- 真空漏气气流（Odyssey）：已并入气体页签，位于页签底部 -->
   <VisualTweaks_Leak_GroupLook>外观</VisualTweaks_Leak_GroupLook>
   <VisualTweaks_Leak_GroupDebug>调试</VisualTweaks_Leak_GroupDebug>
 

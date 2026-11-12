@@ -6,13 +6,15 @@ namespace VisualTweaks
 {
     public sealed class VisualTweaksMod : Mod
     {
+        // Declaration order is the order of the tab strip. Wind is last because it is
+        // the only optional tab, so AO being missing never shifts the other tabs.
         private enum SettingsTab
         {
-            Wind = 0,
-            Gas = 1,
-            Ripple = 2,
-            Temperature = 3,
-            Leak = 4
+            Gas = 0,
+            Ripple = 1,
+            Temperature = 2,
+            Shield = 3,
+            Wind = 4
         }
 
         private const int TabCount = 5;
@@ -49,7 +51,7 @@ namespace VisualTweaks
         // is open, and a new listing per frame would be pure garbage.
         private readonly Listing_Standard listing = new Listing_Standard();
 
-        private SettingsTab currentTab = SettingsTab.Wind;
+        private SettingsTab currentTab = SettingsTab.Gas;
         private bool tabsBuilt;
         private bool tabsIncludeWind;
 
@@ -116,16 +118,6 @@ namespace VisualTweaks
             tabsIncludeWind = wind;
             tabs.Clear();
 
-            // Without AO the streamline layer does not exist at all, so a tab full of
-            // controls that configure nothing would be worse than no tab.
-            if (wind)
-            {
-                tabs.Add(new TabRecord(
-                    "VisualTweaks_Tab_Wind".Translate(),
-                    delegate { currentTab = SettingsTab.Wind; },
-                    () => currentTab == SettingsTab.Wind));
-            }
-
             tabs.Add(new TabRecord(
                 "VisualTweaks_Tab_Gas".Translate(),
                 delegate { currentTab = SettingsTab.Gas; },
@@ -144,10 +136,23 @@ namespace VisualTweaks
                 delegate { currentTab = SettingsTab.Temperature; },
                 () => currentTab == SettingsTab.Temperature));
 
+            // Every shield visual lives on this tab: impact ripple, stock display and
+            // the custom dome. They used to sit under the ripple tab only because the
+            // ripple shader is involved, which buried most of the shield controls.
             tabs.Add(new TabRecord(
-                "VisualTweaks_Tab_Leak".Translate(),
-                delegate { currentTab = SettingsTab.Leak; },
-                () => currentTab == SettingsTab.Leak));
+                "VisualTweaks_Tab_Shield".Translate(),
+                delegate { currentTab = SettingsTab.Shield; },
+                () => currentTab == SettingsTab.Shield));
+
+            // Without AO the streamline layer does not exist at all, so a tab full of
+            // controls that configure nothing would be worse than no tab.
+            if (wind)
+            {
+                tabs.Add(new TabRecord(
+                    "VisualTweaks_Tab_Wind".Translate(),
+                    delegate { currentTab = SettingsTab.Wind; },
+                    () => currentTab == SettingsTab.Wind));
+            }
         }
 
         private void DrawFooter(Rect inRect)
@@ -217,8 +222,8 @@ namespace VisualTweaks
                 case SettingsTab.Temperature:
                     DoTemperatureTab(listing);
                     break;
-                case SettingsTab.Leak:
-                    DoLeakTab(listing);
+                case SettingsTab.Shield:
+                    DoShieldTab(listing);
                     break;
             }
 
@@ -496,6 +501,11 @@ namespace VisualTweaks
                 ref VisualTweaksSettings.gasFieldDiagnostics,
                 "VisualTweaks_Gas_DiagnosticsTip".Translate());
 
+            // Vacuum leak used to have a tab of its own, but it is another way air is
+            // shown moving, and the tab strip was getting crowded. It sits at the bottom
+            // of the gas tab so the gas controls keep their place.
+            DoLeakSection(listing);
+
             SettingsLayout.Finish(listing);
         }
 
@@ -542,8 +552,20 @@ namespace VisualTweaks
                 VisualTweaksSettings.MaxRippleDuration,
                 "VisualTweaks_Ripple_DurationTip".Translate());
 
-            // Same tab but a separate switch: this is feedback, not air distortion, and
-            // it borrows the shockwave shader without inheriting its on/off state.
+            SettingsLayout.Finish(listing);
+        }
+
+        /// <summary>
+        /// Every shield visual lives here. The groups used to sit under the ripple tab
+        /// only because the hit ripple borrows the shockwave shader, but the display and
+        /// dome settings have nothing to do with explosions and were easy to miss there.
+        /// Each group stays a section of its own: they replace different parts of the
+        /// stock shield drawing and are switched on independently.
+        /// </summary>
+        private static void DoShieldTab(Listing_Standard listing)
+        {
+            // Borrows the shockwave shader but keeps its own switch: this is feedback
+            // on the shield, not air distortion, so it does not follow the ripple toggle.
             SettingsLayout.Header(listing, "VisualTweaks_ShieldRipple_Group".Translate());
             listing.CheckboxLabeled(
                 "VisualTweaks_ShieldRipple_Enable".Translate(),
@@ -859,9 +881,14 @@ namespace VisualTweaks
                 step: 0.1f);
         }
 
-        private static void DoLeakTab(Listing_Standard listing)
+        /// <summary>
+        /// Also part of the gas tab now: vacuum leak is another way escaping air is
+        /// drawn, driven by Odyssey's pressure difference instead of gas cell density.
+        /// Keeping it last leaves the gas controls where they have always been.
+        /// </summary>
+        private static void DoLeakSection(Listing_Standard listing)
         {
-            SettingsLayout.Header(listing, "VisualTweaks_Leak_GroupSwitch".Translate());
+            SettingsLayout.Header(listing, "VisualTweaks_Gas_GroupLeak".Translate());
             listing.CheckboxLabeled(
                 "VisualTweaks_Leak_Enable".Translate(),
                 ref VisualTweaksSettings.vacuumLeakEnabled,
@@ -872,7 +899,7 @@ namespace VisualTweaks
                 SettingsLayout.Warning(listing, "VisualTweaks_Leak_ShaderMissing".Translate());
             }
 
-            SettingsLayout.Header(listing, "VisualTweaks_Leak_GroupLook".Translate());
+            SettingsLayout.SubHeader(listing, "VisualTweaks_Leak_GroupLook".Translate());
             VisualTweaksSettings.vacuumLeakIntensity = SettingsLayout.Slider(
                 listing,
                 "VisualTweaks_Leak_Intensity".Translate(),
@@ -913,14 +940,12 @@ namespace VisualTweaks
                     step: 1f);
             }
 
-            SettingsLayout.Header(listing, "VisualTweaks_Leak_GroupDebug".Translate());
+            SettingsLayout.SubHeader(listing, "VisualTweaks_Leak_GroupDebug".Translate());
             SettingsLayout.DevModeCheckbox(
                 listing,
                 "VisualTweaks_Leak_Trace".Translate(),
                 ref VisualTweaksSettings.vacuumLeakTrace,
                 "VisualTweaks_Leak_TraceTip".Translate());
-
-            SettingsLayout.Finish(listing);
         }
     }
 }

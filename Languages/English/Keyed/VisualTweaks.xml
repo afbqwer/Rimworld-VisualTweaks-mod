@@ -6,10 +6,11 @@
   <VisualTweaks_Version>Version {0}</VisualTweaks_Version>
 
   <!-- Tabs -->
-  <VisualTweaks_Tab_Wind>Streamlines</VisualTweaks_Tab_Wind>
   <VisualTweaks_Tab_Gas>Gas</VisualTweaks_Tab_Gas>
   <VisualTweaks_Tab_Ripple>Shockwave</VisualTweaks_Tab_Ripple>
   <VisualTweaks_Tab_Temperature>Temperature</VisualTweaks_Tab_Temperature>
+  <VisualTweaks_Tab_Shield>Shields</VisualTweaks_Tab_Shield>
+  <VisualTweaks_Tab_Wind>Streamlines</VisualTweaks_Tab_Wind>
 
   <!-- Streamlines (AO only) -->
   <VisualTweaks_Wind_GroupRender>Rendering</VisualTweaks_Wind_GroupRender>
@@ -53,6 +54,7 @@
   <VisualTweaks_Gas_GroupMotion>Motion and smoothing</VisualTweaks_Gas_GroupMotion>
   <VisualTweaks_Gas_GroupLook>Appearance</VisualTweaks_Gas_GroupLook>
   <VisualTweaks_Gas_GroupDebug>Diagnostics</VisualTweaks_Gas_GroupDebug>
+  <VisualTweaks_Gas_GroupLeak>Vacuum leak (Odyssey)</VisualTweaks_Gas_GroupLeak>
 
   <VisualTweaks_Gas_ReplaceAOSprites>Use the new gas rendering (replace AO)</VisualTweaks_Gas_ReplaceAOSprites>
   <VisualTweaks_Gas_ReplaceVanillaSprites>Use the new gas rendering (replace vanilla)</VisualTweaks_Gas_ReplaceVanillaSprites>
@@ -194,9 +196,7 @@
   <VisualTweaks_Cold_Speed>Float speed</VisualTweaks_Cold_Speed>
   <VisualTweaks_Cold_SpeedTip>How fast the vapour curls, thickens and dissolves in place. The haze never slides across the screen as a whole; higher values make it churn more visibly.</VisualTweaks_Cold_SpeedTip>
 
-  <!-- Vacuum leak airflow (Odyssey) -->
-  <VisualTweaks_Tab_Leak>Vacuum leak</VisualTweaks_Tab_Leak>
-  <VisualTweaks_Leak_GroupSwitch>Master switch</VisualTweaks_Leak_GroupSwitch>
+  <!-- Vacuum leak airflow (Odyssey): now lives at the bottom of the Gas tab -->
   <VisualTweaks_Leak_GroupLook>Appearance</VisualTweaks_Leak_GroupLook>
   <VisualTweaks_Leak_GroupDebug>Debug</VisualTweaks_Leak_GroupDebug>
 
