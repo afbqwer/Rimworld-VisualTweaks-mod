@@ -179,7 +179,6 @@
   <VisualTweaks_ShieldDome_DissolveTimeTip>Ticks from the first crack to fully gone; 60 ticks = 1 second.</VisualTweaks_ShieldDome_DissolveTimeTip>
   <VisualTweaks_ShieldDome_DissolveBrightness>Break brightness</VisualTweaks_ShieldDome_DissolveBrightness>
   <VisualTweaks_ShieldDome_DissolveBrightnessTip>Brightness as it breaks; vanilla visibility is already zero, so the animation carries its own.</VisualTweaks_ShieldDome_DissolveBrightnessTip>
-  <VisualTweaks_ShieldDome_DissolveSharedNote>Timing and brightness are shared by both shield types.</VisualTweaks_ShieldDome_DissolveSharedNote>
 
   <VisualTweaks_ShieldDome_PersonalGroup>Personal shields</VisualTweaks_ShieldDome_PersonalGroup>
   <VisualTweaks_ShieldPersonal_VanillaOnly>Vanilla type only</VisualTweaks_ShieldPersonal_VanillaOnly>

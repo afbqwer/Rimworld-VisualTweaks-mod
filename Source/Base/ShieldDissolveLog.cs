@@ -96,7 +96,7 @@ namespace VisualTweaks
             state.StartTick = now;
             state.DurationTicks = Mathf.Max(
                 1,
-                Mathf.RoundToInt(VisualTweaksSettings.shieldDissolveTicks));
+                Mathf.RoundToInt(VisualTweaksSettings.largeShieldDissolveTicks));
             state.OriginX = ox;
             state.OriginZ = oz;
             // Seed must stay small. It is added to the noise lattice coordinates

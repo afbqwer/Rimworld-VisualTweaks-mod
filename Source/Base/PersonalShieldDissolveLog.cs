@@ -88,7 +88,7 @@ namespace VisualTweaks
             state.StartTick = now;
             state.DurationTicks = Mathf.Max(
                 1,
-                Mathf.RoundToInt(VisualTweaksSettings.shieldDissolveTicks));
+                Mathf.RoundToInt(VisualTweaksSettings.personalShieldDissolveTicks));
             state.OriginX = ox;
             state.OriginZ = oz;
             // Small on purpose: the shader adds this to noise lattice coordinates and

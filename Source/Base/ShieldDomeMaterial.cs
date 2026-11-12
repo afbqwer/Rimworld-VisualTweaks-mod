@@ -159,10 +159,19 @@ namespace VisualTweaks
                 return;
             }
 
-            float width = VisualTweaksSettings.shieldRidgeWidth;
-            float brightness = VisualTweaksSettings.shieldRidgeBrightness;
-            float face = VisualTweaksSettings.shieldHexFaceStrength;
-            float line = VisualTweaksSettings.shieldHexLineStrength;
+            bool personal = target == ShieldHexTarget.Personal;
+            float width = personal
+                ? VisualTweaksSettings.personalShieldRidgeWidth
+                : VisualTweaksSettings.largeShieldRidgeWidth;
+            float brightness = personal
+                ? VisualTweaksSettings.personalShieldRidgeBrightness
+                : VisualTweaksSettings.largeShieldRidgeBrightness;
+            float face = personal
+                ? VisualTweaksSettings.personalShieldHexFaceStrength
+                : VisualTweaksSettings.largeShieldHexFaceStrength;
+            float line = personal
+                ? VisualTweaksSettings.personalShieldHexLineStrength
+                : VisualTweaksSettings.largeShieldHexLineStrength;
 
             // The spherical lattice is baked once per target and shared by every
             // shield of that target. Bind is cheap to call every frame: it only

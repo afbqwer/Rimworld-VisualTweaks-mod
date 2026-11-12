@@ -306,7 +306,7 @@ namespace VisualTweaks
                         ParamsId,
                         new NVector4(
                             dissolveMode,
-                            VisualTweaksSettings.shieldDissolveBrightness,
+                            VisualTweaksSettings.largeShieldDissolveBrightness,
                             time,
                             radius));
                     properties[1] = DrawProperty.Vector(

@@ -849,7 +849,7 @@ namespace VisualTweaks
 
             if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex)
             {
-                DrawHexPanelSliders(listing);
+                DrawHexPanelSliders(listing, false);
                 DrawHexDensity(listing, false);
             }
             else if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
@@ -861,7 +861,7 @@ namespace VisualTweaks
             }
             else
             {
-                DrawRidgeSliders(listing);
+                DrawRidgeSliders(listing, false);
             }
 
             SettingsLayout.SubHeader(
@@ -889,13 +889,13 @@ namespace VisualTweaks
             if (VisualTweaksSettings.CurrentShieldBreakStyle
                 != ShieldBreakStyle.Vanilla)
             {
-                DrawDissolveSliders(listing);
+                DrawDissolveSliders(listing, false);
             }
         }
 
         /// <summary>
         /// Personal shield belts. They choose their own surface, opacity, break and
-        /// hit feedback; only the hex panel weights and break timing are shared.
+        /// hit feedback; every appearance and timing slider below edits only the belt.
         /// </summary>
         private static void DrawPersonalSection(Listing_Standard listing)
         {
@@ -927,23 +927,13 @@ namespace VisualTweaks
 
             if (VisualTweaksSettings.personalShieldDomeStyle == ShieldDomeStyle.Hex)
             {
-                // Panel and line brightness are shared with the dome; show them
-                // here only when the dome's section did not already.
-                if (VisualTweaksSettings.shieldDomeStyle != ShieldDomeStyle.Hex)
-                {
-                    DrawHexPanelSliders(listing);
-                }
-
+                DrawHexPanelSliders(listing, true);
                 DrawHexDensity(listing, true);
             }
             else if (VisualTweaksSettings.personalShieldDomeStyle
-                    != ShieldDomeStyle.Vanilla
-                && VisualTweaksSettings.shieldDomeStyle != ShieldDomeStyle.Crisp)
+                == ShieldDomeStyle.Crisp)
             {
-                // A crisp belt shares the dome's ridge sliders. Show them here only
-                // when the dome's own section did not (it was hex or stock-like),
-                // so a dome that already shows them does not get a duplicate pair.
-                DrawRidgeSliders(listing);
+                DrawRidgeSliders(listing, true);
             }
 
             VisualTweaksSettings.personalShieldOpacity = SettingsLayout.Slider(
@@ -959,14 +949,10 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldDome_BreakGroup".Translate());
             DrawBreakChoice(listing, true);
 
-            // The timing sliders are shared, so show them here only when the dome
-            // section did not (its own break animation is Vanilla there).
             if (VisualTweaksSettings.CurrentShieldBreakStyleFor(ShieldHexTarget.Personal)
-                    != ShieldBreakStyle.Vanilla
-                && VisualTweaksSettings.CurrentShieldBreakStyle
-                    == ShieldBreakStyle.Vanilla)
+                != ShieldBreakStyle.Vanilla)
             {
-                DrawDissolveSliders(listing);
+                DrawDissolveSliders(listing, true);
             }
 
             SettingsLayout.SubHeader(
@@ -1064,42 +1050,87 @@ namespace VisualTweaks
                     step: 1f);
         }
 
-        /// <summary>Ridge width and brightness, shared by every crisp surface.</summary>
-        private static void DrawRidgeSliders(Listing_Standard listing)
+        /// <summary>Ridge width and brightness for one shield family.</summary>
+        private static void DrawRidgeSliders(Listing_Standard listing, bool personal)
         {
-            VisualTweaksSettings.shieldRidgeWidth = SettingsLayout.Slider(
+            if (personal)
+            {
+                VisualTweaksSettings.personalShieldRidgeWidth = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_RidgeWidth".Translate(),
+                    VisualTweaksSettings.personalShieldRidgeWidth,
+                    VisualTweaksSettings.MinShieldRidgeWidth,
+                    VisualTweaksSettings.MaxShieldRidgeWidth,
+                    "VisualTweaks_ShieldDome_RidgeWidthTip".Translate());
+                VisualTweaksSettings.personalShieldRidgeBrightness =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_RidgeBrightness".Translate(),
+                        VisualTweaksSettings.personalShieldRidgeBrightness,
+                        0f,
+                        1f,
+                        "VisualTweaks_ShieldDome_RidgeBrightnessTip".Translate());
+                return;
+            }
+
+            VisualTweaksSettings.largeShieldRidgeWidth = SettingsLayout.Slider(
                 listing,
                 "VisualTweaks_ShieldDome_RidgeWidth".Translate(),
-                VisualTweaksSettings.shieldRidgeWidth,
+                VisualTweaksSettings.largeShieldRidgeWidth,
                 VisualTweaksSettings.MinShieldRidgeWidth,
                 VisualTweaksSettings.MaxShieldRidgeWidth,
                 "VisualTweaks_ShieldDome_RidgeWidthTip".Translate());
-            VisualTweaksSettings.shieldRidgeBrightness = SettingsLayout.Slider(
+            VisualTweaksSettings.largeShieldRidgeBrightness = SettingsLayout.Slider(
                 listing,
                 "VisualTweaks_ShieldDome_RidgeBrightness".Translate(),
-                VisualTweaksSettings.shieldRidgeBrightness,
+                VisualTweaksSettings.largeShieldRidgeBrightness,
                 0f,
                 1f,
                 "VisualTweaks_ShieldDome_RidgeBrightnessTip".Translate());
         }
 
-        /// <summary>Panel and line brightness, shared by every hexagonal surface.</summary>
-        private static void DrawHexPanelSliders(Listing_Standard listing)
+        /// <summary>Panel and line brightness for one shield family.</summary>
+        private static void DrawHexPanelSliders(
+            Listing_Standard listing,
+            bool personal)
         {
-            VisualTweaksSettings.shieldHexFaceStrength = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_HexFace".Translate(),
-                VisualTweaksSettings.shieldHexFaceStrength,
-                VisualTweaksSettings.MinShieldHexFace,
-                VisualTweaksSettings.MaxShieldHexFace,
-                "VisualTweaks_ShieldDome_HexFaceTip".Translate());
-            VisualTweaksSettings.shieldHexLineStrength = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_HexLine".Translate(),
-                VisualTweaksSettings.shieldHexLineStrength,
-                VisualTweaksSettings.MinShieldHexLine,
-                VisualTweaksSettings.MaxShieldHexLine,
-                "VisualTweaks_ShieldDome_HexLineTip".Translate());
+            if (personal)
+            {
+                VisualTweaksSettings.personalShieldHexFaceStrength =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_HexFace".Translate(),
+                        VisualTweaksSettings.personalShieldHexFaceStrength,
+                        VisualTweaksSettings.MinShieldHexFace,
+                        VisualTweaksSettings.MaxShieldHexFace,
+                        "VisualTweaks_ShieldDome_HexFaceTip".Translate());
+                VisualTweaksSettings.personalShieldHexLineStrength =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_HexLine".Translate(),
+                        VisualTweaksSettings.personalShieldHexLineStrength,
+                        VisualTweaksSettings.MinShieldHexLine,
+                        VisualTweaksSettings.MaxShieldHexLine,
+                        "VisualTweaks_ShieldDome_HexLineTip".Translate());
+                return;
+            }
+
+            VisualTweaksSettings.largeShieldHexFaceStrength =
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexFace".Translate(),
+                    VisualTweaksSettings.largeShieldHexFaceStrength,
+                    VisualTweaksSettings.MinShieldHexFace,
+                    VisualTweaksSettings.MaxShieldHexFace,
+                    "VisualTweaks_ShieldDome_HexFaceTip".Translate());
+            VisualTweaksSettings.largeShieldHexLineStrength =
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexLine".Translate(),
+                    VisualTweaksSettings.largeShieldHexLineStrength,
+                    VisualTweaksSettings.MinShieldHexLine,
+                    VisualTweaksSettings.MaxShieldHexLine,
+                    "VisualTweaks_ShieldDome_HexLineTip".Translate());
         }
 
         /// <summary>
@@ -1340,27 +1371,48 @@ namespace VisualTweaks
             }
         }
 
-        /// <summary>Timing and brightness, shared by every custom break animation.</summary>
-        private static void DrawDissolveSliders(Listing_Standard listing)
+        /// <summary>Timing and brightness for one family's custom break.</summary>
+        private static void DrawDissolveSliders(Listing_Standard listing, bool personal)
         {
-            VisualTweaksSettings.shieldDissolveTicks = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_DissolveTime".Translate(),
-                VisualTweaksSettings.shieldDissolveTicks,
-                VisualTweaksSettings.MinShieldDissolveTicks,
-                VisualTweaksSettings.MaxShieldDissolveTicks,
-                "VisualTweaks_ShieldDome_DissolveTimeTip".Translate(),
-                step: 1f);
-            VisualTweaksSettings.shieldDissolveBrightness = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_DissolveBrightness".Translate(),
-                VisualTweaksSettings.shieldDissolveBrightness,
-                VisualTweaksSettings.MinShieldDissolveBrightness,
-                VisualTweaksSettings.MaxShieldDissolveBrightness,
-                "VisualTweaks_ShieldDome_DissolveBrightnessTip".Translate());
-            SettingsLayout.Note(
-                listing,
-                "VisualTweaks_ShieldDome_DissolveSharedNote".Translate());
+            if (personal)
+            {
+                VisualTweaksSettings.personalShieldDissolveTicks =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_DissolveTime".Translate(),
+                        VisualTweaksSettings.personalShieldDissolveTicks,
+                        VisualTweaksSettings.MinShieldDissolveTicks,
+                        VisualTweaksSettings.MaxShieldDissolveTicks,
+                        "VisualTweaks_ShieldDome_DissolveTimeTip".Translate(),
+                        step: 1f);
+                VisualTweaksSettings.personalShieldDissolveBrightness =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_DissolveBrightness".Translate(),
+                        VisualTweaksSettings.personalShieldDissolveBrightness,
+                        VisualTweaksSettings.MinShieldDissolveBrightness,
+                        VisualTweaksSettings.MaxShieldDissolveBrightness,
+                        "VisualTweaks_ShieldDome_DissolveBrightnessTip".Translate());
+                return;
+            }
+
+            VisualTweaksSettings.largeShieldDissolveTicks =
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_DissolveTime".Translate(),
+                    VisualTweaksSettings.largeShieldDissolveTicks,
+                    VisualTweaksSettings.MinShieldDissolveTicks,
+                    VisualTweaksSettings.MaxShieldDissolveTicks,
+                    "VisualTweaks_ShieldDome_DissolveTimeTip".Translate(),
+                    step: 1f);
+            VisualTweaksSettings.largeShieldDissolveBrightness =
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_DissolveBrightness".Translate(),
+                    VisualTweaksSettings.largeShieldDissolveBrightness,
+                    VisualTweaksSettings.MinShieldDissolveBrightness,
+                    VisualTweaksSettings.MaxShieldDissolveBrightness,
+                    "VisualTweaks_ShieldDome_DissolveBrightnessTip".Translate());
         }
 
         /// <summary>

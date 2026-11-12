@@ -333,11 +333,13 @@ namespace VisualTweaks
 
         public const float MinShieldHexFace = 0f;
         public const float MaxShieldHexFace = 0.6f;
-        public static float shieldHexFaceStrength = 0.22f;
+        public static float largeShieldHexFaceStrength = 0.22f;
+        public static float personalShieldHexFaceStrength = 0.22f;
 
         public const float MinShieldHexLine = 0f;
         public const float MaxShieldHexLine = 1.2f;
-        public static float shieldHexLineStrength = 0.75f;
+        public static float largeShieldHexLineStrength = 0.75f;
+        public static float personalShieldHexLineStrength = 0.75f;
 
         // Icosahedron subdivision k: 10k^2+2 cells over the whole sphere (12 of
         // them pentagons, always). k=2 reads like a football, k=12 like a fine
@@ -464,9 +466,10 @@ namespace VisualTweaks
         // version of this shader still looked thin at maximum weight.
         public const float MinShieldRidgeWidth = 1f;
         public const float MaxShieldRidgeWidth = 8f;
-        public static float shieldRidgeWidth = 3.6f;
-
-        public static float shieldRidgeBrightness = 0.52f;
+        public static float largeShieldRidgeWidth = 3.6f;
+        public static float largeShieldRidgeBrightness = 0.52f;
+        public static float personalShieldRidgeWidth = 3.6f;
+        public static float personalShieldRidgeBrightness = 0.52f;
 
         // Peak opacity of one impact flare. Vanilla's cone reaches 0.82, which reads as
         // an opaque slice rather than as light; the default here is a third of that.
@@ -493,7 +496,8 @@ namespace VisualTweaks
         // time to cross a large dome without lingering into the recharge cycle.
         public const float MinShieldDissolveTicks = 30f;
         public const float MaxShieldDissolveTicks = 180f;
-        public static float shieldDissolveTicks = 60f;
+        public static float largeShieldDissolveTicks = 60f;
+        public static float personalShieldDissolveTicks = 60f;
 
         // The dissolve has to supply its own brightness because GetCurrentAlpha() is
         // already zero by then. 0.6 sits at the selected dome's alpha peak and is
@@ -502,7 +506,8 @@ namespace VisualTweaks
         // flash on its own; the shader no longer surges the whole body.
         public const float MinShieldDissolveBrightness = 0.2f;
         public const float MaxShieldDissolveBrightness = 1.5f;
-        public static float shieldDissolveBrightness = 0.6f;
+        public static float largeShieldDissolveBrightness = 0.6f;
+        public static float personalShieldDissolveBrightness = 0.6f;
 
         // Vacuum leak airflow (Odyssey vacuum maps). Streams converge on ventilation
         // ports while air escapes; hull breaches add a short two-sided burst. The
@@ -804,12 +809,20 @@ namespace VisualTweaks
                 ShieldBreakStyle.HexDissipate);
 
             Scribe_Values.Look(
-                ref shieldHexFaceStrength,
-                "shieldHexFaceStrength",
+                ref largeShieldHexFaceStrength,
+                "largeShieldHexFaceStrength",
                 0.22f);
             Scribe_Values.Look(
-                ref shieldHexLineStrength,
-                "shieldHexLineStrength",
+                ref personalShieldHexFaceStrength,
+                "personalShieldHexFaceStrength",
+                0.22f);
+            Scribe_Values.Look(
+                ref largeShieldHexLineStrength,
+                "largeShieldHexLineStrength",
+                0.75f);
+            Scribe_Values.Look(
+                ref personalShieldHexLineStrength,
+                "personalShieldHexLineStrength",
                 0.75f);
             Scribe_Values.Look(ref shieldHexDensity, "shieldHexDensity", 5f);
             Scribe_Values.Look(
@@ -879,18 +892,43 @@ namespace VisualTweaks
                 ref personalShieldHexImpactShare,
                 "personalShieldHexImpactShare",
                 0.4f);
-            Scribe_Values.Look(ref shieldRidgeWidth, "shieldRidgeWidth", 3.6f);
-            Scribe_Values.Look(ref shieldRidgeBrightness, "shieldRidgeBrightness", 0.52f);
+            Scribe_Values.Look(
+                ref largeShieldRidgeWidth,
+                "largeShieldRidgeWidth",
+                3.6f);
+            Scribe_Values.Look(
+                ref largeShieldRidgeBrightness,
+                "largeShieldRidgeBrightness",
+                0.52f);
+            Scribe_Values.Look(
+                ref personalShieldRidgeWidth,
+                "personalShieldRidgeWidth",
+                3.6f);
+            Scribe_Values.Look(
+                ref personalShieldRidgeBrightness,
+                "personalShieldRidgeBrightness",
+                0.52f);
             Scribe_Values.Look(ref shieldFlareAlpha, "shieldFlareAlpha", 0.30f);
             Scribe_Values.Look(
                 ref shieldFlareDamageInfluence,
                 "shieldFlareDamageInfluence",
                 0.5f);
             Scribe_Values.Look(ref shieldFlareSizeScale, "shieldFlareSizeScale", 1f);
-            Scribe_Values.Look(ref shieldDissolveTicks, "shieldDissolveTicks", 60f);
             Scribe_Values.Look(
-                ref shieldDissolveBrightness,
-                "shieldDissolveBrightness",
+                ref largeShieldDissolveTicks,
+                "largeShieldDissolveTicks",
+                60f);
+            Scribe_Values.Look(
+                ref personalShieldDissolveTicks,
+                "personalShieldDissolveTicks",
+                60f);
+            Scribe_Values.Look(
+                ref largeShieldDissolveBrightness,
+                "largeShieldDissolveBrightness",
+                0.6f);
+            Scribe_Values.Look(
+                ref personalShieldDissolveBrightness,
+                "personalShieldDissolveBrightness",
                 0.6f);
             Scribe_Values.Look(ref vacuumLeakEnabled, "vacuumLeakEnabled", true);
             Scribe_Values.Look(ref vacuumLeakIntensity, "vacuumLeakIntensity", 1f);
@@ -979,11 +1017,16 @@ namespace VisualTweaks
                 shieldRippleDamageScale,
                 MinShieldRippleDamageScale,
                 MaxShieldRippleDamageScale);
-            shieldRidgeWidth = Mathf.Clamp(
-                shieldRidgeWidth,
+            largeShieldRidgeWidth = Mathf.Clamp(
+                largeShieldRidgeWidth,
                 MinShieldRidgeWidth,
                 MaxShieldRidgeWidth);
-            shieldRidgeBrightness = Mathf.Clamp01(shieldRidgeBrightness);
+            largeShieldRidgeBrightness = Mathf.Clamp01(largeShieldRidgeBrightness);
+            personalShieldRidgeWidth = Mathf.Clamp(
+                personalShieldRidgeWidth,
+                MinShieldRidgeWidth,
+                MaxShieldRidgeWidth);
+            personalShieldRidgeBrightness = Mathf.Clamp01(personalShieldRidgeBrightness);
             shieldFlareAlpha = Mathf.Clamp(
                 shieldFlareAlpha,
                 MinShieldFlareAlpha,
@@ -993,12 +1036,20 @@ namespace VisualTweaks
                 shieldFlareSizeScale,
                 MinShieldFlareSize,
                 MaxShieldFlareSize);
-            shieldHexFaceStrength = Mathf.Clamp(
-                shieldHexFaceStrength,
+            largeShieldHexFaceStrength = Mathf.Clamp(
+                largeShieldHexFaceStrength,
                 MinShieldHexFace,
                 MaxShieldHexFace);
-            shieldHexLineStrength = Mathf.Clamp(
-                shieldHexLineStrength,
+            largeShieldHexLineStrength = Mathf.Clamp(
+                largeShieldHexLineStrength,
+                MinShieldHexLine,
+                MaxShieldHexLine);
+            personalShieldHexFaceStrength = Mathf.Clamp(
+                personalShieldHexFaceStrength,
+                MinShieldHexFace,
+                MaxShieldHexFace);
+            personalShieldHexLineStrength = Mathf.Clamp(
+                personalShieldHexLineStrength,
                 MinShieldHexLine,
                 MaxShieldHexLine);
             shieldHexDensity = Mathf.Clamp(
@@ -1119,12 +1170,20 @@ namespace VisualTweaks
                 ShieldBreakStyle.HexDissipate,
                 true);
 
-            shieldDissolveTicks = Mathf.Clamp(
-                shieldDissolveTicks,
+            largeShieldDissolveTicks = Mathf.Clamp(
+                largeShieldDissolveTicks,
                 MinShieldDissolveTicks,
                 MaxShieldDissolveTicks);
-            shieldDissolveBrightness = Mathf.Clamp(
-                shieldDissolveBrightness,
+            personalShieldDissolveTicks = Mathf.Clamp(
+                personalShieldDissolveTicks,
+                MinShieldDissolveTicks,
+                MaxShieldDissolveTicks);
+            largeShieldDissolveBrightness = Mathf.Clamp(
+                largeShieldDissolveBrightness,
+                MinShieldDissolveBrightness,
+                MaxShieldDissolveBrightness);
+            personalShieldDissolveBrightness = Mathf.Clamp(
+                personalShieldDissolveBrightness,
                 MinShieldDissolveBrightness,
                 MaxShieldDissolveBrightness);
             vacuumLeakIntensity = Mathf.Clamp(
@@ -1295,8 +1354,10 @@ namespace VisualTweaks
             personalCrispShieldBreakStyle = ShieldBreakStyle.Dissolve;
             personalVanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
             personalHexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
-            shieldHexFaceStrength = 0.22f;
-            shieldHexLineStrength = 0.75f;
+            largeShieldHexFaceStrength = 0.22f;
+            largeShieldHexLineStrength = 0.75f;
+            personalShieldHexFaceStrength = 0.22f;
+            personalShieldHexLineStrength = 0.75f;
             shieldHexDensity = 5f;
             shieldHexDensityApplied = 5;
             personalShieldHexDensity = 4f;
@@ -1312,13 +1373,17 @@ namespace VisualTweaks
             personalShieldHexImpactShare = 0.4f;
             shieldHexImpactStrength = 0.28f;
             shieldHexImpactShare = 0.32f;
-            shieldRidgeWidth = 3.6f;
-            shieldRidgeBrightness = 0.52f;
+            largeShieldRidgeWidth = 3.6f;
+            largeShieldRidgeBrightness = 0.52f;
+            personalShieldRidgeWidth = 3.6f;
+            personalShieldRidgeBrightness = 0.52f;
             shieldFlareAlpha = 0.30f;
             shieldFlareDamageInfluence = 0.5f;
             shieldFlareSizeScale = 1f;
-            shieldDissolveTicks = 90f;
-            shieldDissolveBrightness = 0.6f;
+            largeShieldDissolveTicks = 90f;
+            personalShieldDissolveTicks = 90f;
+            largeShieldDissolveBrightness = 0.6f;
+            personalShieldDissolveBrightness = 0.6f;
             vacuumLeakEnabled = true;
             vacuumLeakIntensity = 1f;
             vacuumLeakSpeed = 1f;
