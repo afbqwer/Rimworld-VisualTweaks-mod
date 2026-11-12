@@ -72,23 +72,25 @@ namespace VisualTweaks
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// How far the flare reaches inward — a radial quantity, deliberately independent
-        /// of the angular width.
+        /// How far the flare reaches inward, as a fraction of the radius — a radial
+        /// quantity, deliberately independent of the angular width.
         ///
         /// Deriving depth from the width was a mistake with a specific failure: depth
         /// then equals width times tan(half-angle), so the narrower the flare the shorter
         /// it gets, and on a large shield (5 degrees) it collapsed into a notch at the
-        /// rim that was simply too small to see. Width answers "how wide is the beam",
-        /// depth answers "how far into the dome does it reach"; nothing ties the two.
+        /// rim. Width answers "how wide is the beam", depth answers "how far into the
+        /// dome does it reach"; nothing ties the two.
         ///
-        /// 0.78 is the fraction the earlier fixed-angle version used, which reads well on
-        /// a normal shield. The cell clamps keep a tiny dome from asking for a negative
-        /// inner radius and a huge one from laying a 19-cell wedge over everything.
+        /// There is no ceiling. One was tried — 6 cells, to stop the 25-cell gravship
+        /// generator from laying a long wedge over everything standing under it — and it
+        /// caused the mirror-image complaint: 6 cells is 24% of a 25-cell radius, so the
+        /// streak sat at the rim looking like a nick. Proportion is the thing that reads
+        /// consistently at every size, so the fraction is the whole rule; only the floor
+        /// survives, because a 2-cell shield would otherwise get a sub-cell stub.
         /// </summary>
         private const float FlareDepthShare = 0.78f;
 
         private const float FlareMinDepthCells = 2.5f;
-        private const float FlareMaxDepthCells = 6f;
 
         /// <summary>
         /// Damage that maps to a damage factor of exactly 1.0 — a vanilla bullet in the
@@ -244,10 +246,7 @@ namespace VisualTweaks
 
             // Depth depends only on the shield, so it is resolved once. Width does not:
             // it follows each impact's damage.
-            float depth = Mathf.Clamp(
-                radius * FlareDepthShare,
-                FlareMinDepthCells,
-                FlareMaxDepthCells);
+            float depth = Mathf.Max(radius * FlareDepthShare, FlareMinDepthCells);
             float innerRadius = Mathf.Clamp(1f - depth / radius, 0.05f, 0.9f);
 
             for (int i = impacts.Count - 1; i >= 0; i--)
