@@ -130,11 +130,11 @@
   <VisualTweaks_ShieldDome_RidgeBrightnessTip>Brightness of the outline band. At 0 only the hot core and inner glow remain; use thickness to make it bolder.</VisualTweaks_ShieldDome_RidgeBrightnessTip>
   <VisualTweaks_ShieldDome_Hex>Hexagonal</VisualTweaks_ShieldDome_Hex>
   <VisualTweaks_ShieldDome_HexTip>Spherical hex/pentagon panels with flat per-cell shading, so it reads as half a sphere. The defaults are Hex wave for hits and Hex dissipate for breaks; both can be changed below.</VisualTweaks_ShieldDome_HexTip>
-  <VisualTweaks_ShieldDome_StyleVanilla>Stock-like</VisualTweaks_ShieldDome_StyleVanilla>
+  <VisualTweaks_ShieldDome_StyleVanilla>Vanilla-style</VisualTweaks_ShieldDome_StyleVanilla>
   <VisualTweaks_ShieldDome_StyleVanillaTip>Imitates the stock textures: a narrow rim for domes, a soft bubble for belts.</VisualTweaks_ShieldDome_StyleVanillaTip>
   <VisualTweaks_ShieldDome_StyleBubble>Shield bubble</VisualTweaks_ShieldDome_StyleBubble>
   <VisualTweaks_ShieldDome_StyleBubbleTip>Uses the personal shield's soft bubble on a large shield.</VisualTweaks_ShieldDome_StyleBubbleTip>
-  <VisualTweaks_ShieldDome_VanillaNote>Stock-like and bubble styles use fixed proportions, with no outline sliders.</VisualTweaks_ShieldDome_VanillaNote>
+  <VisualTweaks_ShieldDome_VanillaNote>Vanilla-style and bubble styles use fixed proportions, with no outline sliders.</VisualTweaks_ShieldDome_VanillaNote>
   <VisualTweaks_ShieldDome_HexFace>Panel brightness</VisualTweaks_ShieldDome_HexFace>
   <VisualTweaks_ShieldDome_HexFaceTip>Fill brightness of each panel; too high drowns the cell lines.</VisualTweaks_ShieldDome_HexFaceTip>
   <VisualTweaks_ShieldDome_HexLine>Cell line brightness</VisualTweaks_ShieldDome_HexLine>

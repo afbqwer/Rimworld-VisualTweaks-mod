@@ -1,4 +1,4 @@
-﻿﻿using UnityEngine;
+﻿using UnityEngine;
 using Verse;
 
 namespace VisualTweaks
@@ -204,8 +204,8 @@ namespace VisualTweaks
         // keep their own drawing. Large shields use CompProjectileInterceptor, and the
         // vanilla CompGravshipShieldGenerator is explicitly included as well. Personal
         // belts use CompShield, which mods may also subclass.
-        public static bool largeShieldsVanillaOnly = false;
-        public static bool personalShieldsVanillaOnly = false;
+        public static bool largeShieldsVanillaOnly = true;
+        public static bool personalShieldsVanillaOnly = true;
 
         // Vanilla's Interceptor_BlockedProjectile effecter contains 3-5 DustPuff
         // flecks on top of its sound and flash. They are aimed at the impact point
@@ -283,7 +283,7 @@ namespace VisualTweaks
         // the full width, not the half-angle.
         public const float MinShieldBrightenAngle = 5f;
         public const float MaxShieldBrightenAngle = 90f;
-        public static float shieldBrightenAngle = 30f;
+        public static float shieldBrightenAngle = 40f;
 
         // How long one intercepted shot's reaction stays on screen on a large shield.
         // The flare, the sector brightening and the hex lattice wave share this clock,
@@ -474,7 +474,7 @@ namespace VisualTweaks
         // time to cross a large dome without lingering into the recharge cycle.
         public const float MinShieldDissolveTicks = 30f;
         public const float MaxShieldDissolveTicks = 180f;
-        public static float shieldDissolveTicks = 90f;
+        public static float shieldDissolveTicks = 60f;
 
         // The dissolve has to supply its own brightness because GetCurrentAlpha() is
         // already zero by then. 0.6 sits at the selected dome's alpha peak and is
@@ -724,11 +724,11 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref largeShieldsVanillaOnly,
                 "largeShieldsVanillaOnly",
-                false);
+                true);
             Scribe_Values.Look(
                 ref personalShieldsVanillaOnly,
                 "personalShieldsVanillaOnly",
-                false);
+                true);
             Scribe_Values.Look(
                 ref largeShieldDisableHitDust,
                 "largeShieldDisableHitDust",
@@ -756,7 +756,7 @@ namespace VisualTweaks
                 ref hexShieldImpactStyle,
                 "hexShieldImpactStyle",
                 ShieldImpactStyle.HexWave);
-            Scribe_Values.Look(ref shieldBrightenAngle, "shieldBrightenAngle", 30f);
+            Scribe_Values.Look(ref shieldBrightenAngle, "shieldBrightenAngle", 40f);
             Scribe_Values.Look(ref shieldImpactTicks, "shieldImpactTicks", 30f);
 
             Scribe_Values.Look(
@@ -856,7 +856,7 @@ namespace VisualTweaks
                 "shieldFlareDamageInfluence",
                 0.5f);
             Scribe_Values.Look(ref shieldFlareSizeScale, "shieldFlareSizeScale", 1f);
-            Scribe_Values.Look(ref shieldDissolveTicks, "shieldDissolveTicks", 90f);
+            Scribe_Values.Look(ref shieldDissolveTicks, "shieldDissolveTicks", 60f);
             Scribe_Values.Look(
                 ref shieldDissolveBrightness,
                 "shieldDissolveBrightness",
