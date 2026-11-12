@@ -143,6 +143,15 @@ namespace VisualTweaks
         public const float MaxShieldRippleDuration = 1f;
         public static float shieldRippleDuration = 0.24f;
 
+        // How strongly the incoming projectile's damage drives the ripple. Damage decides
+        // size, strength and duration; the shield's own radius only caps the size. This
+        // multiplier moves all three at once, so a player who wants every hit to read the
+        // same can pull it towards zero and one who wants a rifle shot to visibly outshine
+        // a pistol shot can push it up.
+        public const float MinShieldRippleDamageScale = 0.25f;
+        public const float MaxShieldRippleDamageScale = 3f;
+        public static float shieldRippleDamageScale = 1f;
+
         // Vacuum leak airflow (Odyssey vacuum maps). Streams converge on ventilation
         // ports while air escapes; hull breaches add a short two-sided burst. The
         // intensity formula itself is state-driven, this slider only scales the look.
@@ -366,6 +375,10 @@ namespace VisualTweaks
             Scribe_Values.Look(ref shieldRippleEnabled, "shieldRippleEnabled", true);
             Scribe_Values.Look(ref shieldRippleIntensity, "shieldRippleIntensity", 1.2f);
             Scribe_Values.Look(ref shieldRippleDuration, "shieldRippleDuration", 0.24f);
+            Scribe_Values.Look(
+                ref shieldRippleDamageScale,
+                "shieldRippleDamageScale",
+                1f);
             Scribe_Values.Look(ref vacuumLeakEnabled, "vacuumLeakEnabled", true);
             Scribe_Values.Look(ref vacuumLeakIntensity, "vacuumLeakIntensity", 1f);
             Scribe_Values.Look(ref vacuumLeakSpeed, "vacuumLeakSpeed", 1f);
@@ -449,6 +462,10 @@ namespace VisualTweaks
                 shieldRippleDuration,
                 MinShieldRippleDuration,
                 MaxShieldRippleDuration);
+            shieldRippleDamageScale = Mathf.Clamp(
+                shieldRippleDamageScale,
+                MinShieldRippleDamageScale,
+                MaxShieldRippleDamageScale);
             vacuumLeakIntensity = Mathf.Clamp(
                 vacuumLeakIntensity,
                 MinLeakIntensity,
@@ -578,6 +595,7 @@ namespace VisualTweaks
             shieldRippleEnabled = true;
             shieldRippleIntensity = 1.2f;
             shieldRippleDuration = 0.24f;
+            shieldRippleDamageScale = 1f;
             vacuumLeakEnabled = true;
             vacuumLeakIntensity = 1f;
             vacuumLeakSpeed = 1f;

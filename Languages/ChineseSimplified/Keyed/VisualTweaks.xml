@@ -109,11 +109,13 @@
   <!-- 护盾受击涟漪：借用冲击波着色器，但开关独立 -->
   <VisualTweaks_ShieldRipple_Group>护盾受击</VisualTweaks_ShieldRipple_Group>
   <VisualTweaks_ShieldRipple_Enable>护盾被击中时产生涟漪</VisualTweaks_ShieldRipple_Enable>
-  <VisualTweaks_ShieldRipple_EnableTip>子弹被拦截器护盾挡下的瞬间，在护盾表面（俯视即轮廓上）炸开一圈向外扩散的折射涟漪，让「挡住了」这件事看得见。空中轰炸被拦截时同样生效。与上方的爆炸冲击波共用着色器，但开关互不影响。</VisualTweaks_ShieldRipple_EnableTip>
-  <VisualTweaks_ShieldRipple_Intensity>涟漪强度</VisualTweaks_ShieldRipple_Intensity>
-  <VisualTweaks_ShieldRipple_IntensityTip>涟漪把护盾自身辉光扭曲的幅度。调高会明显看到护盾表面被「压」出波纹，过高会让护盾下方的植被和地面出现撕裂感。</VisualTweaks_ShieldRipple_IntensityTip>
-  <VisualTweaks_ShieldRipple_Duration>涟漪持续时间</VisualTweaks_ShieldRipple_Duration>
-  <VisualTweaks_ShieldRipple_DurationTip>单圈涟漪存活多久，默认 0.24 秒。护盾受击是短促的「啪」而不是冲击波，时间拉长会变成持续鼓包，不建议超过 0.5 秒。</VisualTweaks_ShieldRipple_DurationTip>
+  <VisualTweaks_ShieldRipple_EnableTip>护盾挡下子弹时，表面扩散一圈涟漪。空中轰炸被拦截时同样生效。</VisualTweaks_ShieldRipple_EnableTip>
+  <VisualTweaks_ShieldRipple_Intensity>基础强度</VisualTweaks_ShieldRipple_Intensity>
+  <VisualTweaks_ShieldRipple_IntensityTip>涟漪的基准强度，实际强度随伤害浮动。过高会让护盾下方的地面看起来被扯动。</VisualTweaks_ShieldRipple_IntensityTip>
+  <VisualTweaks_ShieldRipple_Duration>基础持续时间</VisualTweaks_ShieldRipple_Duration>
+  <VisualTweaks_ShieldRipple_DurationTip>普通子弹（12 点伤害）打中时的存活时间，伤害越高持续越久，上限即此滑条的右端。</VisualTweaks_ShieldRipple_DurationTip>
+  <VisualTweaks_ShieldRipple_DamageScale>伤害比例</VisualTweaks_ShieldRipple_DamageScale>
+  <VisualTweaks_ShieldRipple_DamageScaleTip>伤害换算成涟漪大小的倍率。调低让各种武器看起来更接近，调高让重武器更醒目。</VisualTweaks_ShieldRipple_DamageScaleTip>
 
   <!-- 温度：热效应（高温空气热浪）与冷效应（低温房间寒气）共用一页 -->
   <VisualTweaks_Temp_GroupHeat>热效应</VisualTweaks_Temp_GroupHeat>

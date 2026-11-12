@@ -23,6 +23,17 @@ namespace VisualTweaks
     /// </summary>
     internal static class ShieldRipplePatches
     {
+        /// <summary>
+        /// Bombardment projectiles carry no damage number of their own — the shell's
+        /// effect is an explosion whose only dial is a radius range. This converts that
+        /// radius into the same damage units the ripple response is tuned around, so a
+        /// 6-8 cell bombardment lands at roughly two and a half times a bullet instead of
+        /// needing a second code path. 5 damage per cell of blast radius is calibrated
+        /// against the reference: vanilla shells run 6-8 cells, and 5*7 = 35 is a heavy
+        /// hit next to a 12-damage bullet without being off the top of the curve.
+        /// </summary>
+        private const float BombardmentDamagePerRadius = 5f;
+
         internal static void Apply(Harmony harmony)
         {
             PatchIntercept(harmony);
@@ -82,15 +93,18 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Parameter names must match the target's, including <c>newExactPos</c>:
-        /// Harmony binds by name, and a rename here silently yields a zero vector.
+        /// Parameter names must match the target's, including <c>newExactPos</c> and
+        /// <c>projectile</c>: Harmony binds by name, and a rename here silently yields a
+        /// zero vector or a null projectile.
         /// </summary>
         private static void CheckInterceptPostfix(
             CompProjectileInterceptor __instance,
+            Projectile projectile,
             bool __result,
             Vector3 newExactPos)
         {
-            if (!__result || __instance == null || !ShieldRippleLayer.Active)
+            if (!__result || __instance == null || projectile == null
+                || !ShieldRippleLayer.Active)
             {
                 return;
             }
@@ -101,11 +115,17 @@ namespace VisualTweaks
                 return;
             }
 
-            map.GetComponent<OverlayMapComponent>()?.NotifyShieldHit(__instance, newExactPos);
+            // The shield already ate the shot, so the damage that would have landed is
+            // the only honest measure of how hard it hit.
+            map.GetComponent<OverlayMapComponent>()?.NotifyShieldHit(
+                __instance,
+                newExactPos,
+                projectile.DamageAmount);
         }
 
         private static void CheckBombardmentInterceptPostfix(
             CompProjectileInterceptor __instance,
+            Bombardment bombardment,
             bool __result,
             Bombardment.BombardmentProjectile projectile)
         {
@@ -121,11 +141,15 @@ namespace VisualTweaks
                 return;
             }
 
+            float damage = bombardment?.explosionRadiusRange.Average
+                * BombardmentDamagePerRadius ?? 0f;
+
             // Bombardment only knows the target cell, not a crossing point; the layer
             // projects it onto the shield rim like every other impact.
             map.GetComponent<OverlayMapComponent>()?.NotifyShieldHit(
                 __instance,
-                projectile.targetCell.ToVector3Shifted());
+                projectile.targetCell.ToVector3Shifted(),
+                damage);
         }
     }
 }

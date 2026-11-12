@@ -563,6 +563,13 @@ namespace VisualTweaks
                 VisualTweaksSettings.MinShieldRippleDuration,
                 VisualTweaksSettings.MaxShieldRippleDuration,
                 "VisualTweaks_ShieldRipple_DurationTip".Translate());
+            VisualTweaksSettings.shieldRippleDamageScale = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldRipple_DamageScale".Translate(),
+                VisualTweaksSettings.shieldRippleDamageScale,
+                VisualTweaksSettings.MinShieldRippleDamageScale,
+                VisualTweaksSettings.MaxShieldRippleDamageScale,
+                "VisualTweaks_ShieldRipple_DamageScaleTip".Translate());
 
             SettingsLayout.Finish(listing);
         }

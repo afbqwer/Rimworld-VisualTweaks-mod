@@ -120,9 +120,12 @@ namespace VisualTweaks
         /// not a map component of its own, so the hit arrives here through the map it
         /// was standing on.
         /// </summary>
-        internal void NotifyShieldHit(CompProjectileInterceptor interceptor, Vector3 hitPos)
+        internal void NotifyShieldHit(
+            CompProjectileInterceptor interceptor,
+            Vector3 hitPos,
+            float damage)
         {
-            shieldRipples.Spawn(interceptor, hitPos);
+            shieldRipples.Spawn(interceptor, hitPos, damage);
         }
 
         public override void MapComponentDraw()

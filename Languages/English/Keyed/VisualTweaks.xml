@@ -109,11 +109,13 @@
   <!-- Shield hit ripples: borrows the shockwave shader, switches independently -->
   <VisualTweaks_ShieldRipple_Group>Shield hits</VisualTweaks_ShieldRipple_Group>
   <VisualTweaks_ShieldRipple_Enable>Ripple when a shield stops a shot</VisualTweaks_ShieldRipple_Enable>
-  <VisualTweaks_ShieldRipple_EnableTip>When interceptor shielding eats a bullet, a ring of refraction spreads across the shield surface — on the silhouette, in a top-down view — so the block is something you can see. Intercepted bombardment does the same. Shares the shockwave shader, but the two switches are independent.</VisualTweaks_ShieldRipple_EnableTip>
-  <VisualTweaks_ShieldRipple_Intensity>Ripple strength</VisualTweaks_ShieldRipple_Intensity>
-  <VisualTweaks_ShieldRipple_IntensityTip>How hard the ripple bends the shield's own glow. Higher values make the surface visibly dent; too high and the terrain under the shield starts to tear.</VisualTweaks_ShieldRipple_IntensityTip>
-  <VisualTweaks_ShieldRipple_Duration>Ripple duration</VisualTweaks_ShieldRipple_Duration>
-  <VisualTweaks_ShieldRipple_DurationTip>How long one ring lives. 0.24 s by default. A shield hit is a snap, not a shockwave, so stretching this turns it into a lingering bulge — staying under 0.5 s is recommended.</VisualTweaks_ShieldRipple_DurationTip>
+  <VisualTweaks_ShieldRipple_EnableTip>A ring spreads across the shield surface when it stops a bullet. Intercepted bombardment does the same.</VisualTweaks_ShieldRipple_EnableTip>
+  <VisualTweaks_ShieldRipple_Intensity>Base strength</VisualTweaks_ShieldRipple_Intensity>
+  <VisualTweaks_ShieldRipple_IntensityTip>Baseline ripple strength; the actual value scales with damage. Too high and the ground under the shield looks torn.</VisualTweaks_ShieldRipple_IntensityTip>
+  <VisualTweaks_ShieldRipple_Duration>Base duration</VisualTweaks_ShieldRipple_Duration>
+  <VisualTweaks_ShieldRipple_DurationTip>How long a ring lives when hit for 12 damage. Harder hits last longer, up to the right end of this slider.</VisualTweaks_ShieldRipple_DurationTip>
+  <VisualTweaks_ShieldRipple_DamageScale>Damage scale</VisualTweaks_ShieldRipple_DamageScale>
+  <VisualTweaks_ShieldRipple_DamageScaleTip>How much damage translates into ripple size. Lower makes every hit look alike; higher makes heavy weapons stand out.</VisualTweaks_ShieldRipple_DamageScaleTip>
 
   <!-- Temperature: heat haze and cold mist share one page -->
   <VisualTweaks_Temp_GroupHeat>Heat</VisualTweaks_Temp_GroupHeat>

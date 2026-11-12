@@ -44,6 +44,45 @@ namespace VisualTweaks
         /// </summary>
         private const int MaxRipples = 64;
 
+        // ------------------------------------------------------------------
+        // Damage response.
+        //
+        // The impact decides how big the ripple is, not the shield: a pistol round and a
+        // charge lance hitting the same dome should not look identical. The shield only
+        // supplies a ceiling, because a ripple wider than the dome has nowhere to travel
+        // and the silhouette clip turns it into a flat arc plastered along the edge.
+        //
+        // 12 is the reference point: a vanilla bullet in the 10-15 band lands at 1.0.
+        // The exponents are deliberately below 1 — damage spans two orders of magnitude
+        // (a 3 dmg spit round against a 200 dmg charge blast) and a linear response would
+        // make small arms invisible while turning the top end into a screen-filling ring.
+        // ------------------------------------------------------------------
+
+        /// <summary>Damage that maps to a response factor of exactly 1.0.</summary>
+        private const float ReferenceDamage = 12f;
+
+        /// <summary>Ripple radius in cells at a response factor of 1.0.</summary>
+        private const float BaseRadius = 1.1f;
+
+        private const float MinRippleRadius = 0.35f;
+
+        /// <summary>Absolute ceiling, independent of the shield.</summary>
+        private const float MaxRippleRadius = 2.2f;
+
+        /// <summary>
+        /// The other ceiling: a ripple may never take more than this share of the shield
+        /// radius. At 0.35 the clip still leaves a readable arc (~44% visible); much
+        /// beyond that the ring degenerates into a band hugging the silhouette.
+        /// </summary>
+        private const float ShieldRadiusShare = 0.35f;
+
+        private const float SizeExponent = 0.6f;
+        private const float StrengthExponent = 0.35f;
+        private const float DurationExponent = 0.5f;
+
+        /// <summary>Strength ceiling per ripple; the settings slider multiplies below it.</summary>
+        private const float MaxRippleStrength = 2.6f;
+
         /// <summary>
         /// Material constants for this renderer instance. The renderer creates its own
         /// material, so these do not leak into the explosion shockwaves.
@@ -95,9 +134,11 @@ namespace VisualTweaks
 
         /// <summary>
         /// Called from the interceptor patch. <paramref name="hitPos"/> is the
-        /// projectile's position after the step that crossed the shield.
+        /// projectile's position after the step that crossed the shield, and
+        /// <paramref name="damage"/> is what that projectile was going to deal — the
+        /// shield stopped it, so this is the only measure of how hard the hit was.
         /// </summary>
-        internal void Spawn(CompProjectileInterceptor interceptor, Vector3 hitPos)
+        internal void Spawn(CompProjectileInterceptor interceptor, Vector3 hitPos, float damage)
         {
             if (interceptor?.parent == null || !interceptor.parent.Spawned)
             {
@@ -155,11 +196,37 @@ namespace VisualTweaks
             float x = center.x + dirX * shieldRadius;
             float z = center.z + dirZ * shieldRadius;
 
-            // The ripple is a fraction of the shield: a fixed size would swallow a
-            // 2-cell low-shield and vanish on a 25-cell gravship bubble.
-            float radius = Mathf.Clamp(shieldRadius * 0.2f, 0.55f, 2.2f);
+            // Damage drives all three values. The floor of 2 damage keeps a zero-damage
+            // projectile (EMP carries no damage of its own) from collapsing the response
+            // to nothing, and the slider is applied to the ratio before the exponents so
+            // one control moves size, strength and duration together.
+            float ratio = Mathf.Max(damage, 2f)
+                / ReferenceDamage
+                * VisualTweaksSettings.shieldRippleDamageScale;
+
+            // The shield is now a ceiling only. `cap` is floored at MinRippleRadius
+            // because Mathf.Clamp with min > max returns min, which would silently
+            // un-cap a shield smaller than the minimum ripple.
+            float cap = Mathf.Max(
+                MinRippleRadius,
+                Mathf.Min(MaxRippleRadius, shieldRadius * ShieldRadiusShare));
+
+            float radius = Mathf.Clamp(
+                BaseRadius * Mathf.Pow(ratio, SizeExponent),
+                MinRippleRadius,
+                cap);
+
+            float intensity = Mathf.Clamp(
+                VisualTweaksSettings.shieldRippleIntensity
+                    * Mathf.Pow(ratio, StrengthExponent),
+                VisualTweaksSettings.MinShieldRippleIntensity,
+                MaxRippleStrength);
+
+            // Duration is capped by the settings maximum, not by the shield: a long
+            // ripple is a readability question, not a geometry one.
             float life = Mathf.Clamp(
-                VisualTweaksSettings.shieldRippleDuration,
+                VisualTweaksSettings.shieldRippleDuration
+                    * Mathf.Pow(ratio, DurationExponent),
                 VisualTweaksSettings.MinShieldRippleDuration,
                 VisualTweaksSettings.MaxShieldRippleDuration);
 
@@ -189,7 +256,7 @@ namespace VisualTweaks
                 Radius = radius,
                 Life = life,
                 InvLife = 1f / life,
-                Intensity = VisualTweaksSettings.shieldRippleIntensity,
+                Intensity = intensity,
                 Seed = Rand.Value,
                 AngleMin = 0f,
                 AngleMax = -1f,
