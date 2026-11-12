@@ -389,13 +389,12 @@ namespace VisualTweaks
             Vector3 lastExactPos,
             bool __result)
         {
-            // After a latched draw failure nothing here can ever be shown, so stop
-            // recording bearings and dissolve origins rather than keep dead state.
-            if (fatal
-                || !__result
+            // Only a stop has anything to record; whether the dome is actually being
+            // replaced (and whether a draw failure latched) is checked in
+            // NotifyIntercepted so the CE path shares the same gate.
+            if (!__result
                 || __instance == null
-                || projectile == null
-                || !ShieldDomeBridge.ShouldReplace(__instance))
+                || projectile == null)
             {
                 return;
             }
@@ -413,14 +412,33 @@ namespace VisualTweaks
             // The damage the shield ate is the only measure of how hard the hit was:
             // the impact itself carries no weight, and the projectile is about to be
             // destroyed without ever landing.
-            ShieldImpactLog.Notify(__instance, angle, projectile.DamageAmount);
+            NotifyIntercepted(__instance, angle, projectile.DamageAmount);
+        }
+
+        /// <summary>
+        /// Shared by the vanilla patch and the Combat Extended bridge, which reaches
+        /// this point from ProjectileCE.CheckIntercept instead. The dome gate — a
+        /// replacement actually installed, and no latched draw failure — lives here
+        /// rather than in the callers so every interception path records the same state.
+        /// </summary>
+        internal static void NotifyIntercepted(
+            CompProjectileInterceptor? comp,
+            float angle,
+            float damage)
+        {
+            if (fatal || comp == null || !ShieldDomeBridge.ShouldReplace(comp))
+            {
+                return;
+            }
+
+            ShieldImpactLog.Notify(comp, angle, damage);
 
             // If this was the shot that broke the shield, the dissolve began a moment
             // ago from inside CheckIntercept and still holds the *previous* hit as its
             // origin. Hand it the fatal bearing while the tick still matches. A no-op
             // on every ordinary hit.
             ShieldDissolveLog.RefreshOrigin(
-                __instance,
+                comp,
                 angle,
                 Find.TickManager?.TicksGame ?? -1);
         }

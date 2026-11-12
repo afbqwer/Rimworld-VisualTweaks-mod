@@ -103,24 +103,40 @@ namespace VisualTweaks
             bool __result,
             Vector3 newExactPos)
         {
-            if (!__result || __instance == null || projectile == null
-                || !ShieldRippleLayer.Active)
-            {
-                return;
-            }
-
-            Map? map = __instance.parent?.Map;
-            if (map == null)
+            if (!__result || __instance == null || projectile == null)
             {
                 return;
             }
 
             // The shield already ate the shot, so the damage that would have landed is
             // the only honest measure of how hard it hit.
+            NotifyIntercept(__instance, newExactPos, projectile.DamageAmount);
+        }
+
+        /// <summary>
+        /// Shared by the vanilla patch and the Combat Extended bridge, which reaches
+        /// this point from ProjectileCE.CheckIntercept instead.
+        /// </summary>
+        internal static void NotifyIntercept(
+            CompProjectileInterceptor? interceptor,
+            Vector3 hitPos,
+            float damage)
+        {
+            if (interceptor == null || !ShieldRippleLayer.Active)
+            {
+                return;
+            }
+
+            Map? map = interceptor.parent?.Map;
+            if (map == null)
+            {
+                return;
+            }
+
             map.GetComponent<OverlayMapComponent>()?.NotifyShieldHit(
-                __instance,
-                newExactPos,
-                projectile.DamageAmount);
+                interceptor,
+                hitPos,
+                damage);
         }
 
         private static void CheckBombardmentInterceptPostfix(

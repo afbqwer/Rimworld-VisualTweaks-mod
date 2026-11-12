@@ -204,8 +204,8 @@ namespace VisualTweaks
         // keep their own drawing. Large shields use CompProjectileInterceptor, and the
         // vanilla CompGravshipShieldGenerator is explicitly included as well. Personal
         // belts use CompShield, which mods may also subclass.
-        public static bool largeShieldsVanillaOnly = true;
-        public static bool personalShieldsVanillaOnly = true;
+        public static bool largeShieldsVanillaOnly = false;
+        public static bool personalShieldsVanillaOnly = false;
 
         // Vanilla's Interceptor_BlockedProjectile effecter contains 3-5 DustPuff
         // flecks on top of its sound and flash. They are aimed at the impact point
@@ -748,11 +748,11 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref largeShieldsVanillaOnly,
                 "largeShieldsVanillaOnly",
-                true);
+                false);
             Scribe_Values.Look(
                 ref personalShieldsVanillaOnly,
                 "personalShieldsVanillaOnly",
-                true);
+                false);
             Scribe_Values.Look(
                 ref largeShieldDisableHitDust,
                 "largeShieldDisableHitDust",
@@ -1362,7 +1362,7 @@ namespace VisualTweaks
             shieldHexDensityApplied = 5;
             personalShieldHexDensity = 4f;
             personalShieldHexDensityApplied = 4;
-            personalShieldOpacity = 0.4f;
+            personalShieldOpacity = 0.2f;
             personalShieldHitStyle = PersonalShieldHitStyle.Jitter;
             personalShieldDisableHitDust = true;
             personalShieldJitterDistance = 0.05f;
