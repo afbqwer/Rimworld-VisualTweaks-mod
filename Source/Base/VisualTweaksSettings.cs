@@ -362,7 +362,7 @@ namespace VisualTweaks
         // so the two can be tuned separately.
         public const float MinPersonalShieldOpacity = 0.05f;
         public const float MaxPersonalShieldOpacity = 1f;
-        public static float personalShieldOpacity = 0.4f;
+        public static float personalShieldOpacity = 0.2f;
 
         // How a personal belt answers an absorbed hit. This is a separate choice from
         // the dome's impact animations: a belt is one character wide, so the effects
@@ -865,7 +865,7 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref personalShieldOpacity,
                 "personalShieldOpacity",
-                0.4f);
+                0.2f);
             // The effect switch has no "off" value any more. A save that wrote the old
             // 0, or an older jitter-off boolean that used to migrate to 0, falls back
             // to the jitter rather than to no reaction at all.

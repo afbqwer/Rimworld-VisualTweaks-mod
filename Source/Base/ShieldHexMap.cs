@@ -545,9 +545,24 @@ namespace VisualTweaks
                     UnityEngine.Object.Destroy(created);
                 }
 
-                surface.Available = false;
+                // A failed re-bake still owns the previous atlas. Unbind it from the
+                // material first, then destroy it: otherwise the old texture would stay
+                // alive with no field able to reach it again (up to 32 MiB for the dome).
+                if (surface.BoundTo != null)
+                {
+                    surface.BoundTo.SetTexture(MapId, null);
+                }
+
+                if (surface.Texture != null)
+                {
+                    UnityEngine.Object.Destroy(surface.Texture);
+                }
+
                 surface.Texture = null;
+                surface.BoundTo = null;
+                surface.BoundFor = -1;
                 surface.BuiltFor = -1;
+                surface.Available = false;
                 surface.FailedFor = k;
                 Log.Error("[Visual Tweaks] Hex shield map (" + surface.Target
                     + ", k=" + k + ", " + size + "^2) could not be baked;"

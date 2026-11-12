@@ -125,9 +125,15 @@ namespace VisualTweaks
             {
                 materialFailed = true;
 
-                // Drop the half-built material: the caller treats null as "do not
-                // draw" and hands the frame back to vanilla, which is the right answer
-                // for a material whose look constants were never uploaded.
+                // A failed first upload must not leave the half-built Unity object
+                // orphaned. Destroy it before clearing the field: callers treat null
+                // as "do not draw" and hand the frame back to vanilla, which is the
+                // right answer for a material whose look constants were never uploaded.
+                if (material != null)
+                {
+                    UnityEngine.Object.Destroy(material);
+                }
+
                 material = null;
                 Log.Error("[Visual Tweaks] Shield dome material (" + target
                     + ") could not be created; stock drawing kept: " + ex);

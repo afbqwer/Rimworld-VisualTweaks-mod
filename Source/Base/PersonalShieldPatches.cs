@@ -268,10 +268,12 @@ namespace VisualTweaks
 
         private static void AbsorbedDamagePrefix(CompShield __instance)
         {
-            // Only while this mod is the one drawing the belt: turning the
-            // replacement off hands the whole presentation, dust included, back to
-            // vanilla instead of leaving one hidden visual change behind.
-            suppressAbsorbedDust = VisualTweaksSettings.personalShieldDisableHitDust
+            // Only while this mod is the one drawing the belt: the replacement being
+            // off, or a draw failure that latched fatal, hands the whole presentation
+            // — dust included — back to vanilla instead of leaving one hidden visual
+            // change behind.
+            suppressAbsorbedDust = !fatal
+                && VisualTweaksSettings.personalShieldDisableHitDust
                 && ShieldDomeBridge.ShouldReplace(__instance);
         }
 

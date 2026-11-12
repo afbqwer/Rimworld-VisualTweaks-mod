@@ -155,10 +155,12 @@ namespace VisualTweaks
         private static void BeginIfEnabled(CompProjectileInterceptor comp)
         {
             // No custom break when the dome is not installed (shader failed, setting
-            // off, screenshot mode): the stock look has no surface to tear apart. The
-            // per-surface choice can also be Vanilla, which means do not start the
-            // animation at all and leave the one-frame disappearance alone.
-            if (comp == null
+            // off, screenshot mode) or after a draw failure latched fatal: the stock
+            // look has no surface to tear apart. The per-surface choice can also be
+            // Vanilla, which means do not start the animation at all and leave the
+            // one-frame disappearance alone.
+            if (fatal
+                || comp == null
                 || !ShieldDomeBridge.ShouldReplace(comp)
                 || VisualTweaksSettings.CurrentShieldBreakStyle
                     == VisualTweaksSettings.ShieldBreakVanilla)
@@ -286,7 +288,12 @@ namespace VisualTweaks
             Vector3 lastExactPos,
             bool __result)
         {
-            if (!__result || __instance == null || projectile == null
+            // After a latched draw failure nothing here can ever be shown, so stop
+            // recording bearings and dissolve origins rather than keep dead state.
+            if (fatal
+                || !__result
+                || __instance == null
+                || projectile == null
                 || !ShieldDomeBridge.ShouldReplace(__instance))
             {
                 return;
