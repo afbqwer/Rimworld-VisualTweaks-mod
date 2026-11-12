@@ -11,12 +11,11 @@ namespace VisualTweaks
             Wind = 0,
             Gas = 1,
             Ripple = 2,
-            Heat = 3,
-            Cold = 4,
-            Leak = 5
+            Temperature = 3,
+            Leak = 4
         }
 
-        private const int TabCount = 6;
+        private const int TabCount = 5;
 
         /// <summary>Inner margin of the tab body.</summary>
         private const float PageMargin = 16f;
@@ -137,15 +136,13 @@ namespace VisualTweaks
                 delegate { currentTab = SettingsTab.Ripple; },
                 () => currentTab == SettingsTab.Ripple));
 
+            // Heat and cold share one tab: they are two ends of the same dial and each
+            // held only a handful of rows, so a separate tab for each cost a slot in the
+            // tab strip for very little content. The section headers keep them apart.
             tabs.Add(new TabRecord(
-                "VisualTweaks_Tab_Heat".Translate(),
-                delegate { currentTab = SettingsTab.Heat; },
-                () => currentTab == SettingsTab.Heat));
-
-            tabs.Add(new TabRecord(
-                "VisualTweaks_Tab_Cold".Translate(),
-                delegate { currentTab = SettingsTab.Cold; },
-                () => currentTab == SettingsTab.Cold));
+                "VisualTweaks_Tab_Temperature".Translate(),
+                delegate { currentTab = SettingsTab.Temperature; },
+                () => currentTab == SettingsTab.Temperature));
 
             tabs.Add(new TabRecord(
                 "VisualTweaks_Tab_Leak".Translate(),
@@ -217,11 +214,8 @@ namespace VisualTweaks
                 case SettingsTab.Ripple:
                     DoRippleTab(listing);
                     break;
-                case SettingsTab.Heat:
-                    DoHeatTab(listing);
-                    break;
-                case SettingsTab.Cold:
-                    DoColdTab(listing);
+                case SettingsTab.Temperature:
+                    DoTemperatureTab(listing);
                     break;
                 case SettingsTab.Leak:
                     DoLeakTab(listing);
@@ -548,12 +542,47 @@ namespace VisualTweaks
                 VisualTweaksSettings.MaxRippleDuration,
                 "VisualTweaks_Ripple_DurationTip".Translate());
 
+            // Same tab but a separate switch: this is feedback, not air distortion, and
+            // it borrows the shockwave shader without inheriting its on/off state.
+            SettingsLayout.Header(listing, "VisualTweaks_ShieldRipple_Group".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldRipple_Enable".Translate(),
+                ref VisualTweaksSettings.shieldRippleEnabled,
+                "VisualTweaks_ShieldRipple_EnableTip".Translate());
+            VisualTweaksSettings.shieldRippleIntensity = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldRipple_Intensity".Translate(),
+                VisualTweaksSettings.shieldRippleIntensity,
+                VisualTweaksSettings.MinShieldRippleIntensity,
+                VisualTweaksSettings.MaxShieldRippleIntensity,
+                "VisualTweaks_ShieldRipple_IntensityTip".Translate());
+            VisualTweaksSettings.shieldRippleDuration = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldRipple_Duration".Translate(),
+                VisualTweaksSettings.shieldRippleDuration,
+                VisualTweaksSettings.MinShieldRippleDuration,
+                VisualTweaksSettings.MaxShieldRippleDuration,
+                "VisualTweaks_ShieldRipple_DurationTip".Translate());
+
             SettingsLayout.Finish(listing);
         }
 
-        private static void DoHeatTab(Listing_Standard listing)
+        /// <summary>
+        /// Heat and cold share one tab. They are two ends of the same dial, and each
+        /// section is short enough that two tabs cost a slot in the tab strip for very
+        /// little content. The section headers keep the two effects apart.
+        /// </summary>
+        private static void DoTemperatureTab(Listing_Standard listing)
         {
-            SettingsLayout.Header(listing, "VisualTweaks_Heat_GroupSwitch".Translate());
+            DoHeatSection(listing);
+            DoColdSection(listing);
+
+            SettingsLayout.Finish(listing);
+        }
+
+        private static void DoHeatSection(Listing_Standard listing)
+        {
+            SettingsLayout.Header(listing, "VisualTweaks_Temp_GroupHeat".Translate());
             listing.CheckboxLabeled(
                 "VisualTweaks_Heat_Enable".Translate(),
                 ref VisualTweaksSettings.heatHazeEnabled,
@@ -581,7 +610,7 @@ namespace VisualTweaks
                 SettingsLayout.Warning(listing, "VisualTweaks_Heat_ShaderMissing".Translate());
             }
 
-            SettingsLayout.Header(listing, "VisualTweaks_Heat_GroupLook".Translate());
+            SettingsLayout.SubHeader(listing, "VisualTweaks_Temp_GroupLook".Translate());
             VisualTweaksSettings.heatHazeStartTemp = SettingsLayout.Slider(
                 listing,
                 "VisualTweaks_Heat_StartTemp".Translate(),
@@ -640,13 +669,11 @@ namespace VisualTweaks
                 VisualTweaksSettings.MinHeatFireBoost,
                 VisualTweaksSettings.MaxHeatFireBoost,
                 "VisualTweaks_Heat_FireBoostTip".Translate());
-
-            SettingsLayout.Finish(listing);
         }
 
-        private static void DoColdTab(Listing_Standard listing)
+        private static void DoColdSection(Listing_Standard listing)
         {
-            SettingsLayout.Header(listing, "VisualTweaks_Cold_GroupSwitch".Translate());
+            SettingsLayout.Header(listing, "VisualTweaks_Temp_GroupCold".Translate());
             listing.CheckboxLabeled(
                 "VisualTweaks_Cold_Enable".Translate(),
                 ref VisualTweaksSettings.coldMistEnabled,
@@ -657,7 +684,7 @@ namespace VisualTweaks
                 SettingsLayout.Warning(listing, "VisualTweaks_Cold_ShaderMissing".Translate());
             }
 
-            SettingsLayout.Header(listing, "VisualTweaks_Cold_GroupLook".Translate());
+            SettingsLayout.SubHeader(listing, "VisualTweaks_Temp_GroupLook".Translate());
             VisualTweaksSettings.coldMistStartTemp = SettingsLayout.Slider(
                 listing,
                 "VisualTweaks_Cold_StartTemp".Translate(),
@@ -714,8 +741,6 @@ namespace VisualTweaks
                 VisualTweaksSettings.MaxColdSpeed,
                 "VisualTweaks_Cold_SpeedTip".Translate(),
                 step: 0.1f);
-
-            SettingsLayout.Finish(listing);
         }
 
         private static void DoLeakTab(Listing_Standard listing)

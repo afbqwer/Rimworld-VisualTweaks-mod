@@ -9,8 +9,7 @@
   <VisualTweaks_Tab_Wind>流线</VisualTweaks_Tab_Wind>
   <VisualTweaks_Tab_Gas>气体</VisualTweaks_Tab_Gas>
   <VisualTweaks_Tab_Ripple>冲击波</VisualTweaks_Tab_Ripple>
-  <VisualTweaks_Tab_Heat>热浪</VisualTweaks_Tab_Heat>
-  <VisualTweaks_Tab_Cold>寒气</VisualTweaks_Tab_Cold>
+  <VisualTweaks_Tab_Temperature>温度</VisualTweaks_Tab_Temperature>
 
   <!-- 流线（仅 AO） -->
   <VisualTweaks_Wind_GroupRender>渲染</VisualTweaks_Wind_GroupRender>
@@ -107,9 +106,18 @@
   <VisualTweaks_Ripple_Duration>基础持续时间</VisualTweaks_Ripple_Duration>
   <VisualTweaks_Ripple_DurationTip>冲击波的基础存活时间，默认 0.5 秒，范围约 0.05 秒到 2 秒。爆炸越大持续越久，最多约 1.5 倍；游戏加速时也会相应更快结束。</VisualTweaks_Ripple_DurationTip>
 
-  <!-- 高温空气热浪 -->
-  <VisualTweaks_Heat_GroupSwitch>总开关</VisualTweaks_Heat_GroupSwitch>
-  <VisualTweaks_Heat_GroupLook>外观</VisualTweaks_Heat_GroupLook>
+  <!-- 护盾受击涟漪：借用冲击波着色器，但开关独立 -->
+  <VisualTweaks_ShieldRipple_Group>护盾受击</VisualTweaks_ShieldRipple_Group>
+  <VisualTweaks_ShieldRipple_Enable>护盾被击中时产生涟漪</VisualTweaks_ShieldRipple_Enable>
+  <VisualTweaks_ShieldRipple_EnableTip>子弹被拦截器护盾挡下的瞬间，在护盾表面（俯视即轮廓上）炸开一圈向外扩散的折射涟漪，让「挡住了」这件事看得见。空中轰炸被拦截时同样生效。与上方的爆炸冲击波共用着色器，但开关互不影响。</VisualTweaks_ShieldRipple_EnableTip>
+  <VisualTweaks_ShieldRipple_Intensity>涟漪强度</VisualTweaks_ShieldRipple_Intensity>
+  <VisualTweaks_ShieldRipple_IntensityTip>涟漪把护盾自身辉光扭曲的幅度。调高会明显看到护盾表面被「压」出波纹，过高会让护盾下方的植被和地面出现撕裂感。</VisualTweaks_ShieldRipple_IntensityTip>
+  <VisualTweaks_ShieldRipple_Duration>涟漪持续时间</VisualTweaks_ShieldRipple_Duration>
+  <VisualTweaks_ShieldRipple_DurationTip>单圈涟漪存活多久，默认 0.24 秒。护盾受击是短促的「啪」而不是冲击波，时间拉长会变成持续鼓包，不建议超过 0.5 秒。</VisualTweaks_ShieldRipple_DurationTip>
+
+  <!-- 温度：热效应（高温空气热浪）与冷效应（低温房间寒气）共用一页 -->
+  <VisualTweaks_Temp_GroupHeat>热效应</VisualTweaks_Temp_GroupHeat>
+  <VisualTweaks_Temp_GroupLook>外观</VisualTweaks_Temp_GroupLook>
 
   <VisualTweaks_Heat_Enable>绘制高温空气热浪</VisualTweaks_Heat_Enable>
   <VisualTweaks_Heat_EnableTip>空气很热的地方会让画面产生微微的热扭曲：炎热的房间、火焰、地热口和热浪天气都会触发。温度越高扭曲越明显；普通温暖天气只有很轻微的效果，火堆或热浪则会明显扭曲场景。</VisualTweaks_Heat_EnableTip>
@@ -134,8 +142,7 @@
   <VisualTweaks_Heat_FireBoostTip>在火焰、篝火、加热器、火把和地热口周围额外叠加的热浪。房间温度本身已经包含室内热源，这一项主要用于让室外热源立刻显现。0 = 关闭额外效果。</VisualTweaks_Heat_FireBoostTip>
 
   <!-- 低温房间寒气 -->
-  <VisualTweaks_Cold_GroupSwitch>总开关</VisualTweaks_Cold_GroupSwitch>
-  <VisualTweaks_Cold_GroupLook>外观</VisualTweaks_Cold_GroupLook>
+  <VisualTweaks_Temp_GroupCold>冷效应</VisualTweaks_Temp_GroupCold>
 
   <VisualTweaks_Cold_Enable>绘制低温房间寒气</VisualTweaks_Cold_Enable>
   <VisualTweaks_Cold_EnableTip>在寒冷的室内叠加缓慢翻滚的寒气：冷库、冰盖基地，以及任何被制冷片压到低温的房间。雾气在原地聚散变形，不会整体飘过画面。只在真正的房间内显示，室外一格都不画；屋顶缺口超过四分之一的开敞房间按室外处理，同样不画。原版真空雾和 Atmosphere Overhaul 的雾气都不受影响。</VisualTweaks_Cold_EnableTip>

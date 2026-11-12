@@ -9,8 +9,7 @@
   <VisualTweaks_Tab_Wind>Streamlines</VisualTweaks_Tab_Wind>
   <VisualTweaks_Tab_Gas>Gas</VisualTweaks_Tab_Gas>
   <VisualTweaks_Tab_Ripple>Shockwave</VisualTweaks_Tab_Ripple>
-  <VisualTweaks_Tab_Heat>Heat haze</VisualTweaks_Tab_Heat>
-  <VisualTweaks_Tab_Cold>Cold mist</VisualTweaks_Tab_Cold>
+  <VisualTweaks_Tab_Temperature>Temperature</VisualTweaks_Tab_Temperature>
 
   <!-- Streamlines (AO only) -->
   <VisualTweaks_Wind_GroupRender>Rendering</VisualTweaks_Wind_GroupRender>
@@ -107,9 +106,18 @@
   <VisualTweaks_Ripple_Duration>Base duration</VisualTweaks_Ripple_Duration>
   <VisualTweaks_Ripple_DurationTip>How long the shockwave lasts. The default is 0.5 s, adjustable from about 0.05 s to 2 s. Larger explosions last up to about 1.5 times longer; the effect also finishes sooner when the game is running fast.</VisualTweaks_Ripple_DurationTip>
 
-  <!-- Heat haze -->
-  <VisualTweaks_Heat_GroupSwitch>Master switch</VisualTweaks_Heat_GroupSwitch>
-  <VisualTweaks_Heat_GroupLook>Appearance</VisualTweaks_Heat_GroupLook>
+  <!-- Shield hit ripples: borrows the shockwave shader, switches independently -->
+  <VisualTweaks_ShieldRipple_Group>Shield hits</VisualTweaks_ShieldRipple_Group>
+  <VisualTweaks_ShieldRipple_Enable>Ripple when a shield stops a shot</VisualTweaks_ShieldRipple_Enable>
+  <VisualTweaks_ShieldRipple_EnableTip>When interceptor shielding eats a bullet, a ring of refraction spreads across the shield surface — on the silhouette, in a top-down view — so the block is something you can see. Intercepted bombardment does the same. Shares the shockwave shader, but the two switches are independent.</VisualTweaks_ShieldRipple_EnableTip>
+  <VisualTweaks_ShieldRipple_Intensity>Ripple strength</VisualTweaks_ShieldRipple_Intensity>
+  <VisualTweaks_ShieldRipple_IntensityTip>How hard the ripple bends the shield's own glow. Higher values make the surface visibly dent; too high and the terrain under the shield starts to tear.</VisualTweaks_ShieldRipple_IntensityTip>
+  <VisualTweaks_ShieldRipple_Duration>Ripple duration</VisualTweaks_ShieldRipple_Duration>
+  <VisualTweaks_ShieldRipple_DurationTip>How long one ring lives. 0.24 s by default. A shield hit is a snap, not a shockwave, so stretching this turns it into a lingering bulge — staying under 0.5 s is recommended.</VisualTweaks_ShieldRipple_DurationTip>
+
+  <!-- Temperature: heat haze and cold mist share one page -->
+  <VisualTweaks_Temp_GroupHeat>Heat</VisualTweaks_Temp_GroupHeat>
+  <VisualTweaks_Temp_GroupLook>Appearance</VisualTweaks_Temp_GroupLook>
 
   <VisualTweaks_Heat_Enable>Draw high-temperature air shimmer</VisualTweaks_Heat_Enable>
   <VisualTweaks_Heat_EnableTip>Makes the view shimmer where the air is hot: hot rooms, fires, geothermal vents and heat-wave weather all trigger it. The hotter it gets, the stronger the distortion; ordinary warm weather stays subtle, while a fire or a heat wave clearly bends the scene.</VisualTweaks_Heat_EnableTip>
@@ -134,8 +142,7 @@
   <VisualTweaks_Heat_FireBoostTip>Extra shimmer added directly around fires, campfires, heaters, torches and heat vents. Room temperature already includes indoor heat, so this mainly makes outdoor sources visible immediately. 0 turns the extra effect off.</VisualTweaks_Heat_FireBoostTip>
 
   <!-- Low-temperature room mist -->
-  <VisualTweaks_Cold_GroupSwitch>Master switch</VisualTweaks_Cold_GroupSwitch>
-  <VisualTweaks_Cold_GroupLook>Appearance</VisualTweaks_Cold_GroupLook>
+  <VisualTweaks_Temp_GroupCold>Cold</VisualTweaks_Temp_GroupCold>
 
   <VisualTweaks_Cold_Enable>Draw low-temperature room mist</VisualTweaks_Cold_Enable>
   <VisualTweaks_Cold_EnableTip>Floats slow vapour in cold indoor air: freezers, ice-sheet bases, and any room kept cool by coolers. The haze curls and thickens in place instead of drifting across the map. It only appears inside real rooms and never outdoors; open rooms missing more than a quarter of their roof count as outdoors and are skipped too. Vanilla's vacuum fog and Atmosphere Overhaul's mist are both unaffected.</VisualTweaks_Cold_EnableTip>
