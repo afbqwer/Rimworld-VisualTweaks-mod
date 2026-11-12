@@ -159,7 +159,7 @@ namespace VisualTweaks
             // per-surface choice can also be Vanilla, which means do not start the
             // animation at all and leave the one-frame disappearance alone.
             if (comp == null
-                || !ShieldDomeBridge.Active
+                || !ShieldDomeBridge.ShouldReplace(comp)
                 || VisualTweaksSettings.CurrentShieldBreakStyle
                     == VisualTweaksSettings.ShieldBreakVanilla)
             {
@@ -232,7 +232,7 @@ namespace VisualTweaks
         {
             // Returning true means "run vanilla". Every early exit below is a situation
             // where the stock drawing is the correct answer.
-            if (fatal || !ShieldDomeBridge.Active || __instance == null)
+            if (fatal || !ShieldDomeBridge.ShouldReplace(__instance))
             {
                 return true;
             }
@@ -287,7 +287,7 @@ namespace VisualTweaks
             bool __result)
         {
             if (!__result || __instance == null || projectile == null
-                || !ShieldDomeBridge.Active)
+                || !ShieldDomeBridge.ShouldReplace(__instance))
             {
                 return;
             }

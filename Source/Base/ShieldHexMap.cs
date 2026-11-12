@@ -252,7 +252,9 @@ namespace VisualTweaks
         /// </summary>
         private static bool CanBeDrawn(ShieldHexTarget target) =>
             VisualTweaksSettings.IsHexShieldDome(target)
-            && VisualTweaksSettings.crispShieldDome
+            && (target == ShieldHexTarget.Personal
+                ? VisualTweaksSettings.replacePersonalShields
+                : VisualTweaksSettings.replaceLargeShields)
             && ShieldDomeBridge.ShaderReady;
 
         /// <summary>

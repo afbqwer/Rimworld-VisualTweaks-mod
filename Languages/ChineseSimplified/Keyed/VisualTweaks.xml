@@ -110,13 +110,16 @@
 
   <!-- 护盾：通用开关 → 大型护盾 → 个人护盾 → 受击涟漪 -->
   <VisualTweaks_Shield_GroupCommon>通用</VisualTweaks_Shield_GroupCommon>
-  <VisualTweaks_ShieldDome_Enable>替换护盾绘制</VisualTweaks_ShieldDome_Enable>
-  <VisualTweaks_ShieldDome_EnableTip>用着色器重画投射器穹顶和个人护盾腰带；关闭后立即恢复原版外观。</VisualTweaks_ShieldDome_EnableTip>
-  <VisualTweaks_ShieldDome_OffNote>已恢复原版绘制，大型护盾与个人护盾的样式设置暂不生效。</VisualTweaks_ShieldDome_OffNote>
-  <VisualTweaks_ShieldAlways_Enable>总是显示护盾</VisualTweaks_ShieldAlways_Enable>
-  <VisualTweaks_ShieldAlways_EnableTip>未选中时也让运作中的护盾淡淡显示，便于看清覆盖范围。</VisualTweaks_ShieldAlways_EnableTip>
+  <VisualTweaks_ShieldLarge_Enable>替换大型护盾</VisualTweaks_ShieldLarge_Enable>
+  <VisualTweaks_ShieldLarge_EnableTip>用着色器重画投射器穹顶；关闭后大型护盾恢复原版绘制。</VisualTweaks_ShieldLarge_EnableTip>
+  <VisualTweaks_ShieldPersonal_Enable>替换个人护盾</VisualTweaks_ShieldPersonal_Enable>
+  <VisualTweaks_ShieldPersonal_EnableTip>用着色器重画个人护盾腰带；关闭后腰带恢复原版绘制。</VisualTweaks_ShieldPersonal_EnableTip>
+  <VisualTweaks_ShieldDome_OffNote>两种护盾都已恢复原版绘制，样式设置暂不生效。</VisualTweaks_ShieldDome_OffNote>
+  <VisualTweaks_ShieldAlways_Enable>总是显示大型护盾</VisualTweaks_ShieldAlways_Enable>
+  <VisualTweaks_ShieldAlways_EnableTip>未选中时也让运作中的大型护盾淡淡显示。个人护盾是否显示仍由原版规则决定。</VisualTweaks_ShieldAlways_EnableTip>
 
   <VisualTweaks_ShieldDome_Group>大型护盾</VisualTweaks_ShieldDome_Group>
+  <VisualTweaks_ShieldLarge_VanillaOnly>只替换原版护盾</VisualTweaks_ShieldLarge_VanillaOnly>
   <VisualTweaks_ShieldDome_LookGroup>外观</VisualTweaks_ShieldDome_LookGroup>
   <VisualTweaks_ShieldDome_DomeStyle>样式</VisualTweaks_ShieldDome_DomeStyle>
   <VisualTweaks_ShieldDome_StyleCrisp>清晰</VisualTweaks_ShieldDome_StyleCrisp>
@@ -173,6 +176,7 @@
   <VisualTweaks_ShieldDome_DissolveSharedNote>大型护盾与个人护盾共用此时长和亮度。</VisualTweaks_ShieldDome_DissolveSharedNote>
 
   <VisualTweaks_ShieldDome_PersonalGroup>个人护盾</VisualTweaks_ShieldDome_PersonalGroup>
+  <VisualTweaks_ShieldPersonal_VanillaOnly>只替换原版个人护盾</VisualTweaks_ShieldPersonal_VanillaOnly>
   <VisualTweaks_ShieldDome_PersonalStyle>腰带样式</VisualTweaks_ShieldDome_PersonalStyle>
   <VisualTweaks_ShieldDome_PersonalHexDensity>格子密度（个人护盾）</VisualTweaks_ShieldDome_PersonalHexDensity>
   <VisualTweaks_ShieldDome_PersonalHexDensityTip>腰带尺寸远小于穹顶，使用独立密度。默认 k=4，比大型护盾略疏。</VisualTweaks_ShieldDome_PersonalHexDensityTip>

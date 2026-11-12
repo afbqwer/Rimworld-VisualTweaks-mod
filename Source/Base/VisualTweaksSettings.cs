@@ -158,15 +158,25 @@ namespace VisualTweaks
         // baseline, and this is an opt-in.
         public static bool alwaysShowShields = false;
 
-        // Replaces vanilla's shield drawing entirely (see ShieldDomePatches and
-        // PersonalShieldPatches): interceptor domes and personal shield belts both
-        // get the analytic surface. On by default: unlike the switch above this is
-        // not an addition to the stock look but a re-draw of it, and the point of the
-        // mod is that the drawn radius matches the one the game blocks projectiles
-        // with. A belt has no radius of its own, so it borrows vanilla's energy-driven
-        // bubble size instead. Turn it off live to A/B against vanilla — both patches
-        // re-read this every frame, so no restart and no save reload.
+        // Large shields and personal belts replace vanilla's drawing independently
+        // (see ShieldDomePatches and PersonalShieldPatches). Both default to on: the
+        // point of the mod is that the drawn radius matches the one the game blocks
+        // projectiles with, and a belt has no radius of its own, so it borrows
+        // vanilla's energy-driven bubble size instead. Both are re-read every frame,
+        // so turning either off is an instant A/B against the stock look.
+        public static bool replaceLargeShields = true;
+        public static bool replacePersonalShields = true;
+
+        // Legacy master switch from before the two independent toggles existed. Only
+        // read during ExposeData migration: old saves used it for both families.
         public static bool crispShieldDome = true;
+
+        // When on, only vanilla comp classes are replaced; mods that derive from them
+        // keep their own drawing. Large shields use CompProjectileInterceptor, and the
+        // vanilla CompGravshipShieldGenerator is explicitly included as well. Personal
+        // belts use CompShield, which mods may also subclass.
+        public static bool largeShieldsVanillaOnly = false;
+        public static bool personalShieldsVanillaOnly = false;
 
         // Which surface the replacement dome draws. Crisp is the original analytic
         // ring; Hex is the spherical panel shell; Vanilla is a soft, wide-gradient
@@ -642,7 +652,27 @@ namespace VisualTweaks
                 "shieldRippleDamageScale",
                 1f);
             Scribe_Values.Look(ref alwaysShowShields, "alwaysShowShields", false);
+
+            // The legacy master switch is read first; both new flags default to its
+            // value, so a save written before the split keeps drawing exactly what it
+            // used to. New saves carry all three keys, and the two flags win.
             Scribe_Values.Look(ref crispShieldDome, "crispShieldDome", true);
+            Scribe_Values.Look(
+                ref replaceLargeShields,
+                "replaceLargeShields",
+                crispShieldDome);
+            Scribe_Values.Look(
+                ref replacePersonalShields,
+                "replacePersonalShields",
+                crispShieldDome);
+            Scribe_Values.Look(
+                ref largeShieldsVanillaOnly,
+                "largeShieldsVanillaOnly",
+                false);
+            Scribe_Values.Look(
+                ref personalShieldsVanillaOnly,
+                "personalShieldsVanillaOnly",
+                false);
 
             // The old save only knows the boolean. -1 means the new key was absent,
             // so its value decides the migrated style; otherwise the int wins even
@@ -1112,6 +1142,10 @@ namespace VisualTweaks
             shieldRippleDamageScale = 1f;
             alwaysShowShields = false;
             crispShieldDome = true;
+            replaceLargeShields = true;
+            replacePersonalShields = true;
+            largeShieldsVanillaOnly = false;
+            personalShieldsVanillaOnly = false;
             shieldDomeStyle = ShieldDomeStyleCrisp;
             personalShieldDomeStyle = ShieldDomeStyleCrisp;
             hexShieldDome = false;

@@ -1,3 +1,4 @@
+using System;
 using RimWorld;
 using Verse;
 using Waylith.Rendering;
@@ -28,16 +29,59 @@ namespace VisualTweaks
         internal static bool ShaderReady => shaderReady;
 
         /// <summary>
-        /// True when the custom dome should replace vanilla's drawing. Screenshot mode
-        /// is excluded so a screenshot still shows the stock visuals, matching every
-        /// other effect in this mod.
+        /// True when the custom dome should replace vanilla's drawing for large
+        /// (interceptor) shields. Screenshot mode is excluded so a screenshot still
+        /// shows the stock visuals, matching every other effect in this mod.
         /// </summary>
-        internal static bool Active =>
+        internal static bool LargeActive =>
             initialized
             && shaderReady
             && !runtimeDisabled
-            && VisualTweaksSettings.crispShieldDome
+            && VisualTweaksSettings.replaceLargeShields
             && !ScreenshotModeGate.Active;
+
+        /// <summary>Same as <see cref="LargeActive"/>, for personal shield belts.</summary>
+        internal static bool PersonalActive =>
+            initialized
+            && shaderReady
+            && !runtimeDisabled
+            && VisualTweaksSettings.replacePersonalShields
+            && !ScreenshotModeGate.Active;
+
+        /// <summary>
+        /// True when this particular interceptor should be drawn by the mod. The
+        /// vanilla-only switch compares the runtime type exactly, so modded subclasses
+        /// keep their own drawing. Vanilla's own CompGravshipShieldGenerator is the one
+        /// exception: it inherits the drawing but is still a stock shield.
+        /// </summary>
+        internal static bool ShouldReplace(CompProjectileInterceptor? comp)
+        {
+            if (comp == null || !LargeActive)
+            {
+                return false;
+            }
+
+            if (!VisualTweaksSettings.largeShieldsVanillaOnly)
+            {
+                return true;
+            }
+
+            Type type = comp.GetType();
+            return type == typeof(CompProjectileInterceptor)
+                || type == typeof(CompGravshipShieldGenerator);
+        }
+
+        /// <summary>Same rule as the large-shield overload, for CompShield.</summary>
+        internal static bool ShouldReplace(CompShield? comp)
+        {
+            if (comp == null || !PersonalActive)
+            {
+                return false;
+            }
+
+            return !VisualTweaksSettings.personalShieldsVanillaOnly
+                || comp.GetType() == typeof(CompShield);
+        }
 
         internal static void Initialize()
         {

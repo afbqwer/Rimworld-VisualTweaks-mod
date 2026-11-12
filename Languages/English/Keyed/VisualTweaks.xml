@@ -110,13 +110,16 @@
 
   <!-- Shields: common switches, large shields, personal belts, then hit ripple -->
   <VisualTweaks_Shield_GroupCommon>General</VisualTweaks_Shield_GroupCommon>
-  <VisualTweaks_ShieldDome_Enable>Replace shield drawing</VisualTweaks_ShieldDome_Enable>
-  <VisualTweaks_ShieldDome_EnableTip>Redraws projector domes and personal shield belts with a shader; turn it off to restore the stock look.</VisualTweaks_ShieldDome_EnableTip>
-  <VisualTweaks_ShieldDome_OffNote>The stock drawing is restored; the dome and belt style settings below are inactive.</VisualTweaks_ShieldDome_OffNote>
-  <VisualTweaks_ShieldAlways_Enable>Always show shields</VisualTweaks_ShieldAlways_Enable>
-  <VisualTweaks_ShieldAlways_EnableTip>Keeps active shields faintly visible when not selected, so their coverage is easy to read.</VisualTweaks_ShieldAlways_EnableTip>
+  <VisualTweaks_ShieldLarge_Enable>Replace large shields</VisualTweaks_ShieldLarge_Enable>
+  <VisualTweaks_ShieldLarge_EnableTip>Redraws projector domes with a shader; turn it off to restore the stock drawing for large shields.</VisualTweaks_ShieldLarge_EnableTip>
+  <VisualTweaks_ShieldPersonal_Enable>Replace personal shields</VisualTweaks_ShieldPersonal_Enable>
+  <VisualTweaks_ShieldPersonal_EnableTip>Redraws personal shield belts with a shader; turn it off to restore the stock drawing for belts.</VisualTweaks_ShieldPersonal_EnableTip>
+  <VisualTweaks_ShieldDome_OffNote>Both shield types use the stock drawing; style settings are inactive.</VisualTweaks_ShieldDome_OffNote>
+  <VisualTweaks_ShieldAlways_Enable>Always show large shields</VisualTweaks_ShieldAlways_Enable>
+  <VisualTweaks_ShieldAlways_EnableTip>Keeps active large shields faintly visible when not selected. Personal belts still follow vanilla's visibility rules.</VisualTweaks_ShieldAlways_EnableTip>
 
   <VisualTweaks_ShieldDome_Group>Large shields</VisualTweaks_ShieldDome_Group>
+  <VisualTweaks_ShieldLarge_VanillaOnly>Vanilla type only</VisualTweaks_ShieldLarge_VanillaOnly>
   <VisualTweaks_ShieldDome_LookGroup>Appearance</VisualTweaks_ShieldDome_LookGroup>
   <VisualTweaks_ShieldDome_DomeStyle>Surface</VisualTweaks_ShieldDome_DomeStyle>
   <VisualTweaks_ShieldDome_StyleCrisp>Crisp</VisualTweaks_ShieldDome_StyleCrisp>
@@ -173,6 +176,7 @@
   <VisualTweaks_ShieldDome_DissolveSharedNote>Timing and brightness are shared by both shield types.</VisualTweaks_ShieldDome_DissolveSharedNote>
 
   <VisualTweaks_ShieldDome_PersonalGroup>Personal shields</VisualTweaks_ShieldDome_PersonalGroup>
+  <VisualTweaks_ShieldPersonal_VanillaOnly>Vanilla type only</VisualTweaks_ShieldPersonal_VanillaOnly>
   <VisualTweaks_ShieldDome_PersonalStyle>Belt surface</VisualTweaks_ShieldDome_PersonalStyle>
   <VisualTweaks_ShieldDome_PersonalHexDensity>Cell density (belts)</VisualTweaks_ShieldDome_PersonalHexDensity>
   <VisualTweaks_ShieldDome_PersonalHexDensityTip>Belts are much smaller than domes, so they use their own density. Default k=4, slightly sparser than the dome.</VisualTweaks_ShieldDome_PersonalHexDensityTip>

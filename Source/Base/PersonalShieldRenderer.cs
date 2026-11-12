@@ -79,7 +79,7 @@ namespace VisualTweaks
             CompShield comp,
             Func<CompShield, bool> shouldDisplay)
         {
-            if (!ShieldDomeBridge.Active || comp == null)
+            if (!ShieldDomeBridge.ShouldReplace(comp))
             {
                 return false;
             }

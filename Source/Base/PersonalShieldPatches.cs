@@ -187,7 +187,7 @@ namespace VisualTweaks
         {
             // Returning true means "run vanilla", which is the correct answer whenever
             // the replacement is unavailable.
-            if (fatal || !ShieldDomeBridge.Active || comp == null)
+            if (fatal || !ShieldDomeBridge.ShouldReplace(comp))
             {
                 return true;
             }
@@ -270,7 +270,10 @@ namespace VisualTweaks
             // Only a call that started with a working shield can have broken it or
             // absorbed anything. A shield already Resetting or Disabled is hit again
             // and again, and must not restart an effect that is already playing.
-            if (!__state.WasActive || __instance == null)
+            // A belt this mod is not replacing keeps vanilla's own reaction.
+            if (!__state.WasActive
+                || __instance == null
+                || !ShieldDomeBridge.ShouldReplace(__instance))
             {
                 return;
             }
@@ -298,7 +301,7 @@ namespace VisualTweaks
             // sensible answer when there is no custom surface. The per-style choice
             // can also be Vanilla, which means do not animate at all.
             if (fatal
-                || !ShieldDomeBridge.Active
+                || !ShieldDomeBridge.ShouldReplace(comp)
                 || VisualTweaksSettings.CurrentShieldBreakStyle
                     == VisualTweaksSettings.ShieldBreakVanilla)
             {

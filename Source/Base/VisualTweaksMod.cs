@@ -703,31 +703,40 @@ namespace VisualTweaks
 
         /// <summary>
         /// Every shield visual lives here, ordered by what the player is configuring:
-        /// the two global switches, the projector dome, the personal belt, then the
-        /// hit ripple. The two style sections build on the replacement switch, so
-        /// they are hidden while it is off.
+        /// the two replacement switches, the projector dome, the personal belt, then
+        /// the hit ripple. Each style section is hidden while its own switch is off.
         /// </summary>
         private static void DoShieldTab(Listing_Standard listing)
         {
             SettingsLayout.Header(listing, "VisualTweaks_Shield_GroupCommon".Translate());
 
             listing.CheckboxLabeled(
-                "VisualTweaks_ShieldDome_Enable".Translate(),
-                ref VisualTweaksSettings.crispShieldDome,
-                "VisualTweaks_ShieldDome_EnableTip".Translate());
+                "VisualTweaks_ShieldLarge_Enable".Translate(),
+                ref VisualTweaksSettings.replaceLargeShields,
+                "VisualTweaks_ShieldLarge_EnableTip".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldPersonal_Enable".Translate(),
+                ref VisualTweaksSettings.replacePersonalShields,
+                "VisualTweaks_ShieldPersonal_EnableTip".Translate());
             listing.CheckboxLabeled(
                 "VisualTweaks_ShieldAlways_Enable".Translate(),
                 ref VisualTweaksSettings.alwaysShowShields,
                 "VisualTweaks_ShieldAlways_EnableTip".Translate());
 
-            // Both style sections configure the replacement drawing. Always-show and
-            // the hit ripple also work on vanilla's drawing, so they stay available.
-            if (VisualTweaksSettings.crispShieldDome)
+            // Each family owns its surface, style and break choices. Turning one off
+            // hides only that section and leaves the other drawing untouched.
+            if (VisualTweaksSettings.replaceLargeShields)
             {
                 DrawDomeSection(listing);
+            }
+
+            if (VisualTweaksSettings.replacePersonalShields)
+            {
                 DrawPersonalSection(listing);
             }
-            else
+
+            if (!VisualTweaksSettings.replaceLargeShields
+                && !VisualTweaksSettings.replacePersonalShields)
             {
                 SettingsLayout.Note(
                     listing,
@@ -776,6 +785,9 @@ namespace VisualTweaks
         private static void DrawDomeSection(Listing_Standard listing)
         {
             SettingsLayout.Header(listing, "VisualTweaks_ShieldDome_Group".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldLarge_VanillaOnly".Translate(),
+                ref VisualTweaksSettings.largeShieldsVanillaOnly);
             SettingsLayout.SubHeader(listing, "VisualTweaks_ShieldDome_LookGroup".Translate());
 
             listing.Label("VisualTweaks_ShieldDome_DomeStyle".Translate());
@@ -836,6 +848,9 @@ namespace VisualTweaks
             SettingsLayout.Header(
                 listing,
                 "VisualTweaks_ShieldDome_PersonalGroup".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldPersonal_VanillaOnly".Translate(),
+                ref VisualTweaksSettings.personalShieldsVanillaOnly);
             SettingsLayout.SubHeader(
                 listing,
                 "VisualTweaks_ShieldDome_LookGroup".Translate());
