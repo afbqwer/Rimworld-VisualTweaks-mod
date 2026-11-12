@@ -122,8 +122,11 @@ namespace VisualTweaks
         /// factor to give that glow somewhere to land. The stock-like style needs the
         /// same room for the same reason; the crisp and panel styles must NOT use it,
         /// because their whole contract is that the silhouette sits on r == 1.
+        ///
+        /// Shared with <see cref="PersonalShieldRenderer"/>: it uses the same
+        /// stock-like surface, so it needs the same margin for the same reason.
         /// </summary>
-        private const float VanillaQuadMargin = 1.1601562f;
+        internal const float VanillaQuadMargin = 1.1601562f;
 
         // Vanilla's ForceFieldCone is a fixed-width sector: only its alpha fades,
         // its angular extent does not follow damage. The brighten reaction keeps
@@ -166,14 +169,14 @@ namespace VisualTweaks
         /// answering a hit with tiles while the dome draws the crisp style would flash
         /// panels that are not on screen.
         /// </summary>
-        private static bool HexActive =>
+        internal static bool HexActive =>
             VisualTweaksSettings.HexShieldDome && ShieldHexMap.Available;
 
         /// <summary>
         /// True when the stock-like style is chosen. Unlike <see cref="HexActive"/>
         /// it has no external asset to fail, so it needs no availability check.
         /// </summary>
-        private static bool VanillaActive => VisualTweaksSettings.VanillaShieldDome;
+        internal static bool VanillaActive => VisualTweaksSettings.VanillaShieldDome;
 
         /// <summary>
         /// Returns false when nothing was drawn, so the caller can hand the frame back
@@ -609,7 +612,7 @@ namespace VisualTweaks
         /// extra vectors on every shield every frame for numbers that change once a
         /// session.
         /// </summary>
-        private static void ApplyLook(Material mat)
+        internal static void ApplyLook(Material mat)
         {
             float width = VisualTweaksSettings.shieldRidgeWidth;
             float brightness = VisualTweaksSettings.shieldRidgeBrightness;
@@ -679,7 +682,12 @@ namespace VisualTweaks
                     density / ShieldHexMap.ERefPerSubdivision));
         }
 
-        private static Material? EnsureMaterial()
+        /// <summary>
+        /// The one material both shield renderers draw with. Its look constants come
+        /// from the global shield settings, so a personal belt and a projector dome
+        /// can never disagree about style, ridge width or lattice density.
+        /// </summary>
+        internal static Material? EnsureMaterial()
         {
             if (material != null || materialFailed)
             {

@@ -125,7 +125,7 @@
 
   <VisualTweaks_ShieldDome_Group>Shield drawing</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldDome_Enable>Replace shield drawing</VisualTweaks_ShieldDome_Enable>
-  <VisualTweaks_ShieldDome_EnableTip>Redraws shields with a custom shader; choose the crisp, hexagonal or stock-like style below. Turn it off to get vanilla's drawing back for comparison.</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_EnableTip>Redraws shields with a custom shader — projector domes and personal shield belts alike; choose the crisp, hexagonal or stock-like style below. Turn it off to get vanilla's drawing back for comparison.</VisualTweaks_ShieldDome_EnableTip>
   <VisualTweaks_ShieldDome_StyleCrisp>Crisp</VisualTweaks_ShieldDome_StyleCrisp>
   <VisualTweaks_ShieldDome_StyleCrispTip>The analytic dome: its edge is a sharp ring that stops exactly on the intercept radius instead of smearing out like the stock texture. Outline thickness and brightness are the sliders below.</VisualTweaks_ShieldDome_StyleCrispTip>
   <VisualTweaks_ShieldDome_RidgeWidth>Outline thickness</VisualTweaks_ShieldDome_RidgeWidth>

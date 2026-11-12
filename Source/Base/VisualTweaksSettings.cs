@@ -158,12 +158,14 @@ namespace VisualTweaks
         // baseline, and this is an opt-in.
         public static bool alwaysShowShields = false;
 
-        // Replaces vanilla's shield drawing entirely (see ShieldDomePatches) with an
-        // analytic ring whose rim sits exactly on Props.radius. On by default: unlike
-        // the switch above this is not an addition to the stock look but a re-draw of
-        // it, and the point of the mod is that the drawn radius matches the one the
-        // game blocks projectiles with. Turn it off live to A/B against vanilla — the
-        // patch re-reads this every frame, so no restart and no save reload.
+        // Replaces vanilla's shield drawing entirely (see ShieldDomePatches and
+        // PersonalShieldPatches): interceptor domes and personal shield belts both
+        // get the analytic surface. On by default: unlike the switch above this is
+        // not an addition to the stock look but a re-draw of it, and the point of the
+        // mod is that the drawn radius matches the one the game blocks projectiles
+        // with. A belt has no radius of its own, so it borrows vanilla's energy-driven
+        // bubble size instead. Turn it off live to A/B against vanilla — both patches
+        // re-read this every frame, so no restart and no save reload.
         public static bool crispShieldDome = true;
 
         // Which surface the replacement dome draws. Crisp is the original analytic

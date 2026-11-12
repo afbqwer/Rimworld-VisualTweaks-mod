@@ -125,7 +125,7 @@
 
   <VisualTweaks_ShieldDome_Group>护盾绘制</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldDome_Enable>替换护盾绘制</VisualTweaks_ShieldDome_Enable>
-  <VisualTweaks_ShieldDome_EnableTip>用自定义着色器重画护盾，可在下面选择清晰、六边形或类原版三种样式。关闭即刻恢复原版绘制，可直接对比。</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_EnableTip>用自定义着色器重画护盾，包括投射器穹顶和个人护盾腰带，可在下面选择清晰、六边形或类原版三种样式。关闭即刻恢复原版绘制，可直接对比。</VisualTweaks_ShieldDome_EnableTip>
   <VisualTweaks_ShieldDome_StyleCrisp>清晰</VisualTweaks_ShieldDome_StyleCrisp>
   <VisualTweaks_ShieldDome_StyleCrispTip>自定义解析式护盾：边缘是一道锐利的环，严格停在拦截判定半径上，不会像原版那样糊成一片。轮廓粗细与亮度就是下面的滑条。</VisualTweaks_ShieldDome_StyleCrispTip>
   <VisualTweaks_ShieldDome_RidgeWidth>轮廓粗细</VisualTweaks_ShieldDome_RidgeWidth>
