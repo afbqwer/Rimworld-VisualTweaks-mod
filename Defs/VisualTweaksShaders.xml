@@ -229,6 +229,18 @@
       <cullMode>None</cullMode>
       <blendMode>Additive</blendMode>
       <renderQueue>3151</renderQueue>
+      <!--
+        The optional hexagonal style samples a baked spherical Voronoi map at
+        binding 1. It is generated in C# (ShieldHexMap) rather than shipped as an
+        asset, and Clamp is required because the disc edges are outside the
+        hemisphere projection, not a tile seam.
+      -->
+      <textureWrapOverrides>
+        <li>
+          <key>_HexMap</key>
+          <value>Clamp</value>
+        </li>
+      </textureWrapOverrides>
     </shaderProgram>
   </ShaderDef>
 </Defs>

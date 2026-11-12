@@ -63,6 +63,22 @@
 //
 // Everything is still clipped by `edge` at r == 1: even while falling apart the
 // shield never paints outside the circle it blocks.
+//
+// ---- the hexagonal shell (second style) ----------------------------------
+//
+// A hexagon grid in screen space is a flat honeycomb pasted onto a circle; the
+// cells do not shrink near the silhouette, so it never reads as a dome. The
+// alternative treats the disc as the orthographic projection of a hemisphere and
+// lays a *spherical* tiling on it. Euler's formula makes twelve pentagons
+// mandatory on any closed hexagon tiling — they are where the curvature goes, and
+// ShieldHexMap bakes exactly that lattice (a subdivided icosahedron's Voronoi
+// diagram) into one texture. Per fragment the cost is one texture sample plus a
+// handful of arithmetic, instead of 42..162 dot products.
+//
+// Each cell is shaded flat from its own face normal, so the shell reads as panels
+// rather than as a smooth sphere with a net drawn over it. The silhouette ridge is
+// still the same DomeColor() term, so this style keeps the crisp edge, the exact
+// intercept radius and the dissolve for free.
 
 layout(location = 0) in vec2 vWorld;
 
@@ -76,8 +92,13 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
                    //                                          // dissolve: break origin x/z, progress, seed
     vec4 _Params4; // @default = vec4(0.0, 0.0, 0.0, 0.0)      // centre x/z in world cells, unused
     vec4 _Params5; // @default = vec4(2.8, 1.2, 5.0, 0.3)      // ridge half px, core sigma px, glow exponent, drift
+    vec4 _Params6; // @default = vec4(0.0, 0.22, 0.45, 1.6)    // hex style, face strength, line strength, line px
     vec4 _Color;   // @color @default = vec4(1.0, 1.0, 1.0, 1.0)
 } u;
+
+// RGB = winning site's direction (the flat face normal, constant inside a cell).
+// A   = 0.5 +/- 0.5 * edgeDistance, the sign marking the twelve pentagon cells.
+layout(set = 2, binding = 1) uniform sampler2D _HexMap; // @default = black
 
 // Deterministic value noise. No texture, so the pattern cannot be stretched or
 // tiled by a different plane10 UV orientation, and the seed is a uniform the CPU
@@ -127,10 +148,57 @@ float Fbm(vec2 p)
     return v / 0.9375;
 }
 
+// The spherical cell pattern. Returns (flat face shade, cell line, is-pentagon).
+//
+// Nothing here is a grid in screen space: the sampled lattice was projected onto
+// the hemisphere before it was baked, so cells naturally compress and bend as they
+// approach the silhouette. That compression is the pseudo-3D cue; the flat per-face
+// shading is the other half.
+vec3 HexSurface(vec2 p, float t)
+{
+    vec4 baked = texture(_HexMap, p * 0.5 + 0.5);
+
+    // Constant inside a cell, so it doubles as a face normal and a per-cell id.
+    vec3 face = baked.rgb * 2.0 - 1.0;
+
+    // 0 on a cell boundary, rising toward the cell centre. The sign of the offset
+    // is the pentagon flag, packed into one channel to keep this a single sample.
+    float signedEdge = baked.a - 0.5;
+    float edgeDistance = abs(signedEdge) * 2.0;
+    float pentagon = step(signedEdge, -1e-5);
+
+    // Surface normal of the hemisphere this disc is standing in for. nz -> 0 at
+    // the silhouette, exactly where a real dome turns away from the viewer.
+    float nz = sqrt(max(1.0 - dot(p, p), 0.0));
+
+    vec3 light = normalize(vec3(
+        0.42 * cos(t * 0.13),
+        0.42 * sin(t * 0.17),
+        0.80));
+    float diffuse = clamp(dot(face, light), 0.0, 1.0);
+    float fresnel = 1.0 - nz;
+
+    // A little per-cell variation stops the panels looking like a printed mesh.
+    // Hash21 is the float32-safe one above; face.xy stays inside [-1, 1].
+    float jitter = Hash21(face.xy * 37.0) - 0.5;
+    float shade = 0.30 + 0.55 * diffuse + 0.35 * fresnel + 0.10 * jitter;
+
+    // One-pixel cell lines at any zoom. fwidth() is taken from the sampled field,
+    // and _Params6.w is a width in *pixels*, not a fraction of a cell — the same
+    // rule the silhouette ridge uses. Because the derivative follows e's local
+    // slope, a baked field whose scale varies slightly between cells still draws
+    // lines of equal thickness.
+    float de = max(fwidth(edgeDistance), 1e-4);
+    float line = 1.0 - smoothstep(0.0, de * u._Params6.w, edgeDistance);
+
+    return vec3(clamp(shade, 0.0, 1.5), line, pentagon);
+}
+
 // The intact dome, as (tint.rgb, unmultiplied alpha). Shared by mode 0 and mode 2
 // so a dissolving shield is literally the same surface with pieces removed, not a
-// second effect that happens to look similar.
-vec4 DomeColor(float r, float aa, float ang, float t)
+// second effect that happens to look similar. The style switch lives here for the
+// same reason: breaking a hexagonal shell tears the same panels it was showing.
+vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
 {
     float rc = clamp(r, 0.0, 1.0);
 
@@ -152,12 +220,31 @@ vec4 DomeColor(float r, float aa, float ang, float t)
     float ridgeTerm = u._Params2.x * ridge;
     float coreTerm = u._Params2.y * core * coreDrift;
     float glowTerm = u._Params2.z * glow;
-    float bodyTerm = u._Params2.w * body;
+
+    // Only the interior fill changes between the two styles. Ridge, core and
+    // fresnel glow are identical, so the silhouette stays as crisp and as exactly
+    // on the intercept radius whichever style is chosen.
+    float hexLine = 0.0;
+    float bodyTerm;
+    if (u._Params6.x > 0.5)
+    {
+        vec3 hex = HexSurface(p, t);
+        float faceTerm = u._Params6.y * hex.x * (1.0 + 0.18 * hex.z);
+        hexLine = u._Params6.z * hex.y * (1.0 + 0.45 * hex.z);
+        bodyTerm = faceTerm + hexLine;
+    }
+    else
+    {
+        bodyTerm = u._Params2.w * body;
+    }
+
     float sum = ridgeTerm + coreTerm + glowTerm + bodyTerm;
 
     vec3 halo = u._Color.rgb;
     vec3 coreTint = mix(halo, vec3(1.0), 0.65);
-    vec3 tint = (halo * (ridgeTerm + glowTerm + bodyTerm) + coreTint * coreTerm)
+    vec3 lineTint = mix(halo, vec3(1.0), 0.55);
+    vec3 tint = (halo * (ridgeTerm + glowTerm + max(bodyTerm - hexLine, 0.0))
+            + coreTint * coreTerm + lineTint * hexLine)
         / max(sum, 1e-4);
 
     return vec4(tint, sum * drift);
@@ -172,6 +259,11 @@ void main()
     // around, and the reason the quad is scaled to 2 * radius rather than to
     // vanilla's 2 * radius * 1.1601562 texture-margin factor.
     float r = length(d) / radius;
+
+    // Normalised disc coordinates, used by both the hexagonal style and the
+    // dissolve. Radius-relative, so a 2-cell bubble and a 25-cell gravship dome
+    // show the same number of panels and break into the same number of pieces.
+    vec2 p = d / radius;
 
     // Unit direction from the centre. Guarded because the pixel under the exact
     // centre has none, and atan(0, 0) is undefined — the drift below would
@@ -195,7 +287,7 @@ void main()
     if (mode < 0.5)
     {
         // ---- intact dome --------------------------------------------------
-        vec4 dome = DomeColor(r, aa, ang, t);
+        vec4 dome = DomeColor(r, p, aa, ang, t);
         outColor = vec4(dome.rgb, dome.a * u._Params.y * edge);
     }
     else if (mode < 1.5)
@@ -237,11 +329,6 @@ void main()
         float progress = clamp(u._Params3.z, 0.0, 1.0);
         float seed = u._Params3.w;
 
-        // Normalised disc coordinates. Radius-relative, so the number of pieces
-        // a shield breaks into is a design constant rather than a side effect of
-        // how big the building happens to be.
-        vec2 p = d / radius;
-
         // Tear front: distance from the point that failed, perturbed by
         // low-frequency noise so it splits into fingers instead of sweeping
         // across as a clean circle.
@@ -274,7 +361,7 @@ void main()
             (1.0 - smoothstep(0.0, 0.26, field - threshold)) * remaining;
         float crack = crackRidge * nearFront * smoothstep(0.0, 0.06, progress);
 
-        vec4 dome = DomeColor(r, aa, ang, t);
+        vec4 dome = DomeColor(r, p, aa, ang, t);
         float baseA = dome.a * remaining;
         float frontA = front * 0.75;
         float crackA = crack * 0.30;

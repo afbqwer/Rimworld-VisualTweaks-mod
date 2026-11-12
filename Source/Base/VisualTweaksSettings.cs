@@ -166,6 +166,27 @@ namespace VisualTweaks
         // patch re-reads this every frame, so no restart and no save reload.
         public static bool crispShieldDome = true;
 
+        // Second replacement style: a spherical hex/pentagon shell. A separate
+        // bool (rather than turning crispShieldDome into an enum) so existing
+        // saves keep their value and "stock look" stays one checkbox away. Off by
+        // default; every value below is read live, like the ridge sliders.
+        public static bool hexShieldDome = false;
+
+        public const float MinShieldHexFace = 0f;
+        public const float MaxShieldHexFace = 0.6f;
+        public static float shieldHexFaceStrength = 0.22f;
+
+        public const float MinShieldHexLine = 0f;
+        public const float MaxShieldHexLine = 1f;
+        public static float shieldHexLineStrength = 0.45f;
+
+        // Icosahedron subdivision k: 42 / 92 / 162 cells over the whole sphere
+        // (12 of them pentagons, always). Quantised to an integer by the renderer;
+        // changing it re-bakes one shared texture, it costs nothing per frame.
+        public const float MinShieldHexDensity = 2f;
+        public const float MaxShieldHexDensity = 4f;
+        public static float shieldHexDensity = 3f;
+
         // The four dome/flare dials that are worth a slider. Everything else about the
         // shield is derived rather than chosen: line weights scale with zoom through a
         // screen-space derivative, and the colour comes from the def so modded shields
@@ -448,6 +469,16 @@ namespace VisualTweaks
                 1f);
             Scribe_Values.Look(ref alwaysShowShields, "alwaysShowShields", false);
             Scribe_Values.Look(ref crispShieldDome, "crispShieldDome", true);
+            Scribe_Values.Look(ref hexShieldDome, "hexShieldDome", false);
+            Scribe_Values.Look(
+                ref shieldHexFaceStrength,
+                "shieldHexFaceStrength",
+                0.22f);
+            Scribe_Values.Look(
+                ref shieldHexLineStrength,
+                "shieldHexLineStrength",
+                0.45f);
+            Scribe_Values.Look(ref shieldHexDensity, "shieldHexDensity", 3f);
             Scribe_Values.Look(ref shieldRidgeWidth, "shieldRidgeWidth", 3.6f);
             Scribe_Values.Look(ref shieldRidgeBrightness, "shieldRidgeBrightness", 0.52f);
             Scribe_Values.Look(ref shieldFlareAlpha, "shieldFlareAlpha", 0.30f);
@@ -566,6 +597,18 @@ namespace VisualTweaks
                 shieldFlareSizeScale,
                 MinShieldFlareSize,
                 MaxShieldFlareSize);
+            shieldHexFaceStrength = Mathf.Clamp(
+                shieldHexFaceStrength,
+                MinShieldHexFace,
+                MaxShieldHexFace);
+            shieldHexLineStrength = Mathf.Clamp(
+                shieldHexLineStrength,
+                MinShieldHexLine,
+                MaxShieldHexLine);
+            shieldHexDensity = Mathf.Clamp(
+                shieldHexDensity,
+                MinShieldHexDensity,
+                MaxShieldHexDensity);
             shieldDissolveTicks = Mathf.Clamp(
                 shieldDissolveTicks,
                 MinShieldDissolveTicks,
@@ -706,6 +749,10 @@ namespace VisualTweaks
             shieldRippleDamageScale = 1f;
             alwaysShowShields = false;
             crispShieldDome = true;
+            hexShieldDome = false;
+            shieldHexFaceStrength = 0.22f;
+            shieldHexLineStrength = 0.45f;
+            shieldHexDensity = 3f;
             shieldRidgeWidth = 3.6f;
             shieldRidgeBrightness = 0.52f;
             shieldFlareAlpha = 0.30f;

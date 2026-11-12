@@ -67,6 +67,13 @@ namespace VisualTweaks
         /// <summary>Angular brightness drift on the rim. 0 freezes it.</summary>
         private const float DriftWeight = 0.30f;
 
+        /// <summary>
+        /// Width of a hexagonal cell line in screen pixels, for the alternate style.
+        /// The shader multiplies it by fwidth(edgeDistance), so this stays the same
+        /// at every zoom and on every shield size — the same rule the ridge uses.
+        /// </summary>
+        private const float HexLinePixels = 1.6f;
+
         // ------------------------------------------------------------------
         // Flare look.
         // ------------------------------------------------------------------
@@ -119,6 +126,7 @@ namespace VisualTweaks
         private static readonly int Params3Id = Shader.PropertyToID("_Params3");
         private static readonly int Params4Id = Shader.PropertyToID("_Params4");
         private static readonly int Params5Id = Shader.PropertyToID("_Params5");
+        private static readonly int Params6Id = Shader.PropertyToID("_Params6");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         // Reused every frame; DrawPropertyBlock wraps these arrays without allocating,
@@ -129,10 +137,13 @@ namespace VisualTweaks
         private static Material? material;
         private static bool materialFailed;
 
-        // What the material currently carries, so a slider drag uploads two vectors
-        // instead of two vectors per shield per frame.
+        // What the material currently carries, so a slider drag uploads a few
+        // vectors instead of a few vectors per shield per frame.
         private static float appliedRidgeWidth = float.NaN;
         private static float appliedRidgeBrightness = float.NaN;
+        private static float appliedHexStyle = float.NaN;
+        private static float appliedHexFace = float.NaN;
+        private static float appliedHexLine = float.NaN;
 
         /// <summary>
         /// Returns false when nothing was drawn, so the caller can hand the frame back
@@ -420,14 +431,39 @@ namespace VisualTweaks
         {
             float width = VisualTweaksSettings.shieldRidgeWidth;
             float brightness = VisualTweaksSettings.shieldRidgeBrightness;
+            float face = VisualTweaksSettings.shieldHexFaceStrength;
+            float line = VisualTweaksSettings.shieldHexLineStrength;
 
-            if (width == appliedRidgeWidth && brightness == appliedRidgeBrightness)
+            // The spherical lattice is baked once, lazily, and shared by every
+            // shield. Bind is cheap to call every frame: it only re-bakes when the
+            // cell density changes and only calls SetTexture for a new material.
+            bool wantHex = VisualTweaksSettings.hexShieldDome;
+            if (wantHex)
+            {
+                ShieldHexMap.Bind(
+                    mat,
+                    Mathf.RoundToInt(VisualTweaksSettings.shieldHexDensity));
+            }
+
+            // A failed bake must not produce a black disc. Falling back to the
+            // smooth dome keeps the shield readable and matches the shader bridge's
+            // "lose the effect, never the feature" rule.
+            float style = wantHex && ShieldHexMap.Available ? 1f : 0f;
+
+            if (width == appliedRidgeWidth
+                && brightness == appliedRidgeBrightness
+                && style == appliedHexStyle
+                && face == appliedHexFace
+                && line == appliedHexLine)
             {
                 return;
             }
 
             appliedRidgeWidth = width;
             appliedRidgeBrightness = brightness;
+            appliedHexStyle = style;
+            appliedHexFace = face;
+            appliedHexLine = line;
 
             // _Params2 = (ridge, core, glow, body) weights.
             mat.SetVector(
@@ -438,6 +474,11 @@ namespace VisualTweaks
             mat.SetVector(
                 Params5Id,
                 new Vector4(width, CoreSigmaPixels, GlowExponent, DriftWeight));
+
+            // _Params6 = (hex style, face strength, line strength, line px).
+            mat.SetVector(
+                Params6Id,
+                new Vector4(style, face, line, HexLinePixels));
         }
 
         private static Material? EnsureMaterial()
@@ -468,6 +509,9 @@ namespace VisualTweaks
                 // defaults these fields were initialised with.
                 appliedRidgeWidth = float.NaN;
                 appliedRidgeBrightness = float.NaN;
+                appliedHexStyle = float.NaN;
+                appliedHexFace = float.NaN;
+                appliedHexLine = float.NaN;
                 ApplyLook(created);
             }
             catch (Exception ex)

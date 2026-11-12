@@ -588,6 +588,37 @@ namespace VisualTweaks
                 ref VisualTweaksSettings.crispShieldDome,
                 "VisualTweaks_ShieldDome_EnableTip".Translate());
 
+            // Second replacement style. A sub-choice of the custom dome, not a
+            // third drawing path: the same quad, the same material, one extra
+            // texture sample. Turning the toggle above off still returns to stock.
+            listing.Gap(6f);
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_Hex".Translate(),
+                ref VisualTweaksSettings.hexShieldDome,
+                "VisualTweaks_ShieldDome_HexTip".Translate());
+            VisualTweaksSettings.shieldHexFaceStrength = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_HexFace".Translate(),
+                VisualTweaksSettings.shieldHexFaceStrength,
+                VisualTweaksSettings.MinShieldHexFace,
+                VisualTweaksSettings.MaxShieldHexFace,
+                "VisualTweaks_ShieldDome_HexFaceTip".Translate());
+            VisualTweaksSettings.shieldHexLineStrength = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_HexLine".Translate(),
+                VisualTweaksSettings.shieldHexLineStrength,
+                VisualTweaksSettings.MinShieldHexLine,
+                VisualTweaksSettings.MaxShieldHexLine,
+                "VisualTweaks_ShieldDome_HexLineTip".Translate());
+            VisualTweaksSettings.shieldHexDensity = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_HexDensity".Translate(),
+                VisualTweaksSettings.shieldHexDensity,
+                VisualTweaksSettings.MinShieldHexDensity,
+                VisualTweaksSettings.MaxShieldHexDensity,
+                "VisualTweaks_ShieldDome_HexDensityTip".Translate(),
+                step: 1f);
+
             // These read every frame, so a slider drag is visible while the game is
             // paused on a selected shield — the same reason the toggle above is live.
             VisualTweaksSettings.shieldRidgeWidth = SettingsLayout.Slider(
