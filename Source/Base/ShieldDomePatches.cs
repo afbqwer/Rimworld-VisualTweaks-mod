@@ -154,11 +154,14 @@ namespace VisualTweaks
 
         private static void BeginIfEnabled(CompProjectileInterceptor comp)
         {
-            // No dissolve when the custom dome is not installed (shader failed, setting
-            // off, screenshot mode): the stock look has no surface to tear apart.
+            // No custom break when the dome is not installed (shader failed, setting
+            // off, screenshot mode): the stock look has no surface to tear apart. The
+            // per-surface choice can also be Vanilla, which means do not start the
+            // animation at all and leave the one-frame disappearance alone.
             if (comp == null
                 || !ShieldDomeBridge.Active
-                || !VisualTweaksSettings.shieldDissolveEnabled)
+                || VisualTweaksSettings.CurrentShieldBreakStyle
+                    == VisualTweaksSettings.ShieldBreakVanilla)
             {
                 return;
             }

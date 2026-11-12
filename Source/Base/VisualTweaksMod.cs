@@ -458,6 +458,53 @@ namespace VisualTweaks
                 };
         }
 
+        // Break animation order. The shell gains its panel-loss option; Vanilla is
+        // still listed first so the custom animation can be turned off.
+        private static readonly int[] StandardBreakOrder =
+        {
+            VisualTweaksSettings.ShieldBreakVanilla,
+            VisualTweaksSettings.ShieldBreakDissolve
+        };
+
+        private static readonly int[] HexBreakOrder =
+        {
+            VisualTweaksSettings.ShieldBreakVanilla,
+            VisualTweaksSettings.ShieldBreakDissolve,
+            VisualTweaksSettings.ShieldBreakHexDissipate
+        };
+
+        private static string[] BreakLabels(bool hexSurface)
+        {
+            return hexSurface
+                ? new string[]
+                {
+                    "VisualTweaks_ShieldDome_BreakVanilla".Translate(),
+                    "VisualTweaks_ShieldDome_BreakDissolve".Translate(),
+                    "VisualTweaks_ShieldDome_BreakHexDissipate".Translate()
+                }
+                : new string[]
+                {
+                    "VisualTweaks_ShieldDome_BreakVanilla".Translate(),
+                    "VisualTweaks_ShieldDome_BreakDissolve".Translate()
+                };
+        }
+
+        private static string[] BreakTips(bool hexSurface)
+        {
+            return hexSurface
+                ? new string[]
+                {
+                    "VisualTweaks_ShieldDome_BreakVanillaTip".Translate(),
+                    "VisualTweaks_ShieldDome_BreakDissolveTip".Translate(),
+                    "VisualTweaks_ShieldDome_BreakHexDissipateTip".Translate()
+                }
+                : new string[]
+                {
+                    "VisualTweaks_ShieldDome_BreakVanillaTip".Translate(),
+                    "VisualTweaks_ShieldDome_BreakDissolveTip".Translate()
+                };
+        }
+
         private static void DoGasTab(Listing_Standard listing)
         {
             SettingsLayout.Header(listing, "VisualTweaks_Gas_GroupSwitch".Translate());
@@ -883,9 +930,9 @@ namespace VisualTweaks
             }
             else
             {
-                // The flare and the brightened sector share one light budget: both
-                // use the same angular width and the same damage response, so these
-                // three dials apply whichever of the two is selected.
+                // The flare and the brightened sector share strength and the damage
+                // response. Size belongs to the flare (its width follows damage);
+                // the brighten sector has a fixed, separately adjustable angle.
                 VisualTweaksSettings.shieldFlareAlpha = SettingsLayout.Slider(
                     listing,
                     "VisualTweaks_ShieldDome_FlareAlpha".Translate(),
@@ -900,37 +947,100 @@ namespace VisualTweaks
                     0f,
                     1f,
                     "VisualTweaks_ShieldDome_FlareDamageTip".Translate());
-                VisualTweaksSettings.shieldFlareSizeScale = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_FlareSize".Translate(),
-                    VisualTweaksSettings.shieldFlareSizeScale,
-                    VisualTweaksSettings.MinShieldFlareSize,
-                    VisualTweaksSettings.MaxShieldFlareSize,
-                    "VisualTweaks_ShieldDome_FlareSizeTip".Translate());
+
+                if (VisualTweaksSettings.CurrentShieldImpactStyle
+                    == VisualTweaksSettings.ShieldImpactFlare)
+                {
+                    VisualTweaksSettings.shieldFlareSizeScale = SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_FlareSize".Translate(),
+                        VisualTweaksSettings.shieldFlareSizeScale,
+                        VisualTweaksSettings.MinShieldFlareSize,
+                        VisualTweaksSettings.MaxShieldFlareSize,
+                        "VisualTweaks_ShieldDome_FlareSizeTip".Translate());
+                }
+                else
+                {
+                    // The angle is the brighten reaction's own control. Vanilla's
+                    // stock value is 30 degrees total; it is adjustable because the
+                    // reaction is also available on the two custom surfaces.
+                    VisualTweaksSettings.shieldBrightenAngle = SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_BrightenAngle".Translate(),
+                        VisualTweaksSettings.shieldBrightenAngle,
+                        VisualTweaksSettings.MinShieldBrightenAngle,
+                        VisualTweaksSettings.MaxShieldBrightenAngle,
+                        "VisualTweaks_ShieldDome_BrightenAngleTip".Translate(),
+                        step: 1f);
+                }
             }
 
-            // A broken shield used to disappear in one frame. This one tears itself
-            // apart over a short animation; the stock flash and sound still play.
-            listing.Gap(6f);
-            listing.CheckboxLabeled(
-                "VisualTweaks_ShieldDome_Dissolve".Translate(),
-                ref VisualTweaksSettings.shieldDissolveEnabled,
-                "VisualTweaks_ShieldDome_DissolveTip".Translate());
-            VisualTweaksSettings.shieldDissolveTicks = SettingsLayout.Slider(
+            // The break animation is per surface for the same reason: a shell loses
+            // panels, a continuous surface tears, and Vanilla means do not animate.
+            SettingsLayout.SubHeader(
                 listing,
-                "VisualTweaks_ShieldDome_DissolveTime".Translate(),
-                VisualTweaksSettings.shieldDissolveTicks,
-                VisualTweaksSettings.MinShieldDissolveTicks,
-                VisualTweaksSettings.MaxShieldDissolveTicks,
-                "VisualTweaks_ShieldDome_DissolveTimeTip".Translate(),
-                step: 1f);
-            VisualTweaksSettings.shieldDissolveBrightness = SettingsLayout.Slider(
+                "VisualTweaks_ShieldDome_BreakGroup".Translate());
+
+            int[] breakOrder;
+            int currentBreak;
+            if (hexSurface)
+            {
+                breakOrder = HexBreakOrder;
+                currentBreak = VisualTweaksSettings.hexShieldBreakStyle;
+            }
+            else if (VisualTweaksSettings.VanillaShieldDome)
+            {
+                breakOrder = StandardBreakOrder;
+                currentBreak = VisualTweaksSettings.vanillaShieldBreakStyle;
+            }
+            else
+            {
+                breakOrder = StandardBreakOrder;
+                currentBreak = VisualTweaksSettings.crispShieldBreakStyle;
+            }
+
+            int breakIndex = ImpactIndexOf(breakOrder, currentBreak);
+            int pickedBreak = SettingsLayout.RadioRow(
                 listing,
-                "VisualTweaks_ShieldDome_DissolveBrightness".Translate(),
-                VisualTweaksSettings.shieldDissolveBrightness,
-                VisualTweaksSettings.MinShieldDissolveBrightness,
-                VisualTweaksSettings.MaxShieldDissolveBrightness,
-                "VisualTweaks_ShieldDome_DissolveBrightnessTip".Translate());
+                BreakLabels(hexSurface),
+                breakIndex,
+                BreakTips(hexSurface));
+            if (pickedBreak != breakIndex)
+            {
+                int pickedValue = breakOrder[pickedBreak];
+                if (hexSurface)
+                {
+                    VisualTweaksSettings.hexShieldBreakStyle = pickedValue;
+                }
+                else if (VisualTweaksSettings.VanillaShieldDome)
+                {
+                    VisualTweaksSettings.vanillaShieldBreakStyle = pickedValue;
+                }
+                else
+                {
+                    VisualTweaksSettings.crispShieldBreakStyle = pickedValue;
+                }
+            }
+
+            if (VisualTweaksSettings.CurrentShieldBreakStyle
+                != VisualTweaksSettings.ShieldBreakVanilla)
+            {
+                VisualTweaksSettings.shieldDissolveTicks = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_DissolveTime".Translate(),
+                    VisualTweaksSettings.shieldDissolveTicks,
+                    VisualTweaksSettings.MinShieldDissolveTicks,
+                    VisualTweaksSettings.MaxShieldDissolveTicks,
+                    "VisualTweaks_ShieldDome_DissolveTimeTip".Translate(),
+                    step: 1f);
+                VisualTweaksSettings.shieldDissolveBrightness = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_DissolveBrightness".Translate(),
+                    VisualTweaksSettings.shieldDissolveBrightness,
+                    VisualTweaksSettings.MinShieldDissolveBrightness,
+                    VisualTweaksSettings.MaxShieldDissolveBrightness,
+                    "VisualTweaks_ShieldDome_DissolveBrightnessTip".Translate());
+            }
 
             SettingsLayout.Finish(listing);
         }

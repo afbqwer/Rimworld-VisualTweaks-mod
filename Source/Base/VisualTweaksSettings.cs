@@ -209,6 +209,32 @@ namespace VisualTweaks
             : shieldDomeStyle == ShieldDomeStyleVanilla ? vanillaShieldImpactStyle
             : crispShieldImpactStyle;
 
+        // Vanilla's brighten cone is 30 degrees total. It used to be a constant in
+        // the renderer; it is a slider now because 30 is only the stock value, and
+        // the reaction is also available on the two custom surfaces. The angle is
+        // the full width, not the half-angle.
+        public const float MinShieldBrightenAngle = 5f;
+        public const float MaxShieldBrightenAngle = 90f;
+        public static float shieldBrightenAngle = 30f;
+
+        // How a shield breaks. Independent of the surface, with per-style choices:
+        // Vanilla leaves the one-frame disappearance alone, Dissolve is the
+        // continuous noise tear, HexDissipate loses whole panels on the shell. Each
+        // surface keeps its own choice for the same reason the hit animations do.
+        public const int ShieldBreakVanilla = 0;
+        public const int ShieldBreakDissolve = 1;
+        public const int ShieldBreakHexDissipate = 2;
+
+        public static int crispShieldBreakStyle = ShieldBreakDissolve;
+        public static int vanillaShieldBreakStyle = ShieldBreakDissolve;
+        public static int hexShieldBreakStyle = ShieldBreakHexDissipate;
+
+        /// <summary>The break animation that belongs to the selected dome style.</summary>
+        public static int CurrentShieldBreakStyle =>
+            shieldDomeStyle == ShieldDomeStyleHex ? hexShieldBreakStyle
+            : shieldDomeStyle == ShieldDomeStyleVanilla ? vanillaShieldBreakStyle
+            : crispShieldBreakStyle;
+
         public const float MinShieldHexFace = 0f;
         public const float MaxShieldHexFace = 0.6f;
         public static float shieldHexFaceStrength = 0.22f;
@@ -284,9 +310,10 @@ namespace VisualTweaks
         public const float MaxShieldFlareSize = 2f;
         public static float shieldFlareSizeScale = 1f;
 
-        // The break animation. It belongs with the shield drawing, not with the
-        // ripples: it replaces the frame on which the dome used to simply disappear.
-        // Vanilla's Shield_Break effecter (flash + sound) still plays underneath.
+        // Legacy save value: the old global dissolve switch. It is only read during
+        // ExposeData migration now; the per-style break choices above decide what
+        // actually plays. Vanilla's Shield_Break effecter (flash + sound) always
+        // plays underneath either way.
         public static bool shieldDissolveEnabled = true;
 
         // In ticks. 60 ticks is one in-game second at normal speed; 90 gives the tear
@@ -560,6 +587,40 @@ namespace VisualTweaks
                 ref hexShieldImpactStyle,
                 "hexShieldImpactStyle",
                 ShieldImpactHexWave);
+            Scribe_Values.Look(ref shieldBrightenAngle, "shieldBrightenAngle", 30f);
+
+            // The old global switch decides the migrated break choice: saves that had
+            // it off start with Vanilla, saves that had it on keep the animation each
+            // surface used before (continuous for crisp/stock, panels for hex). After
+            // this read, only the per-style fields matter at runtime.
+            Scribe_Values.Look(
+                ref shieldDissolveEnabled,
+                "shieldDissolveEnabled",
+                true);
+            Scribe_Values.Look(ref crispShieldBreakStyle, "crispShieldBreakStyle", -1);
+            Scribe_Values.Look(ref vanillaShieldBreakStyle, "vanillaShieldBreakStyle", -1);
+            Scribe_Values.Look(ref hexShieldBreakStyle, "hexShieldBreakStyle", -1);
+
+            if (crispShieldBreakStyle < 0)
+            {
+                crispShieldBreakStyle = shieldDissolveEnabled
+                    ? ShieldBreakDissolve
+                    : ShieldBreakVanilla;
+            }
+
+            if (vanillaShieldBreakStyle < 0)
+            {
+                vanillaShieldBreakStyle = shieldDissolveEnabled
+                    ? ShieldBreakDissolve
+                    : ShieldBreakVanilla;
+            }
+
+            if (hexShieldBreakStyle < 0)
+            {
+                hexShieldBreakStyle = shieldDissolveEnabled
+                    ? ShieldBreakHexDissipate
+                    : ShieldBreakVanilla;
+            }
 
             Scribe_Values.Look(
                 ref shieldHexFaceStrength,
@@ -590,10 +651,6 @@ namespace VisualTweaks
                 "shieldFlareDamageInfluence",
                 0.5f);
             Scribe_Values.Look(ref shieldFlareSizeScale, "shieldFlareSizeScale", 1f);
-            Scribe_Values.Look(
-                ref shieldDissolveEnabled,
-                "shieldDissolveEnabled",
-                true);
             Scribe_Values.Look(ref shieldDissolveTicks, "shieldDissolveTicks", 90f);
             Scribe_Values.Look(
                 ref shieldDissolveBrightness,
@@ -746,6 +803,33 @@ namespace VisualTweaks
                 hexShieldImpactStyle = ShieldImpactHexWave;
             }
 
+            shieldBrightenAngle = Mathf.Round(Mathf.Clamp(
+                shieldBrightenAngle,
+                MinShieldBrightenAngle,
+                MaxShieldBrightenAngle));
+
+            // Same rule for the break choices. The shell additionally allows its own
+            // panel-loss animation; the other surfaces only know vanilla or the
+            // continuous tear.
+            if (crispShieldBreakStyle != ShieldBreakVanilla
+                && crispShieldBreakStyle != ShieldBreakDissolve)
+            {
+                crispShieldBreakStyle = ShieldBreakDissolve;
+            }
+
+            if (vanillaShieldBreakStyle != ShieldBreakVanilla
+                && vanillaShieldBreakStyle != ShieldBreakDissolve)
+            {
+                vanillaShieldBreakStyle = ShieldBreakDissolve;
+            }
+
+            if (hexShieldBreakStyle != ShieldBreakVanilla
+                && hexShieldBreakStyle != ShieldBreakDissolve
+                && hexShieldBreakStyle != ShieldBreakHexDissipate)
+            {
+                hexShieldBreakStyle = ShieldBreakHexDissipate;
+            }
+
             shieldDissolveTicks = Mathf.Clamp(
                 shieldDissolveTicks,
                 MinShieldDissolveTicks,
@@ -891,6 +975,10 @@ namespace VisualTweaks
             crispShieldImpactStyle = ShieldImpactFlare;
             vanillaShieldImpactStyle = ShieldImpactBrighten;
             hexShieldImpactStyle = ShieldImpactHexWave;
+            shieldBrightenAngle = 30f;
+            crispShieldBreakStyle = ShieldBreakDissolve;
+            vanillaShieldBreakStyle = ShieldBreakDissolve;
+            hexShieldBreakStyle = ShieldBreakHexDissipate;
             shieldHexFaceStrength = 0.22f;
             shieldHexLineStrength = 0.75f;
             shieldHexDensity = 5f;

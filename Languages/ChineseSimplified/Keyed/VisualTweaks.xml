@@ -134,12 +134,12 @@
   <VisualTweaks_ShieldDome_RidgeBrightnessTip>外轮廓那条带的亮度。调到 0 只剩一条细热芯和内辉，轮廓会重新显得薄——要更厚请调上面的粗细。</VisualTweaks_ShieldDome_RidgeBrightnessTip>
   <VisualTweaks_ShieldDome_FlareAlpha>受击效果强度</VisualTweaks_ShieldDome_FlareAlpha>
   <VisualTweaks_ShieldDome_FlareAlphaTip>一次拦截产生的峰值亮度。清晰样式在受击方向画一道火舌；类原版样式则让扇形区域内的护盾本体变亮（和原版一样是同一层护盾，不是另一块扇形贴片）。两者共用这一项。原版锥形最高 0.82，看起来像一块实心扇形压在护盾上；这里默认只有它的三分之一。多发射击会各自画一份并叠加变亮。六边形样式有自己的「受击闪光强度」与「受击扩散范围」。</VisualTweaks_ShieldDome_FlareAlphaTip>
-  <VisualTweaks_ShieldDome_FlareSize>受击范围大小</VisualTweaks_ShieldDome_FlareSize>
-  <VisualTweaks_ShieldDome_FlareSizeTip>受击范围的整体倍率：清晰样式是火舌的角宽，类原版样式是增亮扇区的角宽。宽度本身跟随弹道伤害，但受「不超过护盾半径 45%」的上限约束：小护盾上很快就到顶（否则扇形会盖住整个穹顶），大护盾上重武器才会明显更宽。护盾涟漪是另一个功能，它的设置不会影响受击效果。</VisualTweaks_ShieldDome_FlareSizeTip>
+  <VisualTweaks_ShieldDome_FlareSize>火舌大小</VisualTweaks_ShieldDome_FlareSize>
+  <VisualTweaks_ShieldDome_FlareSizeTip>火舌角宽的整体倍率（仅火舌；增亮扇区固定 30°）。宽度本身跟随弹道伤害，但受「不超过护盾半径 45%」的上限约束：小护盾上很快就到顶（否则扇形会盖住整个穹顶），大护盾上重武器才会明显更宽。护盾涟漪是另一个功能，它的设置不会影响受击效果。</VisualTweaks_ShieldDome_FlareSizeTip>
   <VisualTweaks_ShieldDome_FlareDamage>受击伤害影响</VisualTweaks_ShieldDome_FlareDamage>
   <VisualTweaks_ShieldDome_FlareDamageTip>受击亮度跟随击中伤害的程度，两种样式共用。0 时各种武器一样亮；越大重武器越醒目。结果始终限制在 0.55–1.8 倍之间，所以电荷长枪不会糊满整个穹顶，小口径子弹也不会看不见。</VisualTweaks_ShieldDome_FlareDamageTip>
   <VisualTweaks_ShieldDome_Hex>六边形</VisualTweaks_ShieldDome_Hex>
-  <VisualTweaks_ShieldDome_HexTip>把护盾面换成球面的六边形/五边形面板：格子越靠边缘越被压扁，每一格有独立的明暗，看起来像半个球壳而不是平贴的蜂窝。球面上纯六边形铺不满，所以必然有十二个五边形——它们只是球面铺不满时的几何妥协，因此不额外着色、不强调。破裂按面板进行：面板按从受击点向外的顺序逐块熄灭。受击默认是「六边扩散」：命中点附近的面板闪白光并向外传导；也可以在下方「受击动画」改为「扇区增亮」。绘制次数不变。需要先开启上面的「替换护盾绘制」。</VisualTweaks_ShieldDome_HexTip>
+  <VisualTweaks_ShieldDome_HexTip>把护盾面换成球面的六边形/五边形面板：格子越靠边缘越被压扁，每一格有独立的明暗，看起来像半个球壳而不是平贴的蜂窝。球面上纯六边形铺不满，所以必然有十二个五边形——它们只是球面铺不满时的几何妥协，因此不额外着色、不强调。破裂默认是「六边消散」：面板按从受击点向外的顺序逐块熄灭；也可在下方「破裂动画」改为「溶解」或「原版」。受击默认是「六边扩散」：命中点附近的面板闪白光并向外传导；也可以在下方「受击动画」改为「扇区增亮」。绘制次数不变。需要先开启上面的「替换护盾绘制」。</VisualTweaks_ShieldDome_HexTip>
   <VisualTweaks_ShieldDome_StyleVanilla>类原版</VisualTweaks_ShieldDome_StyleVanilla>
   <VisualTweaks_ShieldDome_StyleVanillaTip>模仿原版护盾的柔和光晕：宽而模糊的边缘、几乎透明的内部，并且和原版一样允许辉光略微溢出拦截判定半径。完全由着色器重建，不读取、不提取游戏贴图，因此只是「类原版」而非逐像素复刻。三种样式里只有它不使用轮廓粗细与亮度滑条。</VisualTweaks_ShieldDome_StyleVanillaTip>
   <VisualTweaks_ShieldDome_VanillaNote>类原版样式把原版贴图的比例固定在着色器里：边缘宽度与内部雾气都按护盾半径缩放，因此没有像素级粗细或亮度滑条。</VisualTweaks_ShieldDome_VanillaNote>
@@ -147,9 +147,18 @@
   <VisualTweaks_ShieldDome_ImpactFlare>火舌</VisualTweaks_ShieldDome_ImpactFlare>
   <VisualTweaks_ShieldDome_ImpactFlareTip>在受击方向画一道楔形火舌，指向来袭方向。类原版样式下会在亮环外半段（约 1.0–1.05R）淡出，不会伸进外圈辉光。清晰与类原版可选。</VisualTweaks_ShieldDome_ImpactFlareTip>
   <VisualTweaks_ShieldDome_ImpactBrighten>扇区增亮</VisualTweaks_ShieldDome_ImpactBrighten>
-  <VisualTweaks_ShieldDome_ImpactBrightenTip>让受击方向的角度扇区内的护盾本体变亮（不透明度提高），外缘沿用当前护盾样式自己的轮廓。三种样式都可选；类原版默认使用它。</VisualTweaks_ShieldDome_ImpactBrightenTip>
+  <VisualTweaks_ShieldDome_ImpactBrightenTip>让受击方向的角度扇区内的护盾本体变亮（不透明度提高），越靠近圆心越弱、到约一半半径处消失；外缘收缩在亮环视觉边缘以内。扇区角度在下方的「增亮扇区角度」中调整，原版默认 30°。三种样式都可选；类原版默认使用它。</VisualTweaks_ShieldDome_ImpactBrightenTip>
   <VisualTweaks_ShieldDome_ImpactHexWave>六边扩散</VisualTweaks_ShieldDome_ImpactHexWave>
   <VisualTweaks_ShieldDome_ImpactHexWaveTip>命中点附近的面板先亮起，再沿球面六边形网格向外逐圈扩散。只有六边形样式可用，也是它的默认受击动画。</VisualTweaks_ShieldDome_ImpactHexWaveTip>
+  <VisualTweaks_ShieldDome_BrightenAngle>增亮扇区角度 (°)</VisualTweaks_ShieldDome_BrightenAngle>
+  <VisualTweaks_ShieldDome_BrightenAngleTip>增亮扇区的总角度。原版锥形为 30°；伤害只影响亮度，不改变角度。该滑条只在受击动画选择「扇区增亮」时出现。</VisualTweaks_ShieldDome_BrightenAngleTip>
+  <VisualTweaks_ShieldDome_BreakGroup>破裂动画</VisualTweaks_ShieldDome_BreakGroup>
+  <VisualTweaks_ShieldDome_BreakVanilla>原版</VisualTweaks_ShieldDome_BreakVanilla>
+  <VisualTweaks_ShieldDome_BreakVanillaTip>不播放自定义破裂动画：穹顶在一帧内消失，只保留原版的破裂闪光与音效。</VisualTweaks_ShieldDome_BreakVanillaTip>
+  <VisualTweaks_ShieldDome_BreakDissolve>溶解</VisualTweaks_ShieldDome_BreakDissolve>
+  <VisualTweaks_ShieldDome_BreakDissolveTip>连续溶解：从破裂点开始，表面沿噪声撕裂前沿逐渐被擦除，并带热边与细裂纹。</VisualTweaks_ShieldDome_BreakDissolveTip>
+  <VisualTweaks_ShieldDome_BreakHexDissipate>六边消散</VisualTweaks_ShieldDome_BreakHexDissipate>
+  <VisualTweaks_ShieldDome_BreakHexDissipateTip>六边形专属：从破裂点向外逐块失去面板，而不是把表面撕开一个软洞。</VisualTweaks_ShieldDome_BreakHexDissipateTip>
   <VisualTweaks_ShieldDome_HexFace>格面亮度</VisualTweaks_ShieldDome_HexFace>
   <VisualTweaks_ShieldDome_HexFaceTip>每一格面板的填充亮度。按格子的朝向固定明暗（平面着色），这是「球壳」而不是「光滑球上贴网格」的关键。调太高会盖住轮廓。</VisualTweaks_ShieldDome_HexFaceTip>
   <VisualTweaks_ShieldDome_HexLine>格线亮度</VisualTweaks_ShieldDome_HexLine>

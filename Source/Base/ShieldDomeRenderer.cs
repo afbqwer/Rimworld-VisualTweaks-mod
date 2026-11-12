@@ -125,6 +125,12 @@ namespace VisualTweaks
         /// </summary>
         private const float VanillaQuadMargin = 1.1601562f;
 
+        // Vanilla's ForceFieldCone is a fixed-width sector: only its alpha fades,
+        // its angular extent does not follow damage. The brighten reaction keeps
+        // that fixed width (the stock value is 30 degrees, adjustable in settings).
+        // The painted flare still uses the damage-driven width, because a wedge that
+        // has to point is a different cue.
+
         private static readonly float Altitude =
             Altitudes.AltitudeFor(AltitudeLayer.MoteOverhead);
 
@@ -229,9 +235,21 @@ namespace VisualTweaks
             // only read. Progress advances on TicksGame, so it freezes on pause and
             // speeds up with game speed like a vanilla mote.
             // ------------------------------------------------------------------
+            // The break animation is per surface now. Vanilla means "do not draw a
+            // custom break at all", which restores the one-frame disappearance;
+            // Dissolve is the continuous tear; HexDissipate is the panel loss and
+            // needs the baked lattice, so a missing texture falls back to the tear.
+            int breakStyle = VisualTweaksSettings.CurrentShieldBreakStyle;
+            bool customBreak = breakStyle
+                != VisualTweaksSettings.ShieldBreakVanilla;
+            float dissolveMode = breakStyle
+                == VisualTweaksSettings.ShieldBreakHexDissipate && HexActive
+                ? 5f
+                : 2f;
+
             ShieldDissolveLog.State? dissolve = null;
             float dissolveProgress = 0f;
-            if (VisualTweaksSettings.shieldDissolveEnabled)
+            if (customBreak)
             {
                 dissolve = ShieldDissolveLog.Progress(comp, out dissolveProgress);
             }
@@ -310,12 +328,14 @@ namespace VisualTweaks
 
                 if (dissolve != null)
                 {
-                    // Mode 2. _Params3 switches meaning from an impact's direction to
-                    // the tear's origin / progress / seed; no extra uniform is needed.
+                    // Mode 2 or 5. Both break animations are driven by the same
+                    // clock: _Params3 switches meaning from an impact's direction to
+                    // the break's origin / progress / seed, so no extra uniform is
+                    // needed for the choice between them.
                     properties[0] = DrawProperty.Vector(
                         ParamsId,
                         new NVector4(
-                            2f,
+                            dissolveMode,
                             VisualTweaksSettings.shieldDissolveBrightness,
                             time,
                             radius));
@@ -502,14 +522,23 @@ namespace VisualTweaks
                     continue;
                 }
 
-                // Width from the impact's damage, through the same curve the rim ripple
-                // uses but with the flare's own tuning and its own size slider. Resolved
-                // per impact, so a heavy hit is visibly wider than a pistol round while
-                // both stay inside the clamps.
-                float footprint = ShieldImpactFootprint.FlareCells(
-                    impacts[i].Damage,
-                    radius);
-                float cosHalfAngle = Mathf.Cos(Mathf.Atan2(footprint, radius));
+                // Brighten is vanilla's fixed cone: 30 degrees regardless of damage.
+                // The painted flare keeps the damage-driven width, resolved per impact
+                // through the same curve the rim ripple uses, so a heavy hit is visibly
+                // wider than a pistol round while both stay inside the clamps.
+                float cosHalfAngle;
+                if (brighten)
+                {
+                    cosHalfAngle = Mathf.Cos(
+                        0.5f * VisualTweaksSettings.shieldBrightenAngle * Mathf.Deg2Rad);
+                }
+                else
+                {
+                    float footprint = ShieldImpactFootprint.FlareCells(
+                        impacts[i].Damage,
+                        radius);
+                    cosHalfAngle = Mathf.Cos(Mathf.Atan2(footprint, radius));
+                }
 
                 // The stored angle is the bearing from the projectile towards the
                 // shield centre, so the flare has to look the other way to point at
