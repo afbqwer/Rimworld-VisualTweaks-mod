@@ -121,6 +121,10 @@
   <VisualTweaks_ShieldAlways_Enable>Always show shields</VisualTweaks_ShieldAlways_Enable>
   <VisualTweaks_ShieldAlways_EnableTip>Active shields stay faintly visible when not selected, so their coverage is easy to read.</VisualTweaks_ShieldAlways_EnableTip>
 
+  <VisualTweaks_ShieldDome_Group>Shield drawing</VisualTweaks_ShieldDome_Group>
+  <VisualTweaks_ShieldDome_Enable>Crisp-edged shields</VisualTweaks_ShieldDome_Enable>
+  <VisualTweaks_ShieldDome_EnableTip>Redraws shields with a custom shader: the edge becomes a sharp ring that stops exactly on the intercept radius, instead of smearing out and glowing past it like the stock texture. Turn it off to get vanilla's look back for comparison.</VisualTweaks_ShieldDome_EnableTip>
+
   <!-- Temperature: heat haze and cold mist share one page -->
   <VisualTweaks_Temp_GroupHeat>Heat</VisualTweaks_Temp_GroupHeat>
   <VisualTweaks_Temp_GroupLook>Appearance</VisualTweaks_Temp_GroupLook>

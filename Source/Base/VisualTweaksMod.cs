@@ -579,6 +579,15 @@ namespace VisualTweaks
                 ref VisualTweaksSettings.alwaysShowShields,
                 "VisualTweaks_ShieldAlways_EnableTip".Translate());
 
+            // Also not a ripple, and not an addition either: this one replaces the
+            // stock drawing, so it reads as a separate decision from "show shields
+            // that vanilla hides".
+            SettingsLayout.Header(listing, "VisualTweaks_ShieldDome_Group".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_Enable".Translate(),
+                ref VisualTweaksSettings.crispShieldDome,
+                "VisualTweaks_ShieldDome_EnableTip".Translate());
+
             SettingsLayout.Finish(listing);
         }
 

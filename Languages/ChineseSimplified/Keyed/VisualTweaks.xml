@@ -121,6 +121,10 @@
   <VisualTweaks_ShieldAlways_Enable>总是显示护盾</VisualTweaks_ShieldAlways_Enable>
   <VisualTweaks_ShieldAlways_EnableTip>运作中的护盾即使没有选中也会淡淡显示，方便看清覆盖范围。</VisualTweaks_ShieldAlways_EnableTip>
 
+  <VisualTweaks_ShieldDome_Group>护盾绘制</VisualTweaks_ShieldDome_Group>
+  <VisualTweaks_ShieldDome_Enable>清晰边缘护盾</VisualTweaks_ShieldDome_Enable>
+  <VisualTweaks_ShieldDome_EnableTip>用自定义着色器重画护盾：边缘是一道锐利的环，并且严格停在拦截判定半径上，不会像原版那样糊成一片、还在半径之外发光。关闭即刻恢复原版外观，可直接对比。</VisualTweaks_ShieldDome_EnableTip>
+
   <!-- 温度：热效应（高温空气热浪）与冷效应（低温房间寒气）共用一页 -->
   <VisualTweaks_Temp_GroupHeat>热效应</VisualTweaks_Temp_GroupHeat>
   <VisualTweaks_Temp_GroupLook>外观</VisualTweaks_Temp_GroupLook>

@@ -158,6 +158,14 @@ namespace VisualTweaks
         // baseline, and this is an opt-in.
         public static bool alwaysShowShields = false;
 
+        // Replaces vanilla's shield drawing entirely (see ShieldDomePatches) with an
+        // analytic ring whose rim sits exactly on Props.radius. On by default: unlike
+        // the switch above this is not an addition to the stock look but a re-draw of
+        // it, and the point of the mod is that the drawn radius matches the one the
+        // game blocks projectiles with. Turn it off live to A/B against vanilla — the
+        // patch re-reads this every frame, so no restart and no save reload.
+        public static bool crispShieldDome = true;
+
         // Vacuum leak airflow (Odyssey vacuum maps). Streams converge on ventilation
         // ports while air escapes; hull breaches add a short two-sided burst. The
         // intensity formula itself is state-driven, this slider only scales the look.
@@ -386,6 +394,7 @@ namespace VisualTweaks
                 "shieldRippleDamageScale",
                 1f);
             Scribe_Values.Look(ref alwaysShowShields, "alwaysShowShields", false);
+            Scribe_Values.Look(ref crispShieldDome, "crispShieldDome", true);
             Scribe_Values.Look(ref vacuumLeakEnabled, "vacuumLeakEnabled", true);
             Scribe_Values.Look(ref vacuumLeakIntensity, "vacuumLeakIntensity", 1f);
             Scribe_Values.Look(ref vacuumLeakSpeed, "vacuumLeakSpeed", 1f);
@@ -604,6 +613,7 @@ namespace VisualTweaks
             shieldRippleDuration = 0.24f;
             shieldRippleDamageScale = 1f;
             alwaysShowShields = false;
+            crispShieldDome = true;
             vacuumLeakEnabled = true;
             vacuumLeakIntensity = 1f;
             vacuumLeakSpeed = 1f;

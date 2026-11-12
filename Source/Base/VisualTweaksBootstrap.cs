@@ -16,12 +16,14 @@ namespace VisualTweaks
                 HeatHazeBridge.Initialize();
                 ColdMistBridge.Initialize();
                 VacuumLeakBridge.Initialize();
+                ShieldDomeBridge.Initialize();
 
                 Harmony harmony = new Harmony("local.visualtweaks");
                 GasFieldPatches.Apply(harmony);
                 ExplosionRipplePatches.Apply(harmony);
                 ShieldRipplePatches.Apply(harmony);
                 ShieldVisibilityPatches.Apply(harmony);
+                ShieldDomePatches.Apply(harmony);
                 VacuumBreachPatches.Apply(harmony);
 
                 VisualTweaksLog.Info("base initialized (gas field renderer "
@@ -33,7 +35,9 @@ namespace VisualTweaks
                     + ", cold mist "
                     + (ColdMistBridge.ShaderReady ? "ready" : "disabled")
                     + ", vacuum leak "
-                    + (VacuumLeakBridge.ShaderReady ? "ready" : "disabled") + ").");
+                    + (VacuumLeakBridge.ShaderReady ? "ready" : "disabled")
+                    + ", shield dome "
+                    + (ShieldDomeBridge.ShaderReady ? "ready" : "disabled") + ").");
             }
             catch (Exception ex)
             {

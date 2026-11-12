@@ -206,4 +206,29 @@
       </sceneGrab>
     </shaderProgram>
   </ShaderDef>
+
+  <!--
+    Crisp-edged projectile-interceptor shield, replacing vanilla's PostDraw.
+
+    Queue 3151 and Additive are copied verbatim from vanilla's Map/MoteGlow, which
+    is what the stock ForceField material uses. The shield therefore keeps its place
+    in the layer stack exactly — under fog of war, over the map, added rather than
+    blended — and only its shape on screen changes. Raising this above 3175 would
+    make shields glow through fog of war, which vanilla deliberately does not do.
+  -->
+  <ShaderDef>
+    <defName>VisualTweaksShieldDome</defName>
+    <shaderProgram>
+      <vertexShaderFileName>VisualTweaksShieldDome.vert.glsl</vertexShaderFileName>
+      <fragmentShaderFileName>VisualTweaksShieldDome.frag.glsl</fragmentShaderFileName>
+      <useTexture>false</useTexture>
+      <flipTextureST>false</flipTextureST>
+      <transparent>true</transparent>
+      <depthTest>true</depthTest>
+      <depthWrite>false</depthWrite>
+      <cullMode>None</cullMode>
+      <blendMode>Additive</blendMode>
+      <renderQueue>3151</renderQueue>
+    </shaderProgram>
+  </ShaderDef>
 </Defs>
