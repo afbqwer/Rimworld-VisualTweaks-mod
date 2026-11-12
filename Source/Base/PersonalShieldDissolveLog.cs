@@ -6,18 +6,22 @@ using Verse;
 namespace VisualTweaks
 {
     /// <summary>
-    /// Per-belt dissolve state, the personal-shield analogue of
+    /// Per-personal-shield dissolve state, the personal analogue of
     /// <see cref="ShieldDissolveLog"/>.
     ///
-    /// A broken belt stops drawing on the same frame it breaks: vanilla's
+    /// A broken shield stops drawing on the same frame it breaks: vanilla's
     /// <c>CompShield.Draw()</c> requires <c>ShieldState.Active</c>, and <c>Break()</c>
-    /// immediately moves the comp to Resetting. The custom break therefore has to
-    /// carry its own clock, brightness and origin, exactly like the dome's.
+    /// immediately moves the comp to Resetting. VEF's bubble shield behaves the same
+    /// way. The custom break therefore has to carry its own clock, brightness and
+    /// origin, exactly like the dome's.
     ///
-    /// Started from <c>PostPreApplyDamage</c>, which is the public method that both
-    /// break paths go through, and not from the private <c>Break()</c>: watching the
-    /// shield's state fall out of Active during that call is the same signal without
-    /// depending on a method name that vanilla is free to rename.
+    /// Started from the public damage method of each comp (vanilla's
+    /// <c>PostPreApplyDamage</c>, VEF's own), not from the private <c>Break()</c>:
+    /// watching the shield's state fall out of Active during that call is the same
+    /// signal without depending on a method name that either mod is free to rename.
+    ///
+    /// The key is the base <see cref="ThingComp"/> because vanilla belts and VEF
+    /// bubbles are different comp types feeding the same animation.
     ///
     /// Keyed through a ConditionalWeakTable so a discarded belt takes its state with
     /// it, and not scribed: a dissolve surviving a save would need its start tick
@@ -47,8 +51,8 @@ namespace VisualTweaks
             public bool SawInactive;
         }
 
-        private static readonly ConditionalWeakTable<CompShield, State> States =
-            new ConditionalWeakTable<CompShield, State>();
+        private static readonly ConditionalWeakTable<ThingComp, State> States =
+            new ConditionalWeakTable<ThingComp, State>();
 
         /// <summary>
         /// Starts (or restarts) a dissolve. The angle is the damage direction — from
@@ -56,7 +60,7 @@ namespace VisualTweaks
         /// Null means no useful bearing (a dev break, for instance); a deterministic
         /// side is chosen from the thing id instead.
         /// </summary>
-        internal static void Begin(CompShield comp, float? damageAngle)
+        internal static void Begin(ThingComp comp, float? damageAngle)
         {
             TickManager? tickManager = Find.TickManager;
             ThingWithComps? parent = comp?.parent;
@@ -104,7 +108,7 @@ namespace VisualTweaks
         /// advances on TicksGame, so the animation pauses and speeds up with the game
         /// clock like a vanilla mote.
         /// </summary>
-        internal static State? Progress(CompShield comp, out float progress)
+        internal static State? Progress(ThingComp comp, out float progress)
         {
             progress = 0f;
             TickManager? tickManager = Find.TickManager;
@@ -128,7 +132,7 @@ namespace VisualTweaks
         }
 
         /// <summary>Ends a dissolve early, when the belt is back before it finishes.</summary>
-        internal static void Cancel(CompShield comp)
+        internal static void Cancel(ThingComp comp)
         {
             if (comp != null)
             {

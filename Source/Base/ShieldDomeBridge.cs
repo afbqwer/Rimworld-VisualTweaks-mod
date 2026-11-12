@@ -63,6 +63,19 @@ namespace VisualTweaks
             && !ScreenshotModeGate.Active;
 
         /// <summary>
+        /// VEF's shield-bubble comp (apparel and creature bubbles) is a third
+        /// implementation. It shares the personal family's surface, opacity, hit and
+        /// break choices, but gets its own switch: a warcasket bubble and a vanilla
+        /// shield belt are different objects even though both are "personal".
+        /// </summary>
+        internal static bool VefBubbleActive =>
+            initialized
+            && shaderReady
+            && !runtimeDisabled
+            && VisualTweaksSettings.replaceVefShieldBubbles
+            && !ScreenshotModeGate.Active;
+
+        /// <summary>
         /// True when this particular interceptor should be drawn by the mod. The
         /// vanilla-only switch compares the runtime type exactly, so modded subclasses
         /// keep their own drawing. Vanilla's own CompGravshipShieldGenerator is the one

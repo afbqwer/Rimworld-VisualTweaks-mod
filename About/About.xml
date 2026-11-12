@@ -28,7 +28,7 @@ Adds more shader-based lighting effects to the game. Every effect is drawn by a 
 [*][b]Heat Haze[/b]: Hot rooms, fires, torches… slightly distort the view — the hotter it gets, the stronger the distortion.
 [*][b]Cold Mist[/b]: Cold interiors show slowly rolling cold mist.
 [*][b]Vacuum Leak[/b] (requires Odyssey DLC): When doors, walls, roofs or other openings leak, airflow streams toward the gap.
-[*][b]Shields[/b]: Blocked shots send a ripple across the shield, the surface is fully customizable (including a hexagonal dome), and a shield that breaks dissolves away instead of a simple animation. VEF repulsor shields are covered too when Vanilla Expanded Framework is loaded.
+[*][b]Shields[/b]: Blocked shots send a ripple across the shield, the surface is fully customizable (including a hexagonal dome), and a shield that breaks dissolves away instead of a simple animation. VEF repulsor shields and VEF pawn bubble shields are covered too when Vanilla Expanded Framework is loaded.
 [*][b]Wind Streamlines[/b] (requires Atmosphere Overhaul): Replaces Atmosphere Overhaul's original streamline rendering.
 [/list]
 

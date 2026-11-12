@@ -208,6 +208,13 @@ namespace VisualTweaks
         // of style sliders for the same look would just be two places to tune it.
         public static bool replaceRepulsorShields = true;
 
+        // VEF's shield-bubble comp is the personal counterpart: apparel and creature
+        // bubbles that are neither vanilla CompShield nor a shield field. It uses the
+        // personal family's surface, opacity, hit and break choices, but the switch is
+        // separate so a player can keep a warcasket's stock bubble while replacing
+        // belts (or the reverse).
+        public static bool replaceVefShieldBubbles = true;
+
         // VEF stores the repulsor's opacity in the def's health colour alpha
         // (roughly 0.35 at low energy to 1.0 at full). That number was authored for
         // an additive MoteGlow billboard; the same alpha through an alpha-blended
@@ -765,6 +772,10 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref replaceRepulsorShields,
                 "replaceRepulsorShields",
+                true);
+            Scribe_Values.Look(
+                ref replaceVefShieldBubbles,
+                "replaceVefShieldBubbles",
                 true);
             Scribe_Values.Look(
                 ref repulsorShieldOpacity,
@@ -1368,6 +1379,7 @@ namespace VisualTweaks
             replaceLargeShields = true;
             replacePersonalShields = true;
             replaceRepulsorShields = true;
+            replaceVefShieldBubbles = true;
             repulsorShieldOpacity = 0.6f;
             largeShieldsVanillaOnly = false;
             personalShieldsVanillaOnly = false;

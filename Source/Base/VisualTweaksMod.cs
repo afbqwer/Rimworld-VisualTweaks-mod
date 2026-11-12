@@ -781,31 +781,47 @@ namespace VisualTweaks
                 }
             }
 
+            // VEF's bubble comp is the personal counterpart of the repulsor comp: a
+            // different type in a different assembly, so a separate switch. Its look
+            // follows the personal section below, which stays visible while either it
+            // or the vanilla belts are drawing.
+            if (VefShieldBubbleCompat.Available)
+            {
+                listing.CheckboxLabeled(
+                    "VisualTweaks_ShieldBubble_Enable".Translate(),
+                    ref VisualTweaksSettings.replaceVefShieldBubbles,
+                    "VisualTweaks_ShieldBubble_EnableTip".Translate());
+            }
+
             listing.CheckboxLabeled(
                 "VisualTweaks_ShieldAlways_Enable".Translate(),
                 ref VisualTweaksSettings.alwaysShowShields,
                 "VisualTweaks_ShieldAlways_EnableTip".Translate());
 
             // Each family owns its surface, style and break choices. Turning one off
-            // hides only that section and leaves the other drawing untouched. The
-            // repulsor shares the large-shield section, so that section stays visible
-            // while either of the two is drawing.
+            // hides only that section and leaves the other drawing untouched. The two
+            // VEF families share the matching vanilla section — repulsors follow the
+            // large-shield controls, bubbles follow the personal ones — so those
+            // sections stay visible while either member of the pair is drawing.
             bool repulsorDrawing = VefRepulsorShieldCompat.Available
                 && VisualTweaksSettings.replaceRepulsorShields;
+            bool bubbleDrawing = VefShieldBubbleCompat.Available
+                && VisualTweaksSettings.replaceVefShieldBubbles;
 
             if (VisualTweaksSettings.replaceLargeShields || repulsorDrawing)
             {
                 DrawDomeSection(listing);
             }
 
-            if (VisualTweaksSettings.replacePersonalShields)
+            if (VisualTweaksSettings.replacePersonalShields || bubbleDrawing)
             {
                 DrawPersonalSection(listing);
             }
 
             if (!VisualTweaksSettings.replaceLargeShields
                 && !VisualTweaksSettings.replacePersonalShields
-                && !repulsorDrawing)
+                && !repulsorDrawing
+                && !bubbleDrawing)
             {
                 SettingsLayout.Note(
                     listing,
@@ -924,8 +940,9 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Personal shield belts. They choose their own surface, opacity, break and
-        /// hit feedback; every appearance and timing slider below edits only the belt.
+        /// Personal shields: vanilla belts and VEF's bubble comp. They choose their
+        /// own surface, opacity, break and hit feedback; every appearance and timing
+        /// slider below edits only the personal family, never the projector dome.
         /// </summary>
         private static void DrawPersonalSection(Listing_Standard listing)
         {

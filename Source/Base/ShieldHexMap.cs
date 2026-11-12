@@ -260,6 +260,8 @@ namespace VisualTweaks
                         == PersonalShieldHitStyle.HexWave))
             && (target == ShieldHexTarget.Personal
                 ? VisualTweaksSettings.replacePersonalShields
+                    || (VefShieldBubbleCompat.Available
+                        && VisualTweaksSettings.replaceVefShieldBubbles)
                 : VisualTweaksSettings.replaceLargeShields
                     || (VefRepulsorShieldCompat.Available
                         && VisualTweaksSettings.replaceRepulsorShields))

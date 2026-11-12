@@ -9,8 +9,9 @@ using NVector4 = System.Numerics.Vector4;
 namespace VisualTweaks
 {
     /// <summary>
-    /// Draws the custom dome for personal shield belts, replacing
-    /// <c>CompShield.Draw()</c>.
+    /// Draws the custom dome for personal shields: vanilla shield belts
+    /// (<c>CompShield.Draw()</c>) and VEF's pawn shield bubbles
+    /// (<c>CompShieldBubble</c>).
     ///
     /// What is ported from <see cref="ShieldDomeRenderer"/> is the same three surface
     /// types, the same ridge and face/line weights, a material built from the same
@@ -21,24 +22,25 @@ namespace VisualTweaks
     /// surface choice itself is independent — a belt can draw crisp while the dome
     /// draws hex — and so are the lattice density, opacity and hit reaction.
     ///
-    /// The hit reaction is a belt-specific choice: vanilla's jitter, the surface
+    /// The hit reaction is a personal-specific choice: vanilla's jitter, the surface
     /// brightening in the struck sector, or the lattice wave. The flare is not offered
     /// — a painted wedge needs a readable direction, and at one character wide it is a
     /// few pixels pointed at nothing. Brightening and the wave reuse the dome shader's
     /// modes 4 and 3 unchanged; only the slider values differ, because the same
     /// numbers do not read the same way at this size.
     ///
-    /// What has to differ is geometry and visibility, because a belt is not a
-    /// projector:
+    /// What has to differ is geometry and visibility, because a personal shield is not
+    /// a projector:
     ///
     /// - The radius is not a def constant. Vanilla lerps the bubble's *diameter*
     ///   from <c>minDrawSize</c> to <c>maxDrawSize</c> with the stored energy, so the
-    ///   dome grows as the belt recharges. Reproducing that keeps the bubble's size
-    ///   honest during the recharge cycle.
-    /// - Vanilla only paints a belt when <c>ShouldDisplay</c> says the situation is
-    ///   relevant (drafted, hostile, recently hit, ...). That property is protected,
-    ///   so it is bound once as a delegate and called rather than copied; a future
-    ///   change to the rule then moves both drawings or neither.
+    ///   dome grows as the belt recharges. VEF's bubble uses its own def's
+    ///   <c>minShieldSize</c>/<c>maxShieldSize</c> and raw energy the same way.
+    ///   Reproducing that keeps the bubble's size honest during the recharge cycle.
+    /// - Both comps only paint when their own rule says the situation is relevant
+    ///   (drafted, hostile, recently hit, ...). Vanilla's is a protected property, so
+    ///   it is bound once as a delegate and called rather than copied; VEF's lives in
+    ///   its draw method, so the adapter reproduces that one.
     /// - Alpha is a player setting, not 1.0. A belt has no idle pulse or "selected"
     ///   brightness ramp to borrow, and drawing it at full shader alpha made it far
     ///   more solid than any nearby interceptor dome, whose own alpha comes from
@@ -51,12 +53,12 @@ namespace VisualTweaks
     /// 25-cell dome; only its lattice density is chosen separately. Those lines fade
     /// on their own when a cell drops below the shader's 5-pixel legibility floor.
     ///
-    /// One material for belts, one draw per belt plus at most one additive hit quad.
-    /// The material is separate from the dome's only because the hex atlas is a
-    /// material texture and the two atlases have different densities and resolutions;
-    /// every look constant is still read from the same global settings. Everything
-    /// that differs per belt (centre, radius, alpha, break progress, hit bearing)
-    /// travels as a draw property.
+    /// One material for personal shields, one draw per shield plus at most one
+    /// additive hit quad. The material is separate from the dome's only because the
+    /// hex atlas is a material texture and the two atlases have different densities
+    /// and resolutions; every look constant is still read from the same global
+    /// settings. Everything that differs per shield (centre, radius, tint, alpha,
+    /// break progress, hit bearing) travels as a draw property.
     /// </summary>
     internal static class PersonalShieldRenderer
     {
@@ -82,6 +84,11 @@ namespace VisualTweaks
         /// Returns true when a dome was submitted, so the patch can skip vanilla's
         /// drawing. False means "nothing to draw here" and the stock method runs; its
         /// own conditions decide whether that produces a bubble.
+        ///
+        /// The vanilla belt adapter. It resolves the pawn, checks the stock
+        /// visibility rule and reads vanilla's energy-driven size; the shader path
+        /// below is shared with VEF's shield-bubble comp, which supplies the same
+        /// numbers from its own def.
         /// </summary>
         internal static bool Draw(
             CompShield comp,
@@ -101,6 +108,61 @@ namespace VisualTweaks
                 return false;
             }
 
+            // Same order as vanilla's Draw(): state first, then the visibility rule.
+            // The short-circuit matters — ShouldDisplay dereferences state that only
+            // makes sense for an active shield, which is why vanilla never calls it
+            // for an inactive one.
+            bool active = comp.ShieldState == ShieldState.Active;
+            bool visible = active && shouldDisplay(comp);
+
+            // Vanilla's own sizing rule: the drawn diameter grows with the stored
+            // energy, from minDrawSize to maxDrawSize, and it uses the raw energy on
+            // purpose (an energy stat above 1 is allowed to overshoot just as it does
+            // in vanilla).
+            float size = Mathf.Lerp(
+                comp.Props.minDrawSize,
+                comp.Props.maxDrawSize,
+                comp.Energy);
+
+            return DrawCore(comp, pawn, size, active, visible, Color.white);
+        }
+
+        /// <summary>
+        /// The VEF shield-bubble adapter. The caller has already resolved the pawn,
+        /// the comp's "is it up" state and the bubble's own visibility rule, because
+        /// those live on a comp type this assembly cannot reference. VEF sizes its
+        /// bubble from the def's min/max shield size and the raw energy — not from a
+        /// normalized charge — so the dome occupies exactly the footprint the stock
+        /// billboard would.
+        ///
+        /// <paramref name="active"/> and <paramref name="visible"/> are separate on
+        /// purpose: a dissolve must be cancelled as soon as the shield recharges, even
+        /// if the stock visibility rule still hides it.
+        /// </summary>
+        internal static bool Draw(
+            ThingComp comp,
+            Pawn pawn,
+            float drawnSize,
+            bool active,
+            bool visible,
+            Color color)
+        {
+            if (pawn == null || !pawn.Spawned || pawn.Dead || pawn.Drawer == null)
+            {
+                return false;
+            }
+
+            return DrawCore(comp, pawn, drawnSize, active, visible, color);
+        }
+
+        private static bool DrawCore(
+            ThingComp comp,
+            Pawn pawn,
+            float drawnSize,
+            bool active,
+            bool visible,
+            Color baseColor)
+        {
             ShieldBreakStyle breakStyle =
                 VisualTweaksSettings.CurrentShieldBreakStyleFor(
                     ShieldHexTarget.Personal);
@@ -121,13 +183,13 @@ namespace VisualTweaks
                     comp, out dissolveProgress);
             }
 
-            // A belt that recharges inside the animation is a working shield again.
+            // A shield that recharges inside the animation is a working shield again.
             // Do not keep painting a torn dome over it. Active alone is not enough:
             // the state can still read Active on the frame the break started, so wait
             // until a frame has actually seen it down.
             if (dissolve != null)
             {
-                if (comp.ShieldState == ShieldState.Active)
+                if (active)
                 {
                     if (dissolve.SawInactive)
                     {
@@ -141,31 +203,22 @@ namespace VisualTweaks
                 }
             }
 
-            if (dissolve == null)
+            // Nothing is submitted for a shield that is neither breaking nor active
+            // and visible, so the material and its look uniforms are resolved only
+            // after that decision.
+            if (dissolve == null && !visible)
             {
-                // Same order as vanilla's Draw(): state first, then the visibility
-                // rule. Calling ShouldDisplay for an inactive belt would run code
-                // vanilla never runs there — for example a wild animal's shield can
-                // have no faction, which that property dereferences.
-                if (comp.ShieldState != ShieldState.Active
-                    || !shouldDisplay(comp))
-                {
-                    return false;
-                }
+                return false;
             }
 
-            // Nothing is submitted for a belt that is neither breaking nor active and
-            // visible, so the material and its look uniforms are resolved only after
-            // that decision. An idle belt then costs a few field reads per frame
-            // instead of an Ensure/ApplyLook pass.
             Material? mat = Surface.Ensure();
             if (mat == null)
             {
                 return false;
             }
 
-            // Shared ridge/face/line weights, but this material resolves the belt's
-            // own surface style and lattice independently of the dome's.
+            // Shared ridge/face/line weights, but this material resolves the personal
+            // surface style and lattice independently of the dome's.
             Surface.ApplyLook();
 
             // Only the jitter effect moves the bubble. Brighten and the lattice wave
@@ -180,14 +233,7 @@ namespace VisualTweaks
                 TryGetJitter(comp, out jitterOffset, out jitterShrink);
             }
 
-            // Vanilla's own sizing rule: the drawn diameter grows with the stored
-            // energy, from minDrawSize to maxDrawSize, and it uses the raw energy on
-            // purpose (an energy stat above 1 is allowed to overshoot just as it does
-            // in vanilla). The shader wants a radius, so halve it.
-            float size = Mathf.Lerp(
-                comp.Props.minDrawSize,
-                comp.Props.maxDrawSize,
-                comp.Energy) - jitterShrink;
+            float size = drawnSize - jitterShrink;
             float radius = Mathf.Max(size * 0.5f, 0.05f);
 
             Vector3 center = pawn.Drawer.DrawPos + jitterOffset;
@@ -210,7 +256,13 @@ namespace VisualTweaks
                     1f,
                     radius * 2f * quadMargin));
 
-            NVector4 tint = new NVector4(1f, 1f, 1f, 1f);
+            // Vanilla belts have always drawn white here; VEF lets its def pick the
+            // bubble colour, so the adapter passes it through instead of hard-coding.
+            NVector4 tint = new NVector4(
+                baseColor.r,
+                baseColor.g,
+                baseColor.b,
+                1f);
             NVector4 centerParam = new NVector4(center.x, center.z, 0f, 0f);
             float time = Time.realtimeSinceStartup;
 
@@ -289,7 +341,7 @@ namespace VisualTweaks
         /// one clock so the player tunes a single duration.
         /// </summary>
         private static bool DrawImpact(
-            CompShield comp,
+            ThingComp comp,
             Material material,
             Matrix4x4 matrix,
             NVector4 tint,
@@ -406,7 +458,7 @@ namespace VisualTweaks
         /// the stock bubble rather than an intuitively reversed one.
         /// </summary>
         private static bool TryGetJitter(
-            CompShield comp,
+            ThingComp comp,
             out Vector3 offset,
             out float shrink)
         {
