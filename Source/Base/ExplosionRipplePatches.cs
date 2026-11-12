@@ -17,11 +17,14 @@ namespace VisualTweaks
             MethodInfo target = AccessTools.Method(
                 typeof(Explosion),
                 nameof(Explosion.StartExplosion));
+            MethodInfo prefix = AccessTools.Method(
+                typeof(ExplosionRipplePatches),
+                nameof(StartExplosionPrefix));
             MethodInfo postfix = AccessTools.Method(
                 typeof(ExplosionRipplePatches),
                 nameof(StartExplosionPostfix));
 
-            if (target == null || postfix == null)
+            if (target == null || prefix == null || postfix == null)
             {
                 Log.Warning("[Visual Tweaks] Cannot patch Explosion.StartExplosion.");
                 return;
@@ -29,7 +32,10 @@ namespace VisualTweaks
 
             try
             {
-                harmony.Patch(target, postfix: new HarmonyMethod(postfix));
+                harmony.Patch(
+                    target,
+                    prefix: new HarmonyMethod(prefix),
+                    postfix: new HarmonyMethod(postfix));
                 VisualTweaksLog.Info("Patched Explosion.StartExplosion.");
             }
             catch (Exception ex)
@@ -38,7 +44,23 @@ namespace VisualTweaks
             }
         }
 
-        private static void StartExplosionPostfix(Explosion __instance)
+        /// <summary>
+        /// Captures the visual flag on the way in, before any other mod's postfix can
+        /// touch it. Dynamic Effects Forge ("blues.forge") overrides vanilla explosion
+        /// visuals by setting <c>doVisualEffects = false</c> from its own postfix on
+        /// this method. Harmony runs postfixes in owner order ("blues.forge" sorts
+        /// before "local.visualtweaks"), so reading the field in our postfix saw the
+        /// already-cleared value and silently dropped every shockwave while that mod
+        /// was installed. The flag only controls a vanilla splash fleck here, so a
+        /// value taken before other patches run is the correct one for us.
+        /// </summary>
+        [HarmonyPriority(Priority.High)]
+        private static void StartExplosionPrefix(Explosion __instance, out bool __state)
+        {
+            __state = __instance != null && __instance.doVisualEffects;
+        }
+
+        private static void StartExplosionPostfix(Explosion __instance, bool __state)
         {
             if (!ExplosionRippleBridge.Active || __instance == null || __instance.Map == null)
             {
@@ -47,7 +69,7 @@ namespace VisualTweaks
 
             // No damage-type filter: the user asked for every visual explosion. The
             // radius guard only avoids a degenerate zero-size quad.
-            if (!__instance.doVisualEffects || !(__instance.radius > 0.01f))
+            if (!__state || !(__instance.radius > 0.01f))
             {
                 return;
             }
