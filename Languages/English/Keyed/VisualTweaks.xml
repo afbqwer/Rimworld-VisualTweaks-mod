@@ -124,6 +124,14 @@
   <VisualTweaks_ShieldDome_Group>Shield drawing</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldDome_Enable>Crisp-edged shields</VisualTweaks_ShieldDome_Enable>
   <VisualTweaks_ShieldDome_EnableTip>Redraws shields with a custom shader: the edge becomes a sharp ring that stops exactly on the intercept radius, instead of smearing out and glowing past it like the stock texture. Turn it off to get vanilla's look back for comparison.</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_RidgeWidth>Outline thickness</VisualTweaks_ShieldDome_RidgeWidth>
+  <VisualTweaks_ShieldDome_RidgeWidthTip>The outline is a band, not a stroke; this is its half-width in screen pixels. The thickness stays the same at any zoom and on any shield radius. Want it thicker? Raise this, not the brightness.</VisualTweaks_ShieldDome_RidgeWidthTip>
+  <VisualTweaks_ShieldDome_RidgeBrightness>Outline brightness</VisualTweaks_ShieldDome_RidgeBrightness>
+  <VisualTweaks_ShieldDome_RidgeBrightnessTip>Brightness of the outline band. At 0 only the thin hot core and the inner glow are left, and the edge looks thin again — use the thickness slider above for that.</VisualTweaks_ShieldDome_RidgeBrightnessTip>
+  <VisualTweaks_ShieldDome_FlareAlpha>Impact flare opacity</VisualTweaks_ShieldDome_FlareAlpha>
+  <VisualTweaks_ShieldDome_FlareAlphaTip>Peak opacity of the directional flare a single interception produces. Vanilla's cone reaches 0.82, which reads as an opaque slice laid on the dome; the default here is a third of that. Several simultaneous hits each draw their own flare and add up.</VisualTweaks_ShieldDome_FlareAlphaTip>
+  <VisualTweaks_ShieldDome_FlareDamage>Flare damage influence</VisualTweaks_ShieldDome_FlareDamage>
+  <VisualTweaks_ShieldDome_FlareDamageTip>How much the flare's brightness follows the damage of the hit. 0 makes every weapon look alike; higher makes heavy weapons stand out. The result is always clamped to 0.55-1.8x, so a charge lance cannot wash out the whole dome and a small-calibre round cannot disappear.</VisualTweaks_ShieldDome_FlareDamageTip>
 
   <!-- Temperature: heat haze and cold mist share one page -->
   <VisualTweaks_Temp_GroupHeat>Heat</VisualTweaks_Temp_GroupHeat>

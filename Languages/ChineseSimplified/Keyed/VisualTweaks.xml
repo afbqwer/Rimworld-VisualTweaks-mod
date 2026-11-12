@@ -124,6 +124,14 @@
   <VisualTweaks_ShieldDome_Group>护盾绘制</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldDome_Enable>清晰边缘护盾</VisualTweaks_ShieldDome_Enable>
   <VisualTweaks_ShieldDome_EnableTip>用自定义着色器重画护盾：边缘是一道锐利的环，并且严格停在拦截判定半径上，不会像原版那样糊成一片、还在半径之外发光。关闭即刻恢复原版外观，可直接对比。</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_RidgeWidth>轮廓粗细</VisualTweaks_ShieldDome_RidgeWidth>
+  <VisualTweaks_ShieldDome_RidgeWidthTip>外轮廓是一条带，不是一条线；这里是它的半宽（屏幕像素）。任何缩放、任何护盾半径下厚度都一样。嫌细就加这个，不是加亮度。</VisualTweaks_ShieldDome_RidgeWidthTip>
+  <VisualTweaks_ShieldDome_RidgeBrightness>轮廓亮度</VisualTweaks_ShieldDome_RidgeBrightness>
+  <VisualTweaks_ShieldDome_RidgeBrightnessTip>外轮廓那条带的亮度。调到 0 只剩一条细热芯和内辉，轮廓会重新显得薄——要更厚请调上面的粗细。</VisualTweaks_ShieldDome_RidgeBrightnessTip>
+  <VisualTweaks_ShieldDome_FlareAlpha>受击火舌不透明度</VisualTweaks_ShieldDome_FlareAlpha>
+  <VisualTweaks_ShieldDome_FlareAlphaTip>一次拦截产生的方向火舌的峰值不透明度。原版锥形最高 0.82，看起来像一块实心扇形压在护盾上；这里默认只有它的三分之一。多发射击会各自画一条并叠加变亮。</VisualTweaks_ShieldDome_FlareAlphaTip>
+  <VisualTweaks_ShieldDome_FlareDamage>火舌伤害影响</VisualTweaks_ShieldDome_FlareDamage>
+  <VisualTweaks_ShieldDome_FlareDamageTip>火舌亮度跟随击中伤害的程度。0 时各种武器一样亮；越大重武器越醒目。结果始终限制在 0.55–1.8 倍之间，所以电荷长枪不会糊满整个穹顶，小口径子弹也不会看不见。</VisualTweaks_ShieldDome_FlareDamageTip>
 
   <!-- 温度：热效应（高温空气热浪）与冷效应（低温房间寒气）共用一页 -->
   <VisualTweaks_Temp_GroupHeat>热效应</VisualTweaks_Temp_GroupHeat>

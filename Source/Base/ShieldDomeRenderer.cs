@@ -45,23 +45,15 @@ namespace VisualTweaks
         // say *how much* each term contributes, the shape numbers say *what shape* it
         // has. Tuning one should not silently move the other.
         //
-        // Ridge is the edge's thickness and it is a real width (RidgeHalfPixels), not
-        // a brightness — pushing RidgeWeight makes the band hotter, pushing
-        // RidgeHalfPixels makes it wider. The first complaint about this shader was
-        // that the outline was too thin, and those are two different fixes.
+        // Two of them are player settings (ridge weight and ridge half-width) and are
+        // applied in ApplyLook; the rest are constants, because a slider for "fresnel
+        // exponent" is a slider nobody can reason about. Everything exposed is read
+        // every frame, so dragging a slider on a paused, selected shield shows the
+        // change immediately.
         // ------------------------------------------------------------------
-        private const float RidgeWeight = 0.52f;
         private const float CoreWeight = 0.30f;
         private const float GlowWeight = 0.30f;
         private const float BodyWeight = 0.05f;
-
-        /// <summary>
-        /// Half-width of the ridge in screen pixels. With the shader's 0.42 plateau
-        /// this is a band roughly 5-6 px thick: a ~3 px flat core with a shoulder on
-        /// each side. The first version of this shader drew a 1.5 px gaussian, which
-        /// is why the outline read as vector art.
-        /// </summary>
-        private const float RidgeHalfPixels = 3.6f;
 
         /// <summary>Gaussian sigma of the hot core, in screen pixels.</summary>
         private const float CoreSigmaPixels = 1.2f;
@@ -80,15 +72,6 @@ namespace VisualTweaks
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// Peak alpha of one flare. Vanilla's cone reaches 0.82, which is most of the
-        /// reason it reads as an opaque slice dropped on the dome — at that opacity it
-        /// stops looking like light and starts looking like a decal. 0.30 is a bright
-        /// patch on an additive surface, and several of them can overlap before the
-        /// result saturates.
-        /// </summary>
-        private const float MaxFlareAlpha = 0.30f;
-
-        /// <summary>
         /// Half-width as a cosine. 0.9135 is about 24 degrees each side.
         /// </summary>
         private const float FlareCosHalfAngle = 0.9135f;
@@ -100,6 +83,22 @@ namespace VisualTweaks
         /// </summary>
         private const float FlareInnerRadius = 0.22f;
 
+        /// <summary>
+        /// Damage that maps to a damage factor of exactly 1.0 — a vanilla bullet in the
+        /// 10-15 band, same reference the shield ripple uses.
+        /// </summary>
+        private const float FlareReferenceDamage = 12f;
+
+        /// <summary>
+        /// The two clamps that make the damage response safe. Without them a 200-damage
+        /// charge blast is 17x a pistol round, which saturates the whole dome white and
+        /// stops reading as a direction; and a 3-damage spit round rounds to nothing.
+        /// The response is sub-linear via the influence exponent, then clamped.
+        /// </summary>
+        private const float FlareMinDamageFactor = 0.55f;
+
+        private const float FlareMaxDamageFactor = 1.8f;
+
         /// <summary>Vanilla's own colour for an inactive shield that is selected.</summary>
         private static readonly Color InactiveColor = new Color(0.2f, 0.2f, 0.2f);
 
@@ -110,6 +109,7 @@ namespace VisualTweaks
         private static readonly int Params2Id = Shader.PropertyToID("_Params2");
         private static readonly int Params3Id = Shader.PropertyToID("_Params3");
         private static readonly int Params4Id = Shader.PropertyToID("_Params4");
+        private static readonly int Params5Id = Shader.PropertyToID("_Params5");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         // Reused every frame; DrawPropertyBlock wraps these arrays without allocating,
@@ -119,6 +119,11 @@ namespace VisualTweaks
 
         private static Material? material;
         private static bool materialFailed;
+
+        // What the material currently carries, so a slider drag uploads two vectors
+        // instead of two vectors per shield per frame.
+        private static float appliedRidgeWidth = float.NaN;
+        private static float appliedRidgeBrightness = float.NaN;
 
         /// <summary>
         /// Returns false when nothing was drawn, so the caller can hand the frame back
@@ -150,6 +155,8 @@ namespace VisualTweaks
             {
                 return false;
             }
+
+            ApplyLook(mat);
 
             Vector3 center = parent.DrawPos;
 
@@ -240,7 +247,10 @@ namespace VisualTweaks
                 // most of its brightness in the first third, which is how a flash
                 // behaves. A linear fade reads as a slow dimming slice.
                 float life = 1f - (float)age / ShieldImpactLog.LifetimeTicks;
-                float flareAlpha = MaxFlareAlpha * life * life;
+                float flareAlpha = VisualTweaksSettings.shieldFlareAlpha
+                    * DamageFactor(impacts[i].Damage)
+                    * life
+                    * life;
                 if (flareAlpha < 0.004f)
                 {
                     continue;
@@ -277,6 +287,63 @@ namespace VisualTweaks
             return drew;
         }
 
+        /// <summary>
+        /// How much harder a hit looks, from the damage it would have dealt.
+        ///
+        /// Sub-linear on purpose: damage spans two orders of magnitude, so a linear
+        /// response would make small arms invisible and turn one charge blast into a
+        /// screen-filling wedge. The exponent is the player's "damage influence" slider
+        /// — 0 makes every hit identical, 1 is linear before the clamps — and the
+        /// clamps are absolute: 0.55x to 1.8x, whatever the weapon.
+        /// </summary>
+        private static float DamageFactor(float damage)
+        {
+            float influence = Mathf.Clamp01(VisualTweaksSettings.shieldFlareDamageInfluence);
+            if (influence <= 0f)
+            {
+                return 1f;
+            }
+
+            // Floor at 1 damage so a zero-damage projectile (EMP carries none of its
+            // own) cannot collapse the response or produce pow(0, x).
+            float ratio = Mathf.Max(damage, 1f) / FlareReferenceDamage;
+            return Mathf.Clamp(
+                Mathf.Pow(ratio, influence),
+                FlareMinDamageFactor,
+                FlareMaxDamageFactor);
+        }
+
+        /// <summary>
+        /// Uploads the two vectors the player can move. Called every frame, but only
+        /// writes when a value actually changed: the settings are read live, and the
+        /// alternative — a per-draw property for each look constant — would put two
+        /// extra vectors on every shield every frame for numbers that change once a
+        /// session.
+        /// </summary>
+        private static void ApplyLook(Material mat)
+        {
+            float width = VisualTweaksSettings.shieldRidgeWidth;
+            float brightness = VisualTweaksSettings.shieldRidgeBrightness;
+
+            if (width == appliedRidgeWidth && brightness == appliedRidgeBrightness)
+            {
+                return;
+            }
+
+            appliedRidgeWidth = width;
+            appliedRidgeBrightness = brightness;
+
+            // _Params2 = (ridge, core, glow, body) weights.
+            mat.SetVector(
+                Params2Id,
+                new Vector4(brightness, CoreWeight, GlowWeight, BodyWeight));
+
+            // _Params5 = (ridge half px, core sigma px, glow exponent, drift).
+            mat.SetVector(
+                Params5Id,
+                new Vector4(width, CoreSigmaPixels, GlowExponent, DriftWeight));
+        }
+
         private static Material? EnsureMaterial()
         {
             if (material != null || materialFailed)
@@ -299,21 +366,22 @@ namespace VisualTweaks
                     renderQueue = RenderQueue,
                 };
 
-                // Look constants, identical for every shield and every draw, so they
-                // belong on the material rather than in each draw's property list.
-                created.SetVector(
-                    Params2Id,
-                    new Vector4(RidgeWeight, CoreWeight, GlowWeight, BodyWeight));
-
-                created.SetVector(
-                    Shader.PropertyToID("_Params5"),
-                    new Vector4(RidgeHalfPixels, CoreSigmaPixels, GlowExponent, DriftWeight));
-
                 material = created;
+
+                // Force the first upload even if the settings happen to equal the
+                // defaults these fields were initialised with.
+                appliedRidgeWidth = float.NaN;
+                appliedRidgeBrightness = float.NaN;
+                ApplyLook(created);
             }
             catch (Exception ex)
             {
                 materialFailed = true;
+
+                // Drop the half-built material: the caller treats null as "do not
+                // draw" and hands the frame back to vanilla, which is the right answer
+                // for a material whose look constants were never uploaded.
+                material = null;
                 Log.Error("[Visual Tweaks] Shield dome material could not be created;"
                     + " stock drawing kept: " + ex);
             }

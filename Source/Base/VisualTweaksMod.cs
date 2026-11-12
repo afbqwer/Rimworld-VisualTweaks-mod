@@ -588,6 +588,37 @@ namespace VisualTweaks
                 ref VisualTweaksSettings.crispShieldDome,
                 "VisualTweaks_ShieldDome_EnableTip".Translate());
 
+            // These read every frame, so a slider drag is visible while the game is
+            // paused on a selected shield — the same reason the toggle above is live.
+            VisualTweaksSettings.shieldRidgeWidth = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_RidgeWidth".Translate(),
+                VisualTweaksSettings.shieldRidgeWidth,
+                VisualTweaksSettings.MinShieldRidgeWidth,
+                VisualTweaksSettings.MaxShieldRidgeWidth,
+                "VisualTweaks_ShieldDome_RidgeWidthTip".Translate());
+            VisualTweaksSettings.shieldRidgeBrightness = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_RidgeBrightness".Translate(),
+                VisualTweaksSettings.shieldRidgeBrightness,
+                0f,
+                1f,
+                "VisualTweaks_ShieldDome_RidgeBrightnessTip".Translate());
+            VisualTweaksSettings.shieldFlareAlpha = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_FlareAlpha".Translate(),
+                VisualTweaksSettings.shieldFlareAlpha,
+                VisualTweaksSettings.MinShieldFlareAlpha,
+                VisualTweaksSettings.MaxShieldFlareAlpha,
+                "VisualTweaks_ShieldDome_FlareAlphaTip".Translate());
+            VisualTweaksSettings.shieldFlareDamageInfluence = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_FlareDamage".Translate(),
+                VisualTweaksSettings.shieldFlareDamageInfluence,
+                0f,
+                1f,
+                "VisualTweaks_ShieldDome_FlareDamageTip".Translate());
+
             SettingsLayout.Finish(listing);
         }
 

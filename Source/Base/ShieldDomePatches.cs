@@ -165,16 +165,18 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Parameter names must match the target's, including <c>lastExactPos</c>:
-        /// Harmony binds by name, and a rename here silently yields a zero vector —
-        /// i.e. every flare pointing along +x.
+        /// Parameter names must match the target's, including <c>lastExactPos</c> and
+        /// <c>projectile</c>: Harmony binds by name, and a rename here silently yields a
+        /// zero vector — i.e. every flare pointing along +x — or a zero damage.
         /// </summary>
         private static void CheckInterceptPostfix(
             CompProjectileInterceptor __instance,
+            Projectile projectile,
             Vector3 lastExactPos,
             bool __result)
         {
-            if (!__result || __instance == null || !ShieldDomeBridge.Active)
+            if (!__result || __instance == null || projectile == null
+                || !ShieldDomeBridge.Active)
             {
                 return;
             }
@@ -188,7 +190,11 @@ namespace VisualTweaks
             // Same expression vanilla uses for its own lastInterceptAngle, so a future
             // change to that convention moves both or neither.
             float angle = lastExactPos.AngleToFlat(parent.TrueCenter());
-            ShieldImpactLog.Notify(__instance, angle);
+
+            // The damage the shield ate is the only measure of how hard the hit was:
+            // the impact itself carries no weight, and the projectile is about to be
+            // destroyed without ever landing.
+            ShieldImpactLog.Notify(__instance, angle, projectile.DamageAmount);
         }
 
         /// <summary>

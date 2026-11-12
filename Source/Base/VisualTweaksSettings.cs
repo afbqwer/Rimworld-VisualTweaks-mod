@@ -166,6 +166,32 @@ namespace VisualTweaks
         // patch re-reads this every frame, so no restart and no save reload.
         public static bool crispShieldDome = true;
 
+        // The four dome/flare dials that are worth a slider. Everything else about the
+        // shield is derived rather than chosen: line weights scale with zoom through a
+        // screen-space derivative, and the colour comes from the def so modded shields
+        // keep their identity.
+        //
+        // Thickness and brightness are separate on purpose. Turning up brightness on a
+        // narrow line only produces a brighter narrow line, which is why the first
+        // version of this shader still looked thin at maximum weight.
+        public const float MinShieldRidgeWidth = 1f;
+        public const float MaxShieldRidgeWidth = 8f;
+        public static float shieldRidgeWidth = 3.6f;
+
+        public static float shieldRidgeBrightness = 0.52f;
+
+        // Peak opacity of one impact flare. Vanilla's cone reaches 0.82, which reads as
+        // an opaque slice rather than as light; the default here is a third of that.
+        public const float MinShieldFlareAlpha = 0f;
+        public const float MaxShieldFlareAlpha = 0.6f;
+        public static float shieldFlareAlpha = 0.30f;
+
+        // How much the incoming projectile's damage drives flare brightness. 0 makes
+        // every hit look alike, 1 responds linearly. The response is clamped inside the
+        // renderer either way, so a 200-damage charge blast cannot blow out the dome and
+        // a 3-damage spit round cannot vanish.
+        public static float shieldFlareDamageInfluence = 0.5f;
+
         // Vacuum leak airflow (Odyssey vacuum maps). Streams converge on ventilation
         // ports while air escapes; hull breaches add a short two-sided burst. The
         // intensity formula itself is state-driven, this slider only scales the look.
@@ -395,6 +421,13 @@ namespace VisualTweaks
                 1f);
             Scribe_Values.Look(ref alwaysShowShields, "alwaysShowShields", false);
             Scribe_Values.Look(ref crispShieldDome, "crispShieldDome", true);
+            Scribe_Values.Look(ref shieldRidgeWidth, "shieldRidgeWidth", 3.6f);
+            Scribe_Values.Look(ref shieldRidgeBrightness, "shieldRidgeBrightness", 0.52f);
+            Scribe_Values.Look(ref shieldFlareAlpha, "shieldFlareAlpha", 0.30f);
+            Scribe_Values.Look(
+                ref shieldFlareDamageInfluence,
+                "shieldFlareDamageInfluence",
+                0.5f);
             Scribe_Values.Look(ref vacuumLeakEnabled, "vacuumLeakEnabled", true);
             Scribe_Values.Look(ref vacuumLeakIntensity, "vacuumLeakIntensity", 1f);
             Scribe_Values.Look(ref vacuumLeakSpeed, "vacuumLeakSpeed", 1f);
@@ -482,6 +515,16 @@ namespace VisualTweaks
                 shieldRippleDamageScale,
                 MinShieldRippleDamageScale,
                 MaxShieldRippleDamageScale);
+            shieldRidgeWidth = Mathf.Clamp(
+                shieldRidgeWidth,
+                MinShieldRidgeWidth,
+                MaxShieldRidgeWidth);
+            shieldRidgeBrightness = Mathf.Clamp01(shieldRidgeBrightness);
+            shieldFlareAlpha = Mathf.Clamp(
+                shieldFlareAlpha,
+                MinShieldFlareAlpha,
+                MaxShieldFlareAlpha);
+            shieldFlareDamageInfluence = Mathf.Clamp01(shieldFlareDamageInfluence);
             vacuumLeakIntensity = Mathf.Clamp(
                 vacuumLeakIntensity,
                 MinLeakIntensity,
@@ -614,6 +657,10 @@ namespace VisualTweaks
             shieldRippleDamageScale = 1f;
             alwaysShowShields = false;
             crispShieldDome = true;
+            shieldRidgeWidth = 3.6f;
+            shieldRidgeBrightness = 0.52f;
+            shieldFlareAlpha = 0.30f;
+            shieldFlareDamageInfluence = 0.5f;
             vacuumLeakEnabled = true;
             vacuumLeakIntensity = 1f;
             vacuumLeakSpeed = 1f;
