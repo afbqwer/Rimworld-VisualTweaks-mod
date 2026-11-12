@@ -359,6 +359,48 @@ namespace VisualTweaks
             };
         }
 
+        // Display order of the shield dome styles. Same reason as StyleOrder above:
+        // the radio row is indexed by position, not by the setting value.
+        private static readonly int[] ShieldStyleOrder =
+        {
+            VisualTweaksSettings.ShieldDomeStyleCrisp,
+            VisualTweaksSettings.ShieldDomeStyleHex,
+            VisualTweaksSettings.ShieldDomeStyleVanilla
+        };
+
+        private static int ShieldStyleIndexOf(int style)
+        {
+            for (int i = 0; i < ShieldStyleOrder.Length; i++)
+            {
+                if (ShieldStyleOrder[i] == style)
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+
+        private static string[] ShieldStyleLabels()
+        {
+            return new string[]
+            {
+                "VisualTweaks_ShieldDome_StyleCrisp".Translate(),
+                "VisualTweaks_ShieldDome_Hex".Translate(),
+                "VisualTweaks_ShieldDome_StyleVanilla".Translate()
+            };
+        }
+
+        private static string[] ShieldStyleTips()
+        {
+            return new string[]
+            {
+                "VisualTweaks_ShieldDome_StyleCrispTip".Translate(),
+                "VisualTweaks_ShieldDome_HexTip".Translate(),
+                "VisualTweaks_ShieldDome_StyleVanillaTip".Translate()
+            };
+        }
+
         private static void DoGasTab(Listing_Standard listing)
         {
             SettingsLayout.Header(listing, "VisualTweaks_Gas_GroupSwitch".Translate());
@@ -605,108 +647,156 @@ namespace VisualTweaks
             // stock drawing, so it reads as a separate decision from "show shields
             // that vanilla hides".
             SettingsLayout.Header(listing, "VisualTweaks_ShieldDome_Group".Translate());
-            bool domeWasOn = VisualTweaksSettings.crispShieldDome;
             listing.CheckboxLabeled(
                 "VisualTweaks_ShieldDome_Enable".Translate(),
                 ref VisualTweaksSettings.crispShieldDome,
                 "VisualTweaks_ShieldDome_EnableTip".Translate());
-            BakeHexIfNewlyDrawn(!domeWasOn);
 
-            // Second replacement style. A sub-choice of the custom dome, not a
-            // third drawing path: the same quad, the same material, one extra
-            // texture sample. Turning the toggle above off still returns to stock.
+            // The style is a sub-choice of the custom dome, not a separate drawing
+            // path: the same quad and material. It used to be a checkbox for the hex
+            // shell alone; three mutually exclusive styles need a radio row, or two
+            // of them end up ticked at once.
             listing.Gap(6f);
-            bool hexWasOn = VisualTweaksSettings.hexShieldDome;
-            listing.CheckboxLabeled(
-                "VisualTweaks_ShieldDome_Hex".Translate(),
-                ref VisualTweaksSettings.hexShieldDome,
-                "VisualTweaks_ShieldDome_HexTip".Translate());
-
-            BakeHexIfNewlyDrawn(!hexWasOn);
-            VisualTweaksSettings.shieldHexFaceStrength = SettingsLayout.Slider(
+            int styleIndex = ShieldStyleIndexOf(VisualTweaksSettings.shieldDomeStyle);
+            int pickedStyle = SettingsLayout.RadioRow(
                 listing,
-                "VisualTweaks_ShieldDome_HexFace".Translate(),
-                VisualTweaksSettings.shieldHexFaceStrength,
-                VisualTweaksSettings.MinShieldHexFace,
-                VisualTweaksSettings.MaxShieldHexFace,
-                "VisualTweaks_ShieldDome_HexFaceTip".Translate());
-            VisualTweaksSettings.shieldHexLineStrength = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_HexLine".Translate(),
-                VisualTweaksSettings.shieldHexLineStrength,
-                VisualTweaksSettings.MinShieldHexLine,
-                VisualTweaksSettings.MaxShieldHexLine,
-                "VisualTweaks_ShieldDome_HexLineTip".Translate());
-            VisualTweaksSettings.shieldHexDensity = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_HexDensity".Translate(),
-                VisualTweaksSettings.shieldHexDensity,
-                VisualTweaksSettings.MinShieldHexDensity,
-                VisualTweaksSettings.MaxShieldHexDensity,
-                "VisualTweaks_ShieldDome_HexDensityTip".Translate(),
-                step: 1f);
-
-            // The slider above edits a DRAFT. A rebake at 2048^2 is a few hundred ms of
-            // main-thread work, and rebuilding on every integer step would stall the game over
-            // and over while the handle is dragged. So the only thing that commits the
-            // draft is this button, and the note under it says so whenever the two
-            // disagree.
-            int draftDensity = Mathf.RoundToInt(VisualTweaksSettings.shieldHexDensity);
-            int bakedDensity = VisualTweaksSettings.shieldHexDensityApplied;
-            if (SettingsLayout.ButtonRow(
-                    listing,
-                    new[] { "VisualTweaks_ShieldDome_HexBake".Translate().ToString() }) == 0)
+                ShieldStyleLabels(),
+                styleIndex,
+                ShieldStyleTips());
+            if (pickedStyle != styleIndex)
             {
-                ShieldHexMap.ApplyDensity(draftDensity);
-                bakedDensity = VisualTweaksSettings.shieldHexDensityApplied;
+                VisualTweaksSettings.shieldDomeStyle = ShieldStyleOrder[pickedStyle];
             }
 
-            if (draftDensity != bakedDensity)
+            // Cheap when the texture is already baked. This is also the moment a
+            // mid-game switch to the panel shell pays its one-off cost, instead of
+            // the first shield that happens to be drawn.
+            BakeHexIfNewlyDrawn();
+
+            if (VisualTweaksSettings.HexShieldDome)
+            {
+                VisualTweaksSettings.shieldHexFaceStrength = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexFace".Translate(),
+                    VisualTweaksSettings.shieldHexFaceStrength,
+                    VisualTweaksSettings.MinShieldHexFace,
+                    VisualTweaksSettings.MaxShieldHexFace,
+                    "VisualTweaks_ShieldDome_HexFaceTip".Translate());
+                VisualTweaksSettings.shieldHexLineStrength = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexLine".Translate(),
+                    VisualTweaksSettings.shieldHexLineStrength,
+                    VisualTweaksSettings.MinShieldHexLine,
+                    VisualTweaksSettings.MaxShieldHexLine,
+                    "VisualTweaks_ShieldDome_HexLineTip".Translate());
+                VisualTweaksSettings.shieldHexDensity = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexDensity".Translate(),
+                    VisualTweaksSettings.shieldHexDensity,
+                    VisualTweaksSettings.MinShieldHexDensity,
+                    VisualTweaksSettings.MaxShieldHexDensity,
+                    "VisualTweaks_ShieldDome_HexDensityTip".Translate(),
+                    step: 1f);
+
+                // The slider above edits a DRAFT. A rebake at 2048^2 is a few hundred ms
+                // of main-thread work, and rebuilding on every integer step would stall
+                // the game over and over while the handle is dragged. So the only thing
+                // that commits the draft is this button, and the note under it says so
+                // whenever the two disagree.
+                int draftDensity = Mathf.RoundToInt(VisualTweaksSettings.shieldHexDensity);
+                int bakedDensity = VisualTweaksSettings.shieldHexDensityApplied;
+                if (SettingsLayout.ButtonRow(
+                        listing,
+                        new[] { "VisualTweaks_ShieldDome_HexBake".Translate().ToString() }) == 0)
+                {
+                    ShieldHexMap.ApplyDensity(draftDensity);
+                    bakedDensity = VisualTweaksSettings.shieldHexDensityApplied;
+                }
+
+                if (draftDensity != bakedDensity)
+                {
+                    SettingsLayout.Note(
+                        listing,
+                        "VisualTweaks_ShieldDome_HexPending".Translate(
+                            bakedDensity,
+                            draftDensity));
+                }
+
+                // The panel style's hit reaction has nothing in common with the
+                // flare's numbers, so it gets its own two controls rather than
+                // borrowing the flare's opacity and a hidden fudge factor.
+                VisualTweaksSettings.shieldHexImpactStrength = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexImpact".Translate(),
+                    VisualTweaksSettings.shieldHexImpactStrength,
+                    VisualTweaksSettings.MinShieldHexImpactStrength,
+                    VisualTweaksSettings.MaxShieldHexImpactStrength,
+                    "VisualTweaks_ShieldDome_HexImpactTip".Translate());
+                VisualTweaksSettings.shieldHexImpactShare = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexImpactReach".Translate(),
+                    VisualTweaksSettings.shieldHexImpactShare,
+                    VisualTweaksSettings.MinShieldHexImpactShare,
+                    VisualTweaksSettings.MaxShieldHexImpactShare,
+                    "VisualTweaks_ShieldDome_HexImpactReachTip".Translate());
+            }
+
+            // The stock-like style has no ridge line, a core or a fresnel exponent to
+            // tune: every width is a fraction of the radius, like the texture it
+            // imitates. Showing the ridge sliders would suggest otherwise.
+            if (VisualTweaksSettings.VanillaShieldDome)
             {
                 SettingsLayout.Note(
                     listing,
-                    "VisualTweaks_ShieldDome_HexPending".Translate(
-                        bakedDensity,
-                        draftDensity));
+                    "VisualTweaks_ShieldDome_VanillaNote".Translate());
+            }
+            else
+            {
+                // These read every frame, so a slider drag is visible while the game
+                // is paused on a selected shield — the same reason the style row above
+                // is live.
+                VisualTweaksSettings.shieldRidgeWidth = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_RidgeWidth".Translate(),
+                    VisualTweaksSettings.shieldRidgeWidth,
+                    VisualTweaksSettings.MinShieldRidgeWidth,
+                    VisualTweaksSettings.MaxShieldRidgeWidth,
+                    "VisualTweaks_ShieldDome_RidgeWidthTip".Translate());
+                VisualTweaksSettings.shieldRidgeBrightness = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_RidgeBrightness".Translate(),
+                    VisualTweaksSettings.shieldRidgeBrightness,
+                    0f,
+                    1f,
+                    "VisualTweaks_ShieldDome_RidgeBrightnessTip".Translate());
             }
 
-            // These read every frame, so a slider drag is visible while the game is
-            // paused on a selected shield — the same reason the toggle above is live.
-            VisualTweaksSettings.shieldRidgeWidth = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_RidgeWidth".Translate(),
-                VisualTweaksSettings.shieldRidgeWidth,
-                VisualTweaksSettings.MinShieldRidgeWidth,
-                VisualTweaksSettings.MaxShieldRidgeWidth,
-                "VisualTweaks_ShieldDome_RidgeWidthTip".Translate());
-            VisualTweaksSettings.shieldRidgeBrightness = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_RidgeBrightness".Translate(),
-                VisualTweaksSettings.shieldRidgeBrightness,
-                0f,
-                1f,
-                "VisualTweaks_ShieldDome_RidgeBrightnessTip".Translate());
-            VisualTweaksSettings.shieldFlareAlpha = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_FlareAlpha".Translate(),
-                VisualTweaksSettings.shieldFlareAlpha,
-                VisualTweaksSettings.MinShieldFlareAlpha,
-                VisualTweaksSettings.MaxShieldFlareAlpha,
-                "VisualTweaks_ShieldDome_FlareAlphaTip".Translate());
-            VisualTweaksSettings.shieldFlareDamageInfluence = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_FlareDamage".Translate(),
-                VisualTweaksSettings.shieldFlareDamageInfluence,
-                0f,
-                1f,
-                "VisualTweaks_ShieldDome_FlareDamageTip".Translate());
-            VisualTweaksSettings.shieldFlareSizeScale = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_FlareSize".Translate(),
-                VisualTweaksSettings.shieldFlareSizeScale,
-                VisualTweaksSettings.MinShieldFlareSize,
-                VisualTweaksSettings.MaxShieldFlareSize,
-                "VisualTweaks_ShieldDome_FlareSizeTip".Translate());
+            // The panel style replaces the painted flare with a wave through the
+            // lattice, so the flare's three dials have nothing to drive there.
+            if (!VisualTweaksSettings.HexShieldDome)
+            {
+                VisualTweaksSettings.shieldFlareAlpha = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_FlareAlpha".Translate(),
+                    VisualTweaksSettings.shieldFlareAlpha,
+                    VisualTweaksSettings.MinShieldFlareAlpha,
+                    VisualTweaksSettings.MaxShieldFlareAlpha,
+                    "VisualTweaks_ShieldDome_FlareAlphaTip".Translate());
+                VisualTweaksSettings.shieldFlareDamageInfluence = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_FlareDamage".Translate(),
+                    VisualTweaksSettings.shieldFlareDamageInfluence,
+                    0f,
+                    1f,
+                    "VisualTweaks_ShieldDome_FlareDamageTip".Translate());
+                VisualTweaksSettings.shieldFlareSizeScale = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_FlareSize".Translate(),
+                    VisualTweaksSettings.shieldFlareSizeScale,
+                    VisualTweaksSettings.MinShieldFlareSize,
+                    VisualTweaksSettings.MaxShieldFlareSize,
+                    "VisualTweaks_ShieldDome_FlareSizeTip".Translate());
+            }
 
             // A broken shield used to disappear in one frame. This one tears itself
             // apart over a short animation; the stock flash and sound still play.
@@ -978,14 +1068,15 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Bakes on the tick a box is ticked, not on the next shield that happens to be
-        /// drawn. A settings window is the one moment the player expects the pause, and
-        /// it keeps a mid-game style switch from hitching during a fight. No-op when the
-        /// hex map is already baked or the style is not actually drawable yet.
+        /// Bakes while the settings page is open, not on the next shield that happens to
+        /// be drawn. A settings window is the one moment the player expects the pause,
+        /// and it keeps a mid-game style switch from hitching during a fight. No-op
+        /// unless the panel style is selected and drawable, and cheap when the texture
+        /// is already baked.
         /// </summary>
-        private static void BakeHexIfNewlyDrawn(bool justEnabled)
+        private static void BakeHexIfNewlyDrawn()
         {
-            if (justEnabled && VisualTweaksSettings.hexShieldDome)
+            if (VisualTweaksSettings.HexShieldDome)
             {
                 ShieldHexMap.ApplyDensity(VisualTweaksSettings.shieldHexDensityApplied);
             }

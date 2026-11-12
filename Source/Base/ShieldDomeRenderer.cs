@@ -112,29 +112,18 @@ namespace VisualTweaks
         // Panel-style hit reaction.
         // ------------------------------------------------------------------
 
-        /// <summary>
-        /// How many panels the hit flash crosses in one lifetime, for the hexagonal
-        /// style. Counted in panels rather than in cells or degrees on purpose: the
-        /// reaction has to be "a handful of tiles around the impact", and that is the
-        /// same picture on a 3-cell bubble and on a 25-cell dome.
-        ///
-        /// Four, not more. Panels are big; a wave that crosses six of them covers a
-        /// third of the dome, which reads as the shield lighting up rather than as a
-        /// hit. The 40-tick lifetime puts that at roughly six panels per second.
-        /// </summary>
-        private const float HexImpactReachHops = 4f;
-
-        /// <summary>
-        /// The panel flash reuses the flare's opacity setting. It used to be scaled by
-        /// 1.6 because one tile covers less area than a wedge, but that is what made it
-        /// read as a blown-out white blob rather than as light on a surface: a ripple
-        /// is a gradient, and pinning the brightest panel at the slider value leaves
-        /// the ones behind it room to fall off.
-        /// </summary>
-        private const float HexImpactGain = 0.9f;
 
         /// <summary>Vanilla's own colour for an inactive shield that is selected.</summary>
         private static readonly Color InactiveColor = new Color(0.2f, 0.2f, 0.2f);
+
+        /// <summary>
+        /// The quad margin vanilla uses for Other/ForceField. Its soft rim is drawn
+        /// past the radius the game blocks at, and the stock quad is enlarged by this
+        /// factor to give that glow somewhere to land. The stock-like style needs the
+        /// same room for the same reason; the crisp and panel styles must NOT use it,
+        /// because their whole contract is that the silhouette sits on r == 1.
+        /// </summary>
+        private const float VanillaQuadMargin = 1.1601562f;
 
         private static readonly float Altitude =
             Altitudes.AltitudeFor(AltitudeLayer.MoteOverhead);
@@ -159,20 +148,26 @@ namespace VisualTweaks
         // vectors instead of a few vectors per shield per frame.
         private static float appliedRidgeWidth = float.NaN;
         private static float appliedRidgeBrightness = float.NaN;
-        private static float appliedHexStyle = float.NaN;
+        private static float appliedDomeStyle = float.NaN;
         private static float appliedHexFace = float.NaN;
         private static float appliedHexLine = float.NaN;
         private static int appliedHexDensity = -1;
 
         /// <summary>
-        /// True when the panel style is what the player actually sees: the box is
-        /// ticked and the lattice texture exists. Both the style uniform and the choice
-        /// of hit reaction go through this, so the two can never disagree — answering a
-        /// hit with tiles while the dome draws the smooth style would flash panels that
-        /// are not on screen.
+        /// True when the panel style is what the player actually sees: the style is
+        /// selected and the lattice texture exists. Both the style uniform and the
+        /// choice of hit reaction go through this, so the two can never disagree —
+        /// answering a hit with tiles while the dome draws the crisp style would flash
+        /// panels that are not on screen.
         /// </summary>
         private static bool HexActive =>
-            VisualTweaksSettings.hexShieldDome && ShieldHexMap.Available;
+            VisualTweaksSettings.HexShieldDome && ShieldHexMap.Available;
+
+        /// <summary>
+        /// True when the stock-like style is chosen. Unlike <see cref="HexActive"/>
+        /// it has no external asset to fail, so it needs no availability check.
+        /// </summary>
+        private static bool VanillaActive => VisualTweaksSettings.VanillaShieldDome;
 
         /// <summary>
         /// Returns false when nothing was drawn, so the caller can hand the frame back
@@ -209,14 +204,20 @@ namespace VisualTweaks
 
             Vector3 center = parent.DrawPos;
 
-            // 2 * radius, with no texture-margin factor: the shader puts the
+            // 2 * radius normally, with no texture-margin factor: the shader puts the
             // silhouette on r == 1.0, so the quad edge and the gameplay radius are the
-            // same circle.
+            // same circle. The stock-like style is the exception — its soft rim is
+            // supposed to fade through r == 1 the way vanilla's does, so it gets the
+            // same 1.1601562 margin vanilla uses for Other/ForceField.
+            float quadMargin = VanillaActive ? VanillaQuadMargin : 1f;
             Matrix4x4 matrix = default;
             matrix.SetTRS(
                 new Vector3(center.x, Altitude, center.z),
                 Quaternion.identity,
-                new Vector3(radius * 2f, 1f, radius * 2f));
+                new Vector3(
+                    radius * 2f * quadMargin,
+                    1f,
+                    radius * 2f * quadMargin));
 
             // ------------------------------------------------------------------
             // Dissolve.
@@ -380,10 +381,12 @@ namespace VisualTweaks
                     continue;
                 }
 
+                // Its own strength, not the flare's: the two effects have no common
+                // scale, and a shared slider meant a value tuned for a wedge had to be
+                // multiplied by a fudge factor to look right on a lit tile.
                 float strength = Mathf.Clamp01(
-                    VisualTweaksSettings.shieldFlareAlpha
-                    * DamageFactor(impacts[i].Damage)
-                    * HexImpactGain);
+                    VisualTweaksSettings.shieldHexImpactStrength
+                    * DamageFactor(impacts[i].Damage));
                 if (strength < 0.004f)
                 {
                     continue;
@@ -399,7 +402,7 @@ namespace VisualTweaks
                     -toward.x,
                     -toward.z,
                     progress,
-                    HexImpactReachHops);
+                    VisualTweaksSettings.shieldHexImpactShare);
 
                 properties[0] = DrawProperty.Vector(
                     ParamsId, new NVector4(3f, strength, time, radius));
@@ -556,7 +559,7 @@ namespace VisualTweaks
             // shader's gradient constant has to describe the texture that actually
             // exists, not the one being previewed in a UI.
             int density = VisualTweaksSettings.shieldHexDensityApplied;
-            bool wantHex = VisualTweaksSettings.hexShieldDome;
+            bool wantHex = VisualTweaksSettings.HexShieldDome;
             if (wantHex)
             {
                 ShieldHexMap.Bind(mat, density);
@@ -564,12 +567,15 @@ namespace VisualTweaks
 
             // A failed bake must not produce a black disc. Falling back to the
             // smooth dome keeps the shield readable and matches the shader bridge's
-            // "lose the effect, never the feature" rule.
-            float style = HexActive ? 1f : 0f;
+            // "lose the effect, never the feature" rule. The stock-like style has no
+            // asset to fail, so it is passed through unconditionally.
+            float style = VisualTweaksSettings.VanillaShieldDome
+                ? 2f
+                : HexActive ? 1f : 0f;
 
             if (width == appliedRidgeWidth
                 && brightness == appliedRidgeBrightness
-                && style == appliedHexStyle
+                && style == appliedDomeStyle
                 && face == appliedHexFace
                 && line == appliedHexLine
                 && density == appliedHexDensity)
@@ -579,7 +585,7 @@ namespace VisualTweaks
 
             appliedRidgeWidth = width;
             appliedRidgeBrightness = brightness;
-            appliedHexStyle = style;
+            appliedDomeStyle = style;
             appliedHexFace = face;
             appliedHexLine = line;
             appliedHexDensity = density;
@@ -635,7 +641,7 @@ namespace VisualTweaks
                 // defaults these fields were initialised with.
                 appliedRidgeWidth = float.NaN;
                 appliedRidgeBrightness = float.NaN;
-                appliedHexStyle = float.NaN;
+                appliedDomeStyle = float.NaN;
                 appliedHexFace = float.NaN;
                 appliedHexLine = float.NaN;
                 appliedHexDensity = -1;

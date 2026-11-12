@@ -166,11 +166,29 @@ namespace VisualTweaks
         // patch re-reads this every frame, so no restart and no save reload.
         public static bool crispShieldDome = true;
 
-        // Second replacement style: a spherical hex/pentagon shell. A separate
-        // bool (rather than turning crispShieldDome into an enum) so existing
-        // saves keep their value and "stock look" stays one checkbox away. Off by
-        // default; every value below is read live, like the ridge sliders.
-        public static bool hexShieldDome = false;
+        // Which surface the replacement dome draws. Crisp is the original analytic
+        // ring; Hex is the spherical panel shell; Vanilla is a soft, wide-gradient
+        // reproduction of the stock ForceField read (rebuilt in the shader, never
+        // extracted from the game).
+        //
+        // An int rather than three bools: the three styles are mutually exclusive,
+        // and with checkboxes two of them could be on at once. The old
+        // hexShieldDome bool is still read below so an existing save keeps its
+        // choice, then migrated into shieldDomeStyle.
+        public const int ShieldDomeStyleCrisp = 0;
+        public const int ShieldDomeStyleHex = 1;
+        public const int ShieldDomeStyleVanilla = 2;
+
+        public static int shieldDomeStyle = ShieldDomeStyleCrisp;
+
+        // Legacy save value; only read during ExposeData migration.
+        private static bool hexShieldDome;
+
+        /// <summary>True when the spherical panel shell is the chosen style.</summary>
+        public static bool HexShieldDome => shieldDomeStyle == ShieldDomeStyleHex;
+
+        /// <summary>True when the stock-like soft dome is the chosen style.</summary>
+        public static bool VanillaShieldDome => shieldDomeStyle == ShieldDomeStyleVanilla;
 
         public const float MinShieldHexFace = 0f;
         public const float MaxShieldHexFace = 0.6f;
@@ -194,6 +212,23 @@ namespace VisualTweaks
         public const float MaxShieldHexDensity = 12f;
         public static float shieldHexDensity = 5f;
         public static int shieldHexDensityApplied = 5;
+
+        // The panel style answers a hit differently from the smooth one - a flash that
+        // spreads across the lattice instead of a wedge painted on the surface - so it
+        // gets its own strength and reach. Sharing the flare's slider was wrong twice
+        // over: the two effects have no common scale (a lit tile is tiny next to a
+        // wedge, so it needed an internal x1.6 fudge), and the flare's "size" is an
+        // angle, which is meaningless for a lattice wave.
+        public const float MinShieldHexImpactStrength = 0f;
+        public const float MaxShieldHexImpactStrength = 0.8f;
+        public static float shieldHexImpactStrength = 0.28f;
+
+        // Share of the run from the impact to the far rim that the wave crosses. A
+        // share and not a panel count, because a panel is 1/k of the dome: a fixed
+        // count made a dense shield barely react and a sparse one flood.
+        public const float MinShieldHexImpactShare = 0.12f;
+        public const float MaxShieldHexImpactShare = 0.6f;
+        public static float shieldHexImpactShare = 0.32f;
 
         // The four dome/flare dials that are worth a slider. Everything else about the
         // shield is derived rather than chosen: line weights scale with zoom through a
@@ -477,7 +512,19 @@ namespace VisualTweaks
                 1f);
             Scribe_Values.Look(ref alwaysShowShields, "alwaysShowShields", false);
             Scribe_Values.Look(ref crispShieldDome, "crispShieldDome", true);
+
+            // The old save only knows the boolean. -1 means the new key was absent,
+            // so its value decides the migrated style; otherwise the int wins even
+            // when the stale boolean disagrees.
             Scribe_Values.Look(ref hexShieldDome, "hexShieldDome", false);
+            Scribe_Values.Look(ref shieldDomeStyle, "shieldDomeStyle", -1);
+            if (shieldDomeStyle < ShieldDomeStyleCrisp
+                || shieldDomeStyle > ShieldDomeStyleVanilla)
+            {
+                shieldDomeStyle = hexShieldDome
+                    ? ShieldDomeStyleHex
+                    : ShieldDomeStyleCrisp;
+            }
             Scribe_Values.Look(
                 ref shieldHexFaceStrength,
                 "shieldHexFaceStrength",
@@ -487,6 +534,14 @@ namespace VisualTweaks
                 "shieldHexLineStrength",
                 0.75f);
             Scribe_Values.Look(ref shieldHexDensity, "shieldHexDensity", 5f);
+            Scribe_Values.Look(
+                ref shieldHexImpactStrength,
+                "shieldHexImpactStrength",
+                0.28f);
+            Scribe_Values.Look(
+                ref shieldHexImpactShare,
+                "shieldHexImpactShare",
+                0.32f);
             Scribe_Values.Look(
                 ref shieldHexDensityApplied,
                 "shieldHexDensityApplied",
@@ -625,6 +680,14 @@ namespace VisualTweaks
                 shieldHexDensityApplied,
                 (int)MinShieldHexDensity,
                 (int)MaxShieldHexDensity);
+            shieldHexImpactStrength = Mathf.Clamp(
+                shieldHexImpactStrength,
+                MinShieldHexImpactStrength,
+                MaxShieldHexImpactStrength);
+            shieldHexImpactShare = Mathf.Clamp(
+                shieldHexImpactShare,
+                MinShieldHexImpactShare,
+                MaxShieldHexImpactShare);
             shieldDissolveTicks = Mathf.Clamp(
                 shieldDissolveTicks,
                 MinShieldDissolveTicks,
@@ -765,11 +828,14 @@ namespace VisualTweaks
             shieldRippleDamageScale = 1f;
             alwaysShowShields = false;
             crispShieldDome = true;
+            shieldDomeStyle = ShieldDomeStyleCrisp;
             hexShieldDome = false;
             shieldHexFaceStrength = 0.22f;
             shieldHexLineStrength = 0.75f;
             shieldHexDensity = 5f;
             shieldHexDensityApplied = 5;
+            shieldHexImpactStrength = 0.28f;
+            shieldHexImpactShare = 0.32f;
             shieldRidgeWidth = 3.6f;
             shieldRidgeBrightness = 0.52f;
             shieldFlareAlpha = 0.30f;

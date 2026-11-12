@@ -62,8 +62,8 @@ namespace VisualTweaks
     ///
     ///   1. <see cref="Prewarm"/> from the mod's StaticConstructorOnStartup — the
     ///      normal case. Mod settings are read in the Mod constructor, which runs
-    ///      before static constructors, so the enabled flag and the density are both
-    ///      already known here and the whole cost lands on the loading screen.
+    ///      before static constructors, so the selected style and the density are
+    ///      both already known here and the whole cost lands on the loading screen.
     ///   2. The settings checkbox, the moment it is switched on, so enabling the
     ///      style mid-game does not bill the first shield that happens to be drawn.
     ///   3. The rebake button, when the density draft is committed.
@@ -185,7 +185,7 @@ namespace VisualTweaks
         /// nothing reads.
         /// </summary>
         private static bool CanBeDrawn =>
-            VisualTweaksSettings.hexShieldDome
+            VisualTweaksSettings.HexShieldDome
             && VisualTweaksSettings.crispShieldDome
             && ShieldDomeBridge.ShaderReady;
 

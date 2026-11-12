@@ -208,7 +208,9 @@
   </ShaderDef>
 
   <!--
-    Crisp-edged projectile-interceptor shield, replacing vanilla's PostDraw.
+    Projectile-interceptor shield dome, replacing vanilla's PostDraw. One shader
+    draws all three styles (crisp ring, hexagonal panel shell, stock-like soft
+    dome); the style is a material uniform, so the quad and draw count never change.
 
     Queue 3151 and Additive are copied verbatim from vanilla's Map/MoteGlow, which
     is what the stock ForceField material uses. The shield therefore keeps its place

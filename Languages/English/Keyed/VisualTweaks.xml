@@ -124,20 +124,25 @@
   <VisualTweaks_ShieldAlways_EnableTip>Active shields stay faintly visible when not selected, so their coverage is easy to read.</VisualTweaks_ShieldAlways_EnableTip>
 
   <VisualTweaks_ShieldDome_Group>Shield drawing</VisualTweaks_ShieldDome_Group>
-  <VisualTweaks_ShieldDome_Enable>Crisp-edged shields</VisualTweaks_ShieldDome_Enable>
-  <VisualTweaks_ShieldDome_EnableTip>Redraws shields with a custom shader: the edge becomes a sharp ring that stops exactly on the intercept radius, instead of smearing out and glowing past it like the stock texture. Turn it off to get vanilla's look back for comparison.</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_Enable>Replace shield drawing</VisualTweaks_ShieldDome_Enable>
+  <VisualTweaks_ShieldDome_EnableTip>Redraws shields with a custom shader; choose the crisp, hexagonal or stock-like style below. Turn it off to get vanilla's drawing back for comparison.</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_StyleCrisp>Crisp</VisualTweaks_ShieldDome_StyleCrisp>
+  <VisualTweaks_ShieldDome_StyleCrispTip>The analytic dome: its edge is a sharp ring that stops exactly on the intercept radius instead of smearing out like the stock texture. Outline thickness and brightness are the sliders below.</VisualTweaks_ShieldDome_StyleCrispTip>
   <VisualTweaks_ShieldDome_RidgeWidth>Outline thickness</VisualTweaks_ShieldDome_RidgeWidth>
   <VisualTweaks_ShieldDome_RidgeWidthTip>The outline is a band, not a stroke; this is its half-width in screen pixels. The thickness stays the same at any zoom and on any shield radius. Want it thicker? Raise this, not the brightness.</VisualTweaks_ShieldDome_RidgeWidthTip>
   <VisualTweaks_ShieldDome_RidgeBrightness>Outline brightness</VisualTweaks_ShieldDome_RidgeBrightness>
   <VisualTweaks_ShieldDome_RidgeBrightnessTip>Brightness of the outline band. At 0 only the thin hot core and the inner glow are left, and the edge looks thin again — use the thickness slider above for that.</VisualTweaks_ShieldDome_RidgeBrightnessTip>
   <VisualTweaks_ShieldDome_FlareAlpha>Impact flare opacity</VisualTweaks_ShieldDome_FlareAlpha>
-  <VisualTweaks_ShieldDome_FlareAlphaTip>Peak opacity of the hit effect a single interception produces. Vanilla's cone reaches 0.82, which reads as an opaque slice laid on the dome; the default here is a third of that. Several simultaneous hits each draw their own and add up. With the hexagonal style this drives the panel flash instead (scaled by 1.6 internally, since one panel covers far less area than a wedge).</VisualTweaks_ShieldDome_FlareAlphaTip>
+  <VisualTweaks_ShieldDome_FlareAlphaTip>Peak opacity of the hit effect a single interception produces. Vanilla's cone reaches 0.82, which reads as an opaque slice laid on the dome; the default here is a third of that. Several simultaneous hits each draw their own and add up. This only affects the smooth style; the hexagonal style has its own hit flash strength and reach.</VisualTweaks_ShieldDome_FlareAlphaTip>
   <VisualTweaks_ShieldDome_FlareSize>Flare size</VisualTweaks_ShieldDome_FlareSize>
   <VisualTweaks_ShieldDome_FlareSizeTip>Overall size multiplier for the flare. The width itself follows the projectile's damage, but is capped at 45% of the shield radius: on a small shield it tops out quickly (a wider wedge would cover the whole dome), while on a large one heavier weapons do show. Shield ripples are a separate feature and their settings do not affect the flare.</VisualTweaks_ShieldDome_FlareSizeTip>
   <VisualTweaks_ShieldDome_FlareDamage>Flare damage influence</VisualTweaks_ShieldDome_FlareDamage>
   <VisualTweaks_ShieldDome_FlareDamageTip>How much the flare's brightness follows the damage of the hit. 0 makes every weapon look alike; higher makes heavy weapons stand out. The result is always clamped to 0.55-1.8x, so a charge lance cannot wash out the whole dome and a small-calibre round cannot disappear.</VisualTweaks_ShieldDome_FlareDamageTip>
-  <VisualTweaks_ShieldDome_Hex>Hexagonal dome (alternate style)</VisualTweaks_ShieldDome_Hex>
+  <VisualTweaks_ShieldDome_Hex>Hexagonal</VisualTweaks_ShieldDome_Hex>
   <VisualTweaks_ShieldDome_HexTip>Replaces the shield surface with a spherical hex/pentagon shell: cells compress toward the silhouette and each panel carries its own flat shading, so it reads as half a sphere rather than a honeycomb pasted on a circle. A closed surface cannot be tiled by hexagons alone — exactly twelve pentagons are required, and those are where the curvature lives. They are a geometric compromise and are given no special colouring or emphasis. Hits and breaks also happen per panel: the panels around an impact flash white and the light walks outward, and a breaking shell loses panels from the failure point outward. No draw call is added. Requires the crisp-edged shield toggle above.</VisualTweaks_ShieldDome_HexTip>
+  <VisualTweaks_ShieldDome_StyleVanilla>Stock-like</VisualTweaks_ShieldDome_StyleVanilla>
+  <VisualTweaks_ShieldDome_StyleVanillaTip>Rebuilds the soft stock look: a wide blurred rim, an almost clear interior, and — like vanilla — a glow allowed to spill slightly past the intercept radius. Built entirely in the shader; no game texture is read or extracted, so it imitates the stock look rather than copying it pixel for pixel. It is the one style without outline sliders.</VisualTweaks_ShieldDome_StyleVanillaTip>
+  <VisualTweaks_ShieldDome_VanillaNote>The stock-like style keeps the stock texture's proportions in shader constants: rim width and interior haze scale with the shield radius, so there is no pixel-width or brightness slider.</VisualTweaks_ShieldDome_VanillaNote>
   <VisualTweaks_ShieldDome_HexFace>Panel brightness</VisualTweaks_ShieldDome_HexFace>
   <VisualTweaks_ShieldDome_HexFaceTip>How brightly each hexagonal panel is filled. Shading is flat per face (from its own normal), which is what makes this a shell rather than a smooth sphere with a net drawn over it. Too high and it drowns the rim.</VisualTweaks_ShieldDome_HexFaceTip>
   <VisualTweaks_ShieldDome_HexLine>Cell line brightness</VisualTweaks_ShieldDome_HexLine>
@@ -146,6 +151,10 @@
   <VisualTweaks_ShieldDome_HexDensityTip>Panels over the whole sphere = 10k^2+2: 2 = 42 (looks like a football), 5 = 252, 8 = 642, 12 = 1442 (a fine energy mesh). Exactly twelve are always pentagons, but they are not marked in any way. This is a draft value only — dragging it does not rebuild the texture; the button below bakes and applies it.</VisualTweaks_ShieldDome_HexDensityTip>
   <VisualTweaks_ShieldDome_HexBake>Apply density and rebake</VisualTweaks_ShieldDome_HexBake>
   <VisualTweaks_ShieldDome_HexPending>Showing k={0}; the slider is now at k={1}. Press the button above to apply it (rebuilds the 2048^2 texture — a few hundred ms of hitching, once).</VisualTweaks_ShieldDome_HexPending>
+  <VisualTweaks_ShieldDome_HexImpact>Hit flash strength</VisualTweaks_ShieldDome_HexImpact>
+  <VisualTweaks_ShieldDome_HexImpactTip>Peak brightness of the panels lit by an interception, in the hexagonal style. Separate from the smooth style's flare opacity above: this is the final brightness, with no internal multiplier.</VisualTweaks_ShieldDome_HexImpactTip>
+  <VisualTweaks_ShieldDome_HexImpactReach>Hit flash reach</VisualTweaks_ShieldDome_HexImpactReach>
+  <VisualTweaks_ShieldDome_HexImpactReachTip>How far the light travels from the impact, measured as a share of the distance to the far rim. Being a share, it does not shrink when the cell density is raised.</VisualTweaks_ShieldDome_HexImpactReachTip>
   <VisualTweaks_ShieldDome_Dissolve>Break dissolve</VisualTweaks_ShieldDome_Dissolve>
   <VisualTweaks_ShieldDome_DissolveTip>When a shield is shot down, EMP-disabled, lost with its mech lord, or switched off, the dome cracks from the point of failure and erodes away instead of vanishing in a single frame. Vanilla's break flash and sound still play underneath.</VisualTweaks_ShieldDome_DissolveTip>
   <VisualTweaks_ShieldDome_DissolveTime>Break duration</VisualTweaks_ShieldDome_DissolveTime>
