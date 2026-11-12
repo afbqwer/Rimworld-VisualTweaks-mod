@@ -175,6 +175,17 @@ namespace VisualTweaks
 
         public float AngleMin;
         public float AngleMax;
+
+        // Optional circular clip. Shield ripples set this to the shield's outward
+        // direction at the impact point and the local curvature of the shield edge;
+        // shockwaves leave every field at zero, which the shader reads as "no clip".
+        // Kept here rather than in a subclass so the renderer keeps one instance type
+        // and one buffer layout.
+        public float ClipDirX;
+        public float ClipDirZ;
+        public float ClipCurvature;
+        public float ClipEnabled;
+
         public int StartTick;
         public float StartRealtime;
         public bool UseTicks;

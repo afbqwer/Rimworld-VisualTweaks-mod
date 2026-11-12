@@ -27,9 +27,13 @@ namespace VisualTweaks
     /// Where the ripple goes: <see cref="CompProjectileInterceptor.CheckIntercept"/>
     /// only fires when the projectile segment crosses the circle outline
     /// (GenGeo.IntersectLineCircleOutline), so the impact is always within one
-    /// tile-step of the shield rim. The spawn point is clamped onto that rim, which
+    /// tile-step of the shield rim. The spawn point is pinned onto that rim, which
     /// is also the only honest answer in a top-down view: the dome is drawn as a flat
     /// disc, so "on the surface" means "on the silhouette".
+    ///
+    /// The ripple is then clipped to the inside of the dome by the shader, so only the
+    /// near half — the half that is actually on the visible surface — is drawn. See the
+    /// clip block in VisualTweaksExplosionRipple.frag.glsl.
     /// </summary>
     internal sealed class ShieldRippleLayer : IOverlayLayer
     {
@@ -131,16 +135,25 @@ namespace VisualTweaks
                 return;
             }
 
-            // Clamp between 35% and 100% of the radius. The upper bound keeps the ripple
-            // on the silhouette (the bullet can overstep into the dome on the tick it is
-            // stopped); the lower bound keeps a shield with several projectiles stopping
-            // inside it from stacking rings on the exact centre.
+            // Pin the ripple exactly on the silhouette. Two reasons, and the second one
+            // is what makes the shader clip exact:
+            //
+            // 1. The segment that triggered this call crossed the circle outline, so the
+            //    impact is within one tile-step of the rim. Pulling it onto the rim is a
+            //    sub-tile correction, not a relocation.
+            // 2. The clip term below assumes the impact point lies on the shield sphere.
+            //    If it were allowed to sit inside, the local circle would need a second
+            //    constant term and the ripple would be clipped into a sliver.
+            //
+            // A projectile stopped at the exact centre has no usable direction and was
+            // rejected above, so there is no case left where pinning to the rim is wrong
+            // by more than that one tile-step.
             float dist = Mathf.Sqrt(distSq);
-            float angularRadius = Mathf.Clamp(dist, shieldRadius * 0.35f, shieldRadius);
-            float scale = angularRadius / dist;
+            float dirX = dx / dist;
+            float dirZ = dz / dist;
 
-            float x = center.x + dx * scale;
-            float z = center.z + dz * scale;
+            float x = center.x + dirX * shieldRadius;
+            float z = center.z + dirZ * shieldRadius;
 
             // The ripple is a fraction of the shield: a fixed size would swallow a
             // 2-cell low-shield and vanish on a 25-cell gravship bubble.
@@ -149,6 +162,13 @@ namespace VisualTweaks
                 VisualTweaksSettings.shieldRippleDuration,
                 VisualTweaksSettings.MinShieldRippleDuration,
                 VisualTweaksSettings.MaxShieldRippleDuration);
+
+            // Clip curvature in quad-local units: 1 / (2 * R_local) where
+            // R_local = shieldRadius / quadRadius. Large shields converge on 0, which
+            // degenerates to a straight cut — correct, since their edge is nearly flat
+            // across a ripple this small.
+            float quadRadius = radius * ExplosionRippleRenderer.QuadOvershoot;
+            float clipCurvature = quadRadius / (2f * shieldRadius);
 
             float diameter = radius * 2f * ExplosionRippleRenderer.QuadOvershoot;
 
@@ -180,6 +200,10 @@ namespace VisualTweaks
                 // the same reason — a rarefaction wake needs room to read as a wake.
                 BandWidth = 0.16f,
                 TailLength = 0.1f,
+                ClipDirX = dirX,
+                ClipDirZ = dirZ,
+                ClipCurvature = clipCurvature,
+                ClipEnabled = 1f,
                 Matrix = matrix,
                 StartTick = now,
                 StartRealtime = Time.realtimeSinceStartup,

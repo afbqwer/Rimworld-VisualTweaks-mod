@@ -41,23 +41,27 @@ namespace VisualTweaks
         private static readonly int Params2Id = Shader.PropertyToID("_Params2");
         private static readonly int Params3Id = Shader.PropertyToID("_Params3");
         private static readonly int Params4Id = Shader.PropertyToID("_Params4");
+        private static readonly int Params5Id = Shader.PropertyToID("_Params5");
         private static readonly int RippleParamsId = Shader.PropertyToID("_RippleParams");
 
         // Reused every frame; capacity is the hard upper bound from the settings.
         private readonly List<Matrix4x4> instanceMatrices =
             new List<Matrix4x4>(VisualTweaksSettings.MaxRippleCount);
 
-        // Two vec4 per wave, matching _RippleParams in the shaders:
-        //   (t, front, width, strength), (tail, seed, angleMin, angleMax)
+        // Three vec4 per wave, matching _RippleParams in the shaders:
+        //   (t, front, width, strength), (tail, seed, angleMin, angleMax),
+        //   (clipDirX, clipDirZ, clipCurvature, clipEnabled)
+        // The third vec4 is only ever nonzero for shield ripples; shockwaves leave it
+        // at zero, which the shader reads as "no clip".
         private readonly NVector4[] instanceParams =
-            new NVector4[VisualTweaksSettings.MaxRippleCount * 2];
+            new NVector4[VisualTweaksSettings.MaxRippleCount * 3];
 
         private readonly MaterialPropertyBlock instancedProperties =
             new MaterialPropertyBlock();
 
         // Small-count path. The engine copies this span straight into its
         // property arena, with no MaterialPropertyBlock dictionary in between.
-        private readonly DrawProperty[] drawProperties = new DrawProperty[2];
+        private readonly DrawProperty[] drawProperties = new DrawProperty[3];
 
         // Created on first draw (the shader def is not loaded yet at construction) and
         // released by Dispose. Nullable is the honest type here; EnsureMaterial and the
@@ -132,7 +136,7 @@ namespace VisualTweaks
                 }
 
                 instanceMatrices.Add(ripple.Matrix);
-                int p = count * 2;
+                int p = count * 3;
                 instanceParams[p] = new NVector4(
                     t,
                     front,
@@ -143,6 +147,11 @@ namespace VisualTweaks
                     ripple.Seed,
                     ripple.AngleMin,
                     ripple.AngleMax);
+                instanceParams[p + 2] = new NVector4(
+                    ripple.ClipDirX,
+                    ripple.ClipDirZ,
+                    ripple.ClipCurvature,
+                    ripple.ClipEnabled);
                 count++;
             }
 
@@ -169,9 +178,10 @@ namespace VisualTweaks
         {
             for (int i = 0; i < count; i++)
             {
-                int p = i * 2;
+                int p = i * 3;
                 drawProperties[0] = DrawProperty.Vector(ParamsId, instanceParams[p]);
                 drawProperties[1] = DrawProperty.Vector(Params2Id, instanceParams[p + 1]);
+                drawProperties[2] = DrawProperty.Vector(Params5Id, instanceParams[p + 2]);
 
                 Graphics.DrawMesh(
                     MeshPool.plane10,
@@ -191,12 +201,12 @@ namespace VisualTweaks
                 // Sized once for the absolute maximum; only the used prefix is
                 // written each frame. 16-byte stride = one vec4.
                 paramsBuffer = new ComputeBuffer(
-                    VisualTweaksSettings.MaxRippleCount * 2,
+                    VisualTweaksSettings.MaxRippleCount * 3,
                     16);
                 instancedProperties.SetBuffer(RippleParamsId, paramsBuffer);
             }
 
-            paramsBuffer.SetData(instanceParams, 0, 0, count * 2);
+            paramsBuffer.SetData(instanceParams, 0, 0, count * 3);
 
             Graphics.DrawMeshInstanced(
                 MeshPool.plane10,

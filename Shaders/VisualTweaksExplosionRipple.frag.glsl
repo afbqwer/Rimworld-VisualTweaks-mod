@@ -43,6 +43,10 @@ layout(std430, set = 2, binding = 3) readonly buffer _RippleParams
 //   vParams2.y  random seed
 //   vParams2.z  affected angle minimum (degrees)
 //   vParams2.w  affected angle maximum (degrees); negative disables the mask
+//   vParams3.x  clip direction x (outward unit vector, world xz)
+//   vParams3.y  clip direction y (world z)
+//   vParams3.z  clip curvature, = quad radius / (2 * shield radius)
+//   vParams3.w  clip enable; 0 leaves the ripple unclipped (every shockwave)
 //
 // Material constants (shared by every wave, set once on the material):
 //   _Params3.x  radial noise amplitude
@@ -57,6 +61,7 @@ layout(std430, set = 2, binding = 3) readonly buffer _RippleParams
 layout(location = 0) in vec2 vUv;
 layout(location = 1) in vec4 vParams;
 layout(location = 2) in vec4 vParams2;
+layout(location = 3) in vec4 vParams3;
 
 layout(location = 0) out vec4 outColor;
 
@@ -66,6 +71,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
     vec4 _Params2; // @default = vec4(0.3, 0.0, 0.0, -1.0)
     vec4 _Params3; // @default = vec4(0.02, 3.2, 8.0, 0.0)
     vec4 _Params4; // @default = vec4(0.18, 0.06, 0.0, 0.0)
+    vec4 _Params5; // @default = vec4(0.0, 0.0, 0.0, 0.0)
 } u;
 
 layout(set = 2, binding = 1) uniform sampler2D _GrabVisualTweaksExplosionRipple;
@@ -181,6 +187,28 @@ void main()
         float rel = mod(a - lo + 540.0, 360.0) - 180.0;
         mask = smoothstep(-soft, soft, rel)
             * (1.0 - smoothstep(range - soft, range + soft, rel));
+    }
+
+    // Shield hits only. The ripple sits on the dome, and the dome's silhouette is a
+    // circle that passes through the impact point; everything outside it is on the far
+    // side of the surface and must not be drawn.
+    //
+    // With the origin at the impact point and one unit = quad radius, the shield centre
+    // is at -n * Rl (n = outward normal, Rl = shield radius in local units), so a point
+    // p is inside the sphere when |p + n*Rl|^2 <= Rl^2, which expands to
+    //     p.n + |p|^2 / (2*Rl) <= 0
+    // vParams3.z carries 1/(2*Rl) directly, so this needs no division. The impact point
+    // is always placed exactly on the rim, which is what makes the single-parameter form
+    // exact: an impact that was pulled inward would need a constant offset term as well.
+    //
+    // The band is cut at the silhouette, not faded over it: the surface really does stop
+    // there, and the refracted output is opaque, so a wide cross-fade would show as a
+    // smeared fringe along the whole edge.
+    if (vParams3.w > 0.5)
+    {
+        float outward = dot(centered, vParams3.xy);
+        float cut = outward + r * r * vParams3.z;
+        mask *= 1.0 - smoothstep(-0.015, 0.06, cut);
     }
 
     float s = strength * vParams.w * mask;
