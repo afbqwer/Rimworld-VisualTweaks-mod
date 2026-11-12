@@ -15,10 +15,11 @@ namespace VisualTweaks
     /// What is ported from <see cref="ShieldDomeRenderer"/> is the same three surface
     /// types, the same ridge and face/line weights, a material built from the same
     /// code, and the same dissolve / panel-loss break animations. The stock-like type
-    /// resolves to the belt's own bubble profile rather than the dome's ForceField
-    /// ring, because vanilla uses different textures for the two. The surface choice
-    /// itself is independent — a belt can draw crisp while the dome draws hex — and so
-    /// are the lattice density, opacity and hit reaction.
+    /// resolves to the matching stock profile for the target: the ForceField ring for
+    /// a dome's Vanilla choice, the ShieldBubble bubble for a belt (also selectable on
+    /// a dome as Bubble), because vanilla uses different textures for the two. The
+    /// surface choice itself is independent — a belt can draw crisp while the dome
+    /// draws hex — and so are the lattice density, opacity and hit reaction.
     ///
     /// The hit reaction is a belt-specific choice: vanilla's jitter, the surface
     /// brightening in the struck sector, or the lattice wave. The flare is not offered
@@ -86,11 +87,10 @@ namespace VisualTweaks
             CompShield comp,
             Func<CompShield, bool> shouldDisplay)
         {
-            if (!ShieldDomeBridge.ShouldReplace(comp))
-            {
-                return false;
-            }
-
+            // The caller (PersonalShieldPatches.DrawFor) has already applied
+            // ShieldDomeBridge.ShouldReplace and latched any fatal draw failure.
+            // Checking the gate again here would only repeat the settings and
+            // screenshot checks on every belt every frame.
             Pawn? pawn = comp.parent is Apparel apparel
                 ? apparel.Wearer
                 : comp.parent as Pawn;
@@ -100,16 +100,6 @@ namespace VisualTweaks
             {
                 return false;
             }
-
-            Material? mat = Surface.Ensure();
-            if (mat == null)
-            {
-                return false;
-            }
-
-            // Shared ridge/face/line weights, but this material resolves the belt's
-            // own surface style and lattice independently of the dome's.
-            Surface.ApplyLook();
 
             int breakStyle = VisualTweaksSettings.CurrentShieldBreakStyleFor(
                 ShieldHexTarget.Personal);
@@ -163,6 +153,20 @@ namespace VisualTweaks
                 }
             }
 
+            // Nothing is submitted for a belt that is neither breaking nor active and
+            // visible, so the material and its look uniforms are resolved only after
+            // that decision. An idle belt then costs a few field reads per frame
+            // instead of an Ensure/ApplyLook pass.
+            Material? mat = Surface.Ensure();
+            if (mat == null)
+            {
+                return false;
+            }
+
+            // Shared ridge/face/line weights, but this material resolves the belt's
+            // own surface style and lattice independently of the dome's.
+            Surface.ApplyLook();
+
             // Only the jitter effect moves the bubble. Brighten and the lattice wave
             // are additive quads drawn over the same centred surface, so they must not
             // also displace it. The dissolve owns the frame when one is playing, so no
@@ -190,7 +194,7 @@ namespace VisualTweaks
             // Crisp and panel silhouettes sit exactly on r == 1, so their quad is
             // exactly the diameter. The stock-like style's soft tail is meant to fade
             // past the rim, so it gets vanilla's own ForceField margin for that tail.
-            float quadMargin = VisualTweaksSettings.IsVanillaShieldDome(
+            float quadMargin = VisualTweaksSettings.IsStockLikeShieldDome(
                 ShieldHexTarget.Personal)
                 ? ShieldDomeRenderer.VanillaQuadMargin
                 : 1f;

@@ -99,6 +99,35 @@ namespace VisualTweaks
             return Impacts.TryGetValue(comp, out List<Impact>? list) ? list : null;
         }
 
+        /// <summary>
+        /// True while at least one recorded impact is still inside its lifetime —
+        /// the same age test the draw loops apply. Lets a renderer skip resolving
+        /// the material and its look uniforms on a shield that has not been hit
+        /// recently. At most <see cref="MaxPerShield"/> entries, and the lookup is
+        /// only reached when the surface is already invisible.
+        /// </summary>
+        internal static bool HasLive(CompProjectileInterceptor comp)
+        {
+            TickManager? tickManager = Find.TickManager;
+            if (tickManager == null
+                || !Impacts.TryGetValue(comp, out List<Impact>? list))
+            {
+                return false;
+            }
+
+            int now = tickManager.TicksGame;
+            for (int i = 0; i < list.Count; i++)
+            {
+                int age = now - list[i].Tick;
+                if (age >= 0 && age < LifetimeTicks)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static void Prune(List<Impact> list, int now)
         {
             int drop = 0;

@@ -132,7 +132,9 @@
   <VisualTweaks_ShieldDome_HexTip>Spherical hex/pentagon panels with flat per-cell shading, so it reads as half a sphere. The defaults are Hex wave for hits and Hex dissipate for breaks; both can be changed below.</VisualTweaks_ShieldDome_HexTip>
   <VisualTweaks_ShieldDome_StyleVanilla>Stock-like</VisualTweaks_ShieldDome_StyleVanilla>
   <VisualTweaks_ShieldDome_StyleVanillaTip>Imitates the matching stock texture: a narrow rim with a wide glow for domes, and a gradient-filled soft bubble for belts; glow spills slightly past the intercept radius.</VisualTweaks_ShieldDome_StyleVanillaTip>
-  <VisualTweaks_ShieldDome_VanillaNote>The stock-like style uses fixed rim and haze proportions, so it has no outline sliders.</VisualTweaks_ShieldDome_VanillaNote>
+  <VisualTweaks_ShieldDome_StyleBubble>Shield bubble</VisualTweaks_ShieldDome_StyleBubble>
+  <VisualTweaks_ShieldDome_StyleBubbleTip>Puts the personal shield's bubble on a projector dome: a gradient-filled interior, a wider rim, and a quick outer cutoff.</VisualTweaks_ShieldDome_StyleBubbleTip>
+  <VisualTweaks_ShieldDome_VanillaNote>The stock-like and bubble styles use fixed rim and haze proportions, so they have no outline sliders.</VisualTweaks_ShieldDome_VanillaNote>
   <VisualTweaks_ShieldDome_HexFace>Panel brightness</VisualTweaks_ShieldDome_HexFace>
   <VisualTweaks_ShieldDome_HexFaceTip>Fill brightness of each panel; too high drowns the cell lines.</VisualTweaks_ShieldDome_HexFaceTip>
   <VisualTweaks_ShieldDome_HexLine>Cell line brightness</VisualTweaks_ShieldDome_HexLine>

@@ -127,10 +127,12 @@ namespace VisualTweaks
         internal static bool HexActive => Surface.HexActive;
 
         /// <summary>
-        /// True when the stock-like style is chosen. Unlike <see cref="HexActive"/>
-        /// it has no external asset to fail, so it needs no availability check.
+        /// True when either stock-like style is chosen (ForceField or Bubble).
+        /// Unlike <see cref="HexActive"/> these have no external asset to fail, so
+        /// they need no availability check. Both use the enlarged quad, because
+        /// both draw a faint tail outside the nominal radius.
         /// </summary>
-        internal static bool VanillaActive => VisualTweaksSettings.VanillaShieldDome;
+        internal static bool StockLikeActive => VisualTweaksSettings.StockLikeShieldDome;
 
         /// <summary>
         /// Returns false when nothing was drawn, so the caller can hand the frame back
@@ -157,14 +159,6 @@ namespace VisualTweaks
                 return false;
             }
 
-            Material? mat = Surface.Ensure();
-            if (mat == null)
-            {
-                return false;
-            }
-
-            Surface.ApplyLook();
-
             Vector3 center = parent.DrawPos;
 
             // 2 * radius normally, with no texture-margin factor: the shader puts the
@@ -172,7 +166,7 @@ namespace VisualTweaks
             // same circle. The stock-like style is the exception — its soft rim is
             // supposed to fade through r == 1 the way vanilla's does, so it gets the
             // same 1.1601562 margin vanilla uses for Other/ForceField.
-            float quadMargin = VanillaActive ? VanillaQuadMargin : 1f;
+            float quadMargin = StockLikeActive ? VanillaQuadMargin : 1f;
             Matrix4x4 matrix = default;
             matrix.SetTRS(
                 new Vector3(center.x, Altitude, center.z),
@@ -231,6 +225,25 @@ namespace VisualTweaks
                     dissolve.SawInactive = true;
                 }
             }
+
+            // Nothing is submitted while the surface is fully transparent, no break
+            // is in flight and the last recorded hit has already faded. Deciding that
+            // before touching the material keeps a hidden shield down to a few field
+            // reads and one lookup per frame instead of an Ensure/ApplyLook pass.
+            if (dissolve == null
+                && alpha <= 0f
+                && !ShieldImpactLog.HasLive(comp))
+            {
+                return false;
+            }
+
+            Material? mat = Surface.Ensure();
+            if (mat == null)
+            {
+                return false;
+            }
+
+            Surface.ApplyLook();
 
             // Vanilla paints a selected-but-inactive shield dark grey so "this is off"
             // is visible at a glance. A shield that is actively tearing itself apart is

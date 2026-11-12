@@ -359,20 +359,32 @@ namespace VisualTweaks
             };
         }
 
-        // Display order of the shield dome styles. Same reason as StyleOrder above:
-        // the radio row is indexed by position, not by the setting value.
-        private static readonly int[] ShieldStyleOrder =
+        // Display order of the shield surface styles. Same reason as StyleOrder
+        // above: the radio row is indexed by position, not by the setting value.
+        //
+        // A belt's Vanilla choice already is the ShieldBubble profile, so the belt
+        // has three options. The dome adds that bubble as a fourth, next to its own
+        // ForceField stock-like style.
+        private static readonly int[] PersonalShieldStyleOrder =
         {
             VisualTweaksSettings.ShieldDomeStyleCrisp,
             VisualTweaksSettings.ShieldDomeStyleHex,
             VisualTweaksSettings.ShieldDomeStyleVanilla
         };
 
-        private static int ShieldStyleIndexOf(int style)
+        private static readonly int[] LargeShieldStyleOrder =
         {
-            for (int i = 0; i < ShieldStyleOrder.Length; i++)
+            VisualTweaksSettings.ShieldDomeStyleCrisp,
+            VisualTweaksSettings.ShieldDomeStyleHex,
+            VisualTweaksSettings.ShieldDomeStyleVanilla,
+            VisualTweaksSettings.ShieldDomeStyleBubble
+        };
+
+        private static int ShieldStyleIndexOf(int[] order, int style)
+        {
+            for (int i = 0; i < order.Length; i++)
             {
-                if (ShieldStyleOrder[i] == style)
+                if (order[i] == style)
                 {
                     return i;
                 }
@@ -381,24 +393,40 @@ namespace VisualTweaks
             return 0;
         }
 
-        private static string[] ShieldStyleLabels()
+        private static string[] ShieldStyleLabels(bool withBubble)
         {
-            return new string[]
-            {
-                "VisualTweaks_ShieldDome_StyleCrisp".Translate(),
-                "VisualTweaks_ShieldDome_Hex".Translate(),
-                "VisualTweaks_ShieldDome_StyleVanilla".Translate()
-            };
+            return withBubble
+                ? new string[]
+                {
+                    "VisualTweaks_ShieldDome_StyleCrisp".Translate(),
+                    "VisualTweaks_ShieldDome_Hex".Translate(),
+                    "VisualTweaks_ShieldDome_StyleVanilla".Translate(),
+                    "VisualTweaks_ShieldDome_StyleBubble".Translate()
+                }
+                : new string[]
+                {
+                    "VisualTweaks_ShieldDome_StyleCrisp".Translate(),
+                    "VisualTweaks_ShieldDome_Hex".Translate(),
+                    "VisualTweaks_ShieldDome_StyleVanilla".Translate()
+                };
         }
 
-        private static string[] ShieldStyleTips()
+        private static string[] ShieldStyleTips(bool withBubble)
         {
-            return new string[]
-            {
-                "VisualTweaks_ShieldDome_StyleCrispTip".Translate(),
-                "VisualTweaks_ShieldDome_HexTip".Translate(),
-                "VisualTweaks_ShieldDome_StyleVanillaTip".Translate()
-            };
+            return withBubble
+                ? new string[]
+                {
+                    "VisualTweaks_ShieldDome_StyleCrispTip".Translate(),
+                    "VisualTweaks_ShieldDome_HexTip".Translate(),
+                    "VisualTweaks_ShieldDome_StyleVanillaTip".Translate(),
+                    "VisualTweaks_ShieldDome_StyleBubbleTip".Translate()
+                }
+                : new string[]
+                {
+                    "VisualTweaks_ShieldDome_StyleCrispTip".Translate(),
+                    "VisualTweaks_ShieldDome_HexTip".Translate(),
+                    "VisualTweaks_ShieldDome_StyleVanillaTip".Translate()
+                };
         }
 
         // Display order of the hit animations. The panel surface has a third option;
@@ -834,15 +862,18 @@ namespace VisualTweaks
             SettingsLayout.SubHeader(listing, "VisualTweaks_ShieldDome_LookGroup".Translate());
 
             listing.Label("VisualTweaks_ShieldDome_DomeStyle".Translate());
-            int styleIndex = ShieldStyleIndexOf(VisualTweaksSettings.shieldDomeStyle);
+            int styleIndex = ShieldStyleIndexOf(
+                LargeShieldStyleOrder,
+                VisualTweaksSettings.shieldDomeStyle);
             int pickedStyle = SettingsLayout.RadioRow(
                 listing,
-                ShieldStyleLabels(),
+                ShieldStyleLabels(true),
                 styleIndex,
-                ShieldStyleTips());
+                ShieldStyleTips(true));
             if (pickedStyle != styleIndex)
             {
-                VisualTweaksSettings.shieldDomeStyle = ShieldStyleOrder[pickedStyle];
+                VisualTweaksSettings.shieldDomeStyle =
+                    LargeShieldStyleOrder[pickedStyle];
             }
 
             // Cheap when already baked, and the one-off bake belongs in the settings
@@ -854,7 +885,7 @@ namespace VisualTweaks
                 DrawHexPanelSliders(listing);
                 DrawHexDensity(listing, false);
             }
-            else if (VisualTweaksSettings.VanillaShieldDome)
+            else if (VisualTweaksSettings.StockLikeShieldDome)
             {
                 SettingsLayout.Note(
                     listing,
@@ -900,16 +931,17 @@ namespace VisualTweaks
 
             listing.Label("VisualTweaks_ShieldDome_PersonalStyle".Translate());
             int styleIndex = ShieldStyleIndexOf(
+                PersonalShieldStyleOrder,
                 VisualTweaksSettings.personalShieldDomeStyle);
             int pickedStyle = SettingsLayout.RadioRow(
                 listing,
-                ShieldStyleLabels(),
+                ShieldStyleLabels(false),
                 styleIndex,
-                ShieldStyleTips());
+                ShieldStyleTips(false));
             if (pickedStyle != styleIndex)
             {
                 VisualTweaksSettings.personalShieldDomeStyle =
-                    ShieldStyleOrder[pickedStyle];
+                    PersonalShieldStyleOrder[pickedStyle];
                 BakeHexIfNewlyDrawn();
             }
 
@@ -925,11 +957,12 @@ namespace VisualTweaks
                 DrawHexDensity(listing, true);
             }
             else if (!VisualTweaksSettings.PersonalVanillaShieldDome
-                && !VisualTweaksSettings.HexShieldDome
-                && !VisualTweaksSettings.VanillaShieldDome)
+                && (VisualTweaksSettings.HexShieldDome
+                    || VisualTweaksSettings.StockLikeShieldDome))
             {
-                // A crisp belt shares the dome's ridge sliders, so they are shown
-                // here only when the dome uses a different surface.
+                // A crisp belt shares the dome's ridge sliders. Show them here only
+                // when the dome's own section did not (it was hex or stock-like),
+                // so a dome that already shows them does not get a duplicate pair.
                 DrawRidgeSliders(listing);
             }
 
@@ -1171,7 +1204,7 @@ namespace VisualTweaks
             int[] order = hexSurface ? HexImpactOrder : StandardImpactOrder;
             int current = hexSurface
                 ? VisualTweaksSettings.hexShieldImpactStyle
-                : VisualTweaksSettings.VanillaShieldDome
+                : VisualTweaksSettings.StockLikeShieldDome
                     ? VisualTweaksSettings.vanillaShieldImpactStyle
                     : VisualTweaksSettings.crispShieldImpactStyle;
 
@@ -1188,7 +1221,7 @@ namespace VisualTweaks
                 {
                     VisualTweaksSettings.hexShieldImpactStyle = value;
                 }
-                else if (VisualTweaksSettings.VanillaShieldDome)
+                else if (VisualTweaksSettings.StockLikeShieldDome)
                 {
                     VisualTweaksSettings.vanillaShieldImpactStyle = value;
                 }
@@ -1290,7 +1323,7 @@ namespace VisualTweaks
             }
             else if (personal
                 ? VisualTweaksSettings.PersonalVanillaShieldDome
-                : VisualTweaksSettings.VanillaShieldDome)
+                : VisualTweaksSettings.StockLikeShieldDome)
             {
                 VisualTweaksSettings.vanillaShieldBreakStyle = value;
             }

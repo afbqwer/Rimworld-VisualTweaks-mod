@@ -1,9 +1,10 @@
 #version 450
 
-// Projectile-interceptor shield, in three styles: crisp ring, hexagonal panel
-// shell, and a stock-like soft dome. The stock-like style has two profiles,
-// because vanilla's projector dome and personal belt use different textures;
-// see the two stock-like surfaces section below.
+// Projectile-interceptor shield, in three surface types: crisp ring, hexagonal
+// panel shell, and stock-like. Stock-like has two profiles, because vanilla's
+// projector dome and personal belt use different textures; a dome can choose
+// either (the belt's bubble is offered as a fourth style). See the two stock-like
+// surfaces section below.
 //
 // This replaces CompProjectileInterceptor.PostDraw, which paints Other/ForceField
 // through ShaderDatabase.MoteGlow: a soft radial gradient texture, so the rim is a
@@ -113,8 +114,8 @@
 // at (which is why vanilla scales that quad by 1.1601562). The belt is a broader
 // gradient that fills most of the disc before a bright edge appears, and then
 // stops just outside it. Both are reproduced analytically below—VanillaDomeColor
-// for the dome, PersonalVanillaDomeColor for the belt—never by sampling the
-// game's textures.
+// for the ForceField profile, StockBubbleDomeColor for the ShieldBubble one—never
+// by sampling the game's textures.
 //
 // Neither is a variation of the crisp ridge. The crisp style asks "how thick is
 // the edge"; these ask "how soft is the falloff". The dome keeps its middle
@@ -307,9 +308,11 @@ vec2 HexSurface(vec2 p, float aa, float t)
 // clear disc. Both are rebuilt analytically here; nothing is sampled from the
 // game.
 //
-// _Params6.x selects the profile: 2 is the dome, 3 is the belt.
+// _Params6.x selects the profile: 2 is the ForceField stock-like, 3 the
+// ShieldBubble stock-like. A belt's regular stock choice is 3; a dome can pick
+// either.
 
-// The personal belt's stock-like bubble.
+// The ShieldBubble profile: the belt's stock surface, also selectable on a dome.
 //
 // The reference is not a thin ring with haze behind it: its brightness climbs
 // steadily from the centre, and the last tenth of the radius adds a bright edge
@@ -318,7 +321,7 @@ vec2 HexSurface(vec2 p, float aa, float t)
 // haze, where the body term is the faint one. The rim's inner shoulder is also
 // twice the dome's (sigma 0.090R vs 0.045R), and the whole profile stops just
 // past r == 1 instead of trailing through the quad margin.
-vec4 PersonalVanillaDomeColor(float r)
+vec4 StockBubbleDomeColor(float r)
 {
     float rr = clamp(r, 0.0, 1.2);
     float d = rr - 1.0;
@@ -360,11 +363,11 @@ vec4 PersonalVanillaDomeColor(float r)
 // material. The only motion it gets is the alpha pulse supplied by the caller.
 vec4 VanillaDomeColor(float r)
 {
-    // A belt's stock bubble is a different texture and a different shape; see
-    // PersonalVanillaDomeColor above.
+    // The ShieldBubble profile is a different texture and a different shape; see
+    // StockBubbleDomeColor above.
     if (u._Params6.x > 2.5)
     {
-        return PersonalVanillaDomeColor(r);
+        return StockBubbleDomeColor(r);
     }
 
     // Slightly past the rim: the outer tail is meant to fade through r == 1.
