@@ -367,16 +367,16 @@ namespace VisualTweaks
         // ForceField stock-like style.
         private static readonly ShieldDomeStyle[] PersonalShieldStyleOrder =
         {
+            ShieldDomeStyle.Vanilla,
             ShieldDomeStyle.Crisp,
-            ShieldDomeStyle.Hex,
-            ShieldDomeStyle.Vanilla
+            ShieldDomeStyle.Hex
         };
 
         private static readonly ShieldDomeStyle[] LargeShieldStyleOrder =
         {
+            ShieldDomeStyle.Vanilla,
             ShieldDomeStyle.Crisp,
             ShieldDomeStyle.Hex,
-            ShieldDomeStyle.Vanilla,
             ShieldDomeStyle.Bubble
         };
 
@@ -391,16 +391,16 @@ namespace VisualTweaks
             return withBubble
                 ? new string[]
                 {
+                    "VisualTweaks_ShieldDome_StyleVanilla".Translate(),
                     "VisualTweaks_ShieldDome_StyleCrisp".Translate(),
                     "VisualTweaks_ShieldDome_Hex".Translate(),
-                    "VisualTweaks_ShieldDome_StyleVanilla".Translate(),
                     "VisualTweaks_ShieldDome_StyleBubble".Translate()
                 }
                 : new string[]
                 {
+                    "VisualTweaks_ShieldDome_StyleVanilla".Translate(),
                     "VisualTweaks_ShieldDome_StyleCrisp".Translate(),
-                    "VisualTweaks_ShieldDome_Hex".Translate(),
-                    "VisualTweaks_ShieldDome_StyleVanilla".Translate()
+                    "VisualTweaks_ShieldDome_Hex".Translate()
                 };
         }
 
@@ -409,16 +409,16 @@ namespace VisualTweaks
             return withBubble
                 ? new string[]
                 {
+                    "VisualTweaks_ShieldDome_StyleVanillaTip".Translate(),
                     "VisualTweaks_ShieldDome_StyleCrispTip".Translate(),
                     "VisualTweaks_ShieldDome_HexTip".Translate(),
-                    "VisualTweaks_ShieldDome_StyleVanillaTip".Translate(),
                     "VisualTweaks_ShieldDome_StyleBubbleTip".Translate()
                 }
                 : new string[]
                 {
+                    "VisualTweaks_ShieldDome_StyleVanillaTip".Translate(),
                     "VisualTweaks_ShieldDome_StyleCrispTip".Translate(),
-                    "VisualTweaks_ShieldDome_HexTip".Translate(),
-                    "VisualTweaks_ShieldDome_StyleVanillaTip".Translate()
+                    "VisualTweaks_ShieldDome_HexTip".Translate()
                 };
         }
 
@@ -1278,9 +1278,9 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Break choice for one family. Choices are stored per surface, so the two
-        /// families can pick different animations for the same surface and switching
-        /// a surface back and forth keeps the earlier choice.
+        /// Break choice for one family. Each family stores its choice per surface, so
+        /// the dome and the belt never move each other and switching a surface back
+        /// and forth keeps that surface's choice.
         /// </summary>
         private static void DrawBreakChoice(Listing_Standard listing, bool personal)
         {
@@ -1306,20 +1306,37 @@ namespace VisualTweaks
             }
 
             ShieldBreakStyle value = order[picked];
+            if (personal)
+            {
+                if (hexSurface)
+                {
+                    VisualTweaksSettings.personalHexShieldBreakStyle = value;
+                }
+                else if (VisualTweaksSettings.personalShieldDomeStyle
+                    == ShieldDomeStyle.Vanilla)
+                {
+                    VisualTweaksSettings.personalVanillaShieldBreakStyle = value;
+                }
+                else
+                {
+                    VisualTweaksSettings.personalCrispShieldBreakStyle = value;
+                }
+
+                return;
+            }
+
             if (hexSurface)
             {
-                VisualTweaksSettings.hexShieldBreakStyle = value;
+                VisualTweaksSettings.largeHexShieldBreakStyle = value;
             }
-            else if (personal
-                ? VisualTweaksSettings.personalShieldDomeStyle == ShieldDomeStyle.Vanilla
-                : VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
+            else if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
+                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
             {
-                VisualTweaksSettings.vanillaShieldBreakStyle = value;
+                VisualTweaksSettings.largeVanillaShieldBreakStyle = value;
             }
             else
             {
-                VisualTweaksSettings.crispShieldBreakStyle = value;
+                VisualTweaksSettings.largeCrispShieldBreakStyle = value;
             }
         }
 

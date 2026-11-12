@@ -195,10 +195,16 @@ namespace VisualTweaks
             {
                 Rect cell = new Rect(rect.x + i * (width + ButtonRowGap), rect.y, width, RadioRowHeight);
 
-                // RadioButtonLabeled draws the dot at the right edge without reserving
-                // space for it, so the caption has to be cut short first.
-                string caption = labels[i].Truncate(cell.width - 28f);
-                if (Widgets.RadioButtonLabeled(cell, caption, i == selected))
+                // Vanilla draws the dot at the right edge (rect.x + width - 24) and the
+                // label across the whole cell, left-aligned. Mirror that geometry so the
+                // caption stays centred in the space left of its dot.
+                Rect labelRect = new Rect(cell.x, cell.y, cell.width - 28f, cell.height);
+                TextAnchor anchor = Text.Anchor;
+                Text.Anchor = TextAnchor.MiddleCenter;
+                Widgets.Label(labelRect, labels[i].Truncate(labelRect.width));
+                Text.Anchor = anchor;
+
+                if (Widgets.RadioButtonLabeled(cell, "", i == selected))
                 {
                     result = i;
                 }

@@ -239,23 +239,35 @@ namespace VisualTweaks
                 : shieldDomeStyle;
 
         /// <summary>
-        /// The break animation for one family. Break choices are stored per surface
-        /// (crisp / stock-like / hex), so a belt that picks hex gets the same break
-        /// choice the dome would get for that surface, while the two families can
-        /// still use different surfaces. Both stock-like surfaces share one choice:
-        /// they differ in profile, not in how they fail.
+        /// The break animation for one family. Each family stores its choice per
+        /// surface (crisp / stock-like / hex), so the dome and the belt never move
+        /// each other, and switching a surface back and forth keeps that surface's
+        /// choice. Both stock-like surfaces share one choice per family: they differ
+        /// in profile, not in how they fail.
         /// </summary>
         internal static ShieldBreakStyle CurrentShieldBreakStyleFor(ShieldHexTarget target)
         {
             ShieldDomeStyle style = ShieldDomeStyleFor(target);
+            bool personal = target == ShieldHexTarget.Personal;
             if (style == ShieldDomeStyle.Hex)
             {
-                return hexShieldBreakStyle;
+                return personal
+                    ? personalHexShieldBreakStyle
+                    : largeHexShieldBreakStyle;
             }
 
             bool stockLike = style == ShieldDomeStyle.Vanilla
                 || (target == ShieldHexTarget.Large && style == ShieldDomeStyle.Bubble);
-            return stockLike ? vanillaShieldBreakStyle : crispShieldBreakStyle;
+            if (stockLike)
+            {
+                return personal
+                    ? personalVanillaShieldBreakStyle
+                    : largeVanillaShieldBreakStyle;
+            }
+
+            return personal
+                ? personalCrispShieldBreakStyle
+                : largeCrispShieldBreakStyle;
         }
 
         // How a hit is answered. This is independent of the dome surface, but the
@@ -297,20 +309,27 @@ namespace VisualTweaks
         // How a shield breaks. Independent of the surface, with per-style choices:
         // Vanilla leaves the one-frame disappearance alone, Dissolve is the
         // continuous noise tear, HexDissipate loses whole panels on the shell. Each
-        // surface family keeps its own choice for the same reason the hit animations
-        // do; the two stock-like profiles share one. Vanilla's Shield_Break effecter
-        // (flash + sound) always plays underneath either way.
-        public static ShieldBreakStyle crispShieldBreakStyle = ShieldBreakStyle.Dissolve;
-        public static ShieldBreakStyle vanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
-        public static ShieldBreakStyle hexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
+        // family stores its choice per surface (crisp / stock-like / hex), so the
+        // dome and the belt never move each other. The two stock-like profiles share
+        // one choice per family. Vanilla's Shield_Break effecter (flash + sound)
+        // always plays underneath either way.
+        public static ShieldBreakStyle largeCrispShieldBreakStyle =
+            ShieldBreakStyle.Dissolve;
+        public static ShieldBreakStyle largeVanillaShieldBreakStyle =
+            ShieldBreakStyle.Dissolve;
+        public static ShieldBreakStyle largeHexShieldBreakStyle =
+            ShieldBreakStyle.HexDissipate;
+
+        public static ShieldBreakStyle personalCrispShieldBreakStyle =
+            ShieldBreakStyle.Dissolve;
+        public static ShieldBreakStyle personalVanillaShieldBreakStyle =
+            ShieldBreakStyle.Dissolve;
+        public static ShieldBreakStyle personalHexShieldBreakStyle =
+            ShieldBreakStyle.HexDissipate;
 
         /// <summary>The break animation that belongs to the selected dome style.</summary>
         public static ShieldBreakStyle CurrentShieldBreakStyle =>
-            shieldDomeStyle == ShieldDomeStyle.Hex ? hexShieldBreakStyle
-            : (shieldDomeStyle == ShieldDomeStyle.Vanilla
-                || shieldDomeStyle == ShieldDomeStyle.Bubble)
-                ? vanillaShieldBreakStyle
-                : crispShieldBreakStyle;
+            CurrentShieldBreakStyleFor(ShieldHexTarget.Large);
 
         public const float MinShieldHexFace = 0f;
         public const float MaxShieldHexFace = 0.6f;
@@ -760,16 +779,28 @@ namespace VisualTweaks
             Scribe_Values.Look(ref shieldImpactTicks, "shieldImpactTicks", 30f);
 
             Scribe_Values.Look(
-                ref crispShieldBreakStyle,
-                "crispShieldBreakStyle",
+                ref largeCrispShieldBreakStyle,
+                "largeCrispShieldBreakStyle",
                 ShieldBreakStyle.Dissolve);
             Scribe_Values.Look(
-                ref vanillaShieldBreakStyle,
-                "vanillaShieldBreakStyle",
+                ref largeVanillaShieldBreakStyle,
+                "largeVanillaShieldBreakStyle",
                 ShieldBreakStyle.Dissolve);
             Scribe_Values.Look(
-                ref hexShieldBreakStyle,
-                "hexShieldBreakStyle",
+                ref largeHexShieldBreakStyle,
+                "largeHexShieldBreakStyle",
+                ShieldBreakStyle.HexDissipate);
+            Scribe_Values.Look(
+                ref personalCrispShieldBreakStyle,
+                "personalCrispShieldBreakStyle",
+                ShieldBreakStyle.Dissolve);
+            Scribe_Values.Look(
+                ref personalVanillaShieldBreakStyle,
+                "personalVanillaShieldBreakStyle",
+                ShieldBreakStyle.Dissolve);
+            Scribe_Values.Look(
+                ref personalHexShieldBreakStyle,
+                "personalHexShieldBreakStyle",
                 ShieldBreakStyle.HexDissipate);
 
             Scribe_Values.Look(
@@ -1063,24 +1094,30 @@ namespace VisualTweaks
             // Same rule for the break choices. The shell additionally allows its own
             // panel-loss animation; the other surfaces only know vanilla or the
             // continuous tear.
-            if (crispShieldBreakStyle != ShieldBreakStyle.Vanilla
-                && crispShieldBreakStyle != ShieldBreakStyle.Dissolve)
-            {
-                crispShieldBreakStyle = ShieldBreakStyle.Dissolve;
-            }
-
-            if (vanillaShieldBreakStyle != ShieldBreakStyle.Vanilla
-                && vanillaShieldBreakStyle != ShieldBreakStyle.Dissolve)
-            {
-                vanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
-            }
-
-            if (hexShieldBreakStyle != ShieldBreakStyle.Vanilla
-                && hexShieldBreakStyle != ShieldBreakStyle.Dissolve
-                && hexShieldBreakStyle != ShieldBreakStyle.HexDissipate)
-            {
-                hexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
-            }
+            largeCrispShieldBreakStyle = SanitizeShieldBreakStyle(
+                largeCrispShieldBreakStyle,
+                ShieldBreakStyle.Dissolve,
+                false);
+            largeVanillaShieldBreakStyle = SanitizeShieldBreakStyle(
+                largeVanillaShieldBreakStyle,
+                ShieldBreakStyle.Dissolve,
+                false);
+            largeHexShieldBreakStyle = SanitizeShieldBreakStyle(
+                largeHexShieldBreakStyle,
+                ShieldBreakStyle.HexDissipate,
+                true);
+            personalCrispShieldBreakStyle = SanitizeShieldBreakStyle(
+                personalCrispShieldBreakStyle,
+                ShieldBreakStyle.Dissolve,
+                false);
+            personalVanillaShieldBreakStyle = SanitizeShieldBreakStyle(
+                personalVanillaShieldBreakStyle,
+                ShieldBreakStyle.Dissolve,
+                false);
+            personalHexShieldBreakStyle = SanitizeShieldBreakStyle(
+                personalHexShieldBreakStyle,
+                ShieldBreakStyle.HexDissipate,
+                true);
 
             shieldDissolveTicks = Mathf.Clamp(
                 shieldDissolveTicks,
@@ -1179,6 +1216,25 @@ namespace VisualTweaks
             coldMistSpeed = Mathf.Round(coldMistSpeed * 10f) / 10f;
         }
 
+        /// <summary>
+        /// Keeps a break choice inside what its surface can draw. Vanilla and Dissolve
+        /// are valid everywhere; panel loss only exists on the shell.
+        /// </summary>
+        private static ShieldBreakStyle SanitizeShieldBreakStyle(
+            ShieldBreakStyle value,
+            ShieldBreakStyle fallback,
+            bool allowHexDissipate)
+        {
+            if (value == ShieldBreakStyle.Vanilla
+                || value == ShieldBreakStyle.Dissolve
+                || (allowHexDissipate && value == ShieldBreakStyle.HexDissipate))
+            {
+                return value;
+            }
+
+            return fallback;
+        }
+
         public static void Reset()
         {
             replaceAORenderer = true;
@@ -1226,16 +1282,19 @@ namespace VisualTweaks
             largeShieldsVanillaOnly = false;
             personalShieldsVanillaOnly = false;
             largeShieldDisableHitDust = true;
-            shieldDomeStyle = ShieldDomeStyle.Crisp;
-            personalShieldDomeStyle = ShieldDomeStyle.Crisp;
+            shieldDomeStyle = ShieldDomeStyle.Vanilla;
+            personalShieldDomeStyle = ShieldDomeStyle.Vanilla;
             crispShieldImpactStyle = ShieldImpactStyle.Flare;
             vanillaShieldImpactStyle = ShieldImpactStyle.Brighten;
             hexShieldImpactStyle = ShieldImpactStyle.HexWave;
             shieldBrightenAngle = 30f;
             shieldImpactTicks = 40f;
-            crispShieldBreakStyle = ShieldBreakStyle.Dissolve;
-            vanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
-            hexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
+            largeCrispShieldBreakStyle = ShieldBreakStyle.Dissolve;
+            largeVanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
+            largeHexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
+            personalCrispShieldBreakStyle = ShieldBreakStyle.Dissolve;
+            personalVanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
+            personalHexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
             shieldHexFaceStrength = 0.22f;
             shieldHexLineStrength = 0.75f;
             shieldHexDensity = 5f;
