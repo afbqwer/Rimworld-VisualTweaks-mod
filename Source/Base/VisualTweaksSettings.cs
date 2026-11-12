@@ -496,11 +496,13 @@ namespace VisualTweaks
         public static float shieldDissolveTicks = 90f;
 
         // The dissolve has to supply its own brightness because GetCurrentAlpha() is
-        // already zero by then. 0.9 is just below the intact dome's selected alpha
-        // peak multiplied by the surge, so the break reads as a flare, not a dimming.
+        // already zero by then. 0.6 sits at the selected dome's alpha peak and is
+        // 1.5x a belt's default 0.4: enough to read as a break without turning the
+        // surviving surface into a solid shell. The hot tear carries the initial
+        // flash on its own; the shader no longer surges the whole body.
         public const float MinShieldDissolveBrightness = 0.2f;
         public const float MaxShieldDissolveBrightness = 1.5f;
-        public static float shieldDissolveBrightness = 0.9f;
+        public static float shieldDissolveBrightness = 0.6f;
 
         // Vacuum leak airflow (Odyssey vacuum maps). Streams converge on ventilation
         // ports while air escapes; hull breaches add a short two-sided burst. The
@@ -921,7 +923,7 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref shieldDissolveBrightness,
                 "shieldDissolveBrightness",
-                0.9f);
+                0.6f);
             Scribe_Values.Look(ref vacuumLeakEnabled, "vacuumLeakEnabled", true);
             Scribe_Values.Look(ref vacuumLeakIntensity, "vacuumLeakIntensity", 1f);
             Scribe_Values.Look(ref vacuumLeakSpeed, "vacuumLeakSpeed", 1f);
@@ -1316,7 +1318,7 @@ namespace VisualTweaks
             shieldFlareSizeScale = 1f;
             shieldDissolveEnabled = true;
             shieldDissolveTicks = 90f;
-            shieldDissolveBrightness = 0.9f;
+            shieldDissolveBrightness = 0.6f;
             vacuumLeakEnabled = true;
             vacuumLeakIntensity = 1f;
             vacuumLeakSpeed = 1f;

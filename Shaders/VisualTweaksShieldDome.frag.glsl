@@ -77,9 +77,11 @@
 // preview looks correct. Hash21 below is hardened and the seed is kept small;
 // the dissolve algorithm itself is untouched.
 //
-// Everything is still clipped by `edge` at r == 1 in the crisp and panel styles:
-// even while falling apart, those shields never paint outside the circle they
-// block. (The stock-like style is the deliberate exception described further down.)
+// The break is clipped by BreakEdge: exactly r == 1 (with one pixel of AA) for the
+// crisp and panel styles, and 1.05R for the stock-like ones — the same 1.04..1.05R
+// convention the hit reactions use. The stock-like *idle* surface keeps its longer
+// haze tail; only the break is tightened, so its hot front cannot float outside the
+// shield it is tearing.
 //
 // ---- the hexagonal shell (second style) ----------------------------------
 //
@@ -466,6 +468,23 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
     return vec4(tint, sum * drift);
 }
 
+// Where a break animation is allowed to paint, as opposed to where the idle dome
+// is. The stock-like styles deliberately let the idle haze run into the enlarged
+// quad margin, but a break must stay on the surface it is tearing: an unmasked hot
+// front there reads as a detached arc floating outside the shield. The hit
+// reactions already use this same 1.04..1.05R convention (flareEdge,
+// brightenEdge); the break follows it, so crisp and panel keep their exact rim and
+// the stock-like styles lose only the long outer tail.
+float BreakEdge(float r, float edge)
+{
+    if (u._Params6.x > 1.5)
+    {
+        return 1.0 - smoothstep(1.0, 1.05, r);
+    }
+
+    return edge;
+}
+
 void main()
 {
     vec2 d = vWorld - u._Params4.xy;
@@ -648,7 +667,19 @@ void main()
         vec3 tint = (dome.rgb * baseA + hot * (frontA + crackA))
             / max(total, 1e-4);
 
-        outColor = vec4(tint, total * u._Params.y * edge * surge * endFade);
+        // Clip to the surface's own silhouette, not to the enlarged stock-like quad.
+        // The crisp/panel branch returns `edge` unchanged (already r == 1 with AA).
+        float breakEdge = BreakEdge(r, edge);
+
+        // Surge the tear, not the surface it is tearing. Multiplying the surviving
+        // body as well made the first frames brighter than the shield had ever been
+        // intact (additive blending) and lit the stock-like margin into a visible
+        // halo. Here the body keeps the configured brightness and only the hot line
+        // and cracks carry the initial flash.
+        float bodyA = baseA * u._Params.y * breakEdge * endFade;
+        float hotA = (frontA + crackA) * u._Params.y * breakEdge * surge * endFade;
+
+        outColor = vec4(tint, bodyA + hotA);
     }
     else if (mode < 3.5)
     {
@@ -859,6 +890,10 @@ void main()
         float total = baseA + frontA;
         vec3 tint = (dome.rgb * baseA + hot * frontA) / max(total, 1e-4);
 
-        outColor = vec4(tint, total * u._Params.y * edge * surge * endFade);
+        float breakEdge = BreakEdge(r, edge);
+        float bodyA = baseA * u._Params.y * breakEdge * endFade;
+        float hotA = frontA * u._Params.y * breakEdge * surge * endFade;
+
+        outColor = vec4(tint, bodyA + hotA);
     }
 }
