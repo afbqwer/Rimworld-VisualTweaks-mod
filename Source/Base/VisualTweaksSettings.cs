@@ -152,6 +152,12 @@ namespace VisualTweaks
         public const float MaxShieldRippleDamageScale = 3f;
         public static float shieldRippleDamageScale = 1f;
 
+        // Keeps active shields visible without a selection. Vanilla hides them outright
+        // (see ShieldVisibilityPatches), which makes a shield's coverage hard to read
+        // until something is actually stopped. Off by default: the stock look is the
+        // baseline, and this is an opt-in.
+        public static bool alwaysShowShields = false;
+
         // Vacuum leak airflow (Odyssey vacuum maps). Streams converge on ventilation
         // ports while air escapes; hull breaches add a short two-sided burst. The
         // intensity formula itself is state-driven, this slider only scales the look.
@@ -379,6 +385,7 @@ namespace VisualTweaks
                 ref shieldRippleDamageScale,
                 "shieldRippleDamageScale",
                 1f);
+            Scribe_Values.Look(ref alwaysShowShields, "alwaysShowShields", false);
             Scribe_Values.Look(ref vacuumLeakEnabled, "vacuumLeakEnabled", true);
             Scribe_Values.Look(ref vacuumLeakIntensity, "vacuumLeakIntensity", 1f);
             Scribe_Values.Look(ref vacuumLeakSpeed, "vacuumLeakSpeed", 1f);
@@ -596,6 +603,7 @@ namespace VisualTweaks
             shieldRippleIntensity = 1.2f;
             shieldRippleDuration = 0.24f;
             shieldRippleDamageScale = 1f;
+            alwaysShowShields = false;
             vacuumLeakEnabled = true;
             vacuumLeakIntensity = 1f;
             vacuumLeakSpeed = 1f;

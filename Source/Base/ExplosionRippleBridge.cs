@@ -36,16 +36,7 @@ namespace VisualTweaks
             && shaderReady
             && !runtimeDisabled
             && VisualTweaksSettings.explosionRippleEnabled
-            && !ScreenshotModeActive;
-
-        private static bool ScreenshotModeActive
-        {
-            get
-            {
-                ScreenshotModeHandler handler = Find.ScreenshotModeHandler;
-                return handler != null && handler.Active;
-            }
-        }
+            && !ScreenshotModeGate.Active;
 
         internal static void Initialize()
         {

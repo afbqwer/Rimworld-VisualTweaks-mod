@@ -117,6 +117,10 @@
   <VisualTweaks_ShieldRipple_DamageScale>Damage scale</VisualTweaks_ShieldRipple_DamageScale>
   <VisualTweaks_ShieldRipple_DamageScaleTip>How much damage translates into ripple size. Lower makes every hit look alike; higher makes heavy weapons stand out.</VisualTweaks_ShieldRipple_DamageScaleTip>
 
+  <VisualTweaks_ShieldAlways_Group>Shield display</VisualTweaks_ShieldAlways_Group>
+  <VisualTweaks_ShieldAlways_Enable>Always show shields</VisualTweaks_ShieldAlways_Enable>
+  <VisualTweaks_ShieldAlways_EnableTip>Active shields stay faintly visible when not selected, so their coverage is easy to read.</VisualTweaks_ShieldAlways_EnableTip>
+
   <!-- Temperature: heat haze and cold mist share one page -->
   <VisualTweaks_Temp_GroupHeat>Heat</VisualTweaks_Temp_GroupHeat>
   <VisualTweaks_Temp_GroupLook>Appearance</VisualTweaks_Temp_GroupLook>

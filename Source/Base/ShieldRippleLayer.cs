@@ -121,16 +121,7 @@ namespace VisualTweaks
         internal static bool Active =>
             ExplosionRippleBridge.ShaderReady
             && VisualTweaksSettings.shieldRippleEnabled
-            && !ScreenshotModeActive;
-
-        private static bool ScreenshotModeActive
-        {
-            get
-            {
-                ScreenshotModeHandler? handler = Find.ScreenshotModeHandler;
-                return handler != null && handler.Active;
-            }
-        }
+            && !ScreenshotModeGate.Active;
 
         /// <summary>
         /// Called from the interceptor patch. <paramref name="hitPos"/> is the

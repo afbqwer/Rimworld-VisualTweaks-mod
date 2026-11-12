@@ -571,6 +571,14 @@ namespace VisualTweaks
                 VisualTweaksSettings.MaxShieldRippleDamageScale,
                 "VisualTweaks_ShieldRipple_DamageScaleTip".Translate());
 
+            // Not a ripple: this one changes what the stock shield drawing does on every
+            // frame, so it gets its own section instead of riding along with the effects.
+            SettingsLayout.Header(listing, "VisualTweaks_ShieldAlways_Group".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldAlways_Enable".Translate(),
+                ref VisualTweaksSettings.alwaysShowShields,
+                "VisualTweaks_ShieldAlways_EnableTip".Translate());
+
             SettingsLayout.Finish(listing);
         }
 
