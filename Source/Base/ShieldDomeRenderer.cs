@@ -67,13 +67,6 @@ namespace VisualTweaks
         /// <summary>Angular brightness drift on the rim. 0 freezes it.</summary>
         private const float DriftWeight = 0.30f;
 
-        /// <summary>
-        /// Width of a hexagonal cell line in screen pixels, for the alternate style.
-        /// The shader multiplies it by fwidth(edgeDistance), so this stays the same
-        /// at every zoom and on every shield size — the same rule the ridge uses.
-        /// </summary>
-        private const float HexLinePixels = 1.6f;
-
         // ------------------------------------------------------------------
         // Flare look.
         // ------------------------------------------------------------------
@@ -144,6 +137,7 @@ namespace VisualTweaks
         private static float appliedHexStyle = float.NaN;
         private static float appliedHexFace = float.NaN;
         private static float appliedHexLine = float.NaN;
+        private static int appliedHexDensity = -1;
 
         /// <summary>
         /// Returns false when nothing was drawn, so the caller can hand the frame back
@@ -437,12 +431,11 @@ namespace VisualTweaks
             // The spherical lattice is baked once, lazily, and shared by every
             // shield. Bind is cheap to call every frame: it only re-bakes when the
             // cell density changes and only calls SetTexture for a new material.
+            int density = Mathf.RoundToInt(VisualTweaksSettings.shieldHexDensity);
             bool wantHex = VisualTweaksSettings.hexShieldDome;
             if (wantHex)
             {
-                ShieldHexMap.Bind(
-                    mat,
-                    Mathf.RoundToInt(VisualTweaksSettings.shieldHexDensity));
+                ShieldHexMap.Bind(mat, density);
             }
 
             // A failed bake must not produce a black disc. Falling back to the
@@ -454,7 +447,8 @@ namespace VisualTweaks
                 && brightness == appliedRidgeBrightness
                 && style == appliedHexStyle
                 && face == appliedHexFace
-                && line == appliedHexLine)
+                && line == appliedHexLine
+                && density == appliedHexDensity)
             {
                 return;
             }
@@ -464,6 +458,7 @@ namespace VisualTweaks
             appliedHexStyle = style;
             appliedHexFace = face;
             appliedHexLine = line;
+            appliedHexDensity = density;
 
             // _Params2 = (ridge, core, glow, body) weights.
             mat.SetVector(
@@ -475,10 +470,17 @@ namespace VisualTweaks
                 Params5Id,
                 new Vector4(width, CoreSigmaPixels, GlowExponent, DriftWeight));
 
-            // _Params6 = (hex style, face strength, line strength, line px).
+            // _Params6.w is the SDF gradient floor. It scales with cell density:
+            // denser lattices have a steeper edge-distance field, and the shader
+            // needs that slope to keep a 2.2 px line when fwidth() collapses in
+            // the V-shaped valley of a cell wall.
             mat.SetVector(
                 Params6Id,
-                new Vector4(style, face, line, HexLinePixels));
+                new Vector4(
+                    style,
+                    face,
+                    line,
+                    ShieldHexMap.GradientPerSubdivision * density));
         }
 
         private static Material? EnsureMaterial()
@@ -512,6 +514,7 @@ namespace VisualTweaks
                 appliedHexStyle = float.NaN;
                 appliedHexFace = float.NaN;
                 appliedHexLine = float.NaN;
+                appliedHexDensity = -1;
                 ApplyLook(created);
             }
             catch (Exception ex)

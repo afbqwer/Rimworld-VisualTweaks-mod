@@ -177,15 +177,16 @@ namespace VisualTweaks
         public static float shieldHexFaceStrength = 0.22f;
 
         public const float MinShieldHexLine = 0f;
-        public const float MaxShieldHexLine = 1f;
-        public static float shieldHexLineStrength = 0.45f;
+        public const float MaxShieldHexLine = 1.2f;
+        public static float shieldHexLineStrength = 0.75f;
 
-        // Icosahedron subdivision k: 42 / 92 / 162 cells over the whole sphere
-        // (12 of them pentagons, always). Quantised to an integer by the renderer;
-        // changing it re-bakes one shared texture, it costs nothing per frame.
+        // Icosahedron subdivision k: 10k^2+2 cells over the whole sphere (12 of
+        // them pentagons, always). k=2 reads like a football, k=8 like an energy
+        // mesh. Quantised to an integer by the renderer; changing it re-bakes one
+        // shared texture once, it costs nothing per frame.
         public const float MinShieldHexDensity = 2f;
-        public const float MaxShieldHexDensity = 4f;
-        public static float shieldHexDensity = 3f;
+        public const float MaxShieldHexDensity = 8f;
+        public static float shieldHexDensity = 5f;
 
         // The four dome/flare dials that are worth a slider. Everything else about the
         // shield is derived rather than chosen: line weights scale with zoom through a
@@ -477,8 +478,8 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref shieldHexLineStrength,
                 "shieldHexLineStrength",
-                0.45f);
-            Scribe_Values.Look(ref shieldHexDensity, "shieldHexDensity", 3f);
+                0.75f);
+            Scribe_Values.Look(ref shieldHexDensity, "shieldHexDensity", 5f);
             Scribe_Values.Look(ref shieldRidgeWidth, "shieldRidgeWidth", 3.6f);
             Scribe_Values.Look(ref shieldRidgeBrightness, "shieldRidgeBrightness", 0.52f);
             Scribe_Values.Look(ref shieldFlareAlpha, "shieldFlareAlpha", 0.30f);
@@ -751,8 +752,8 @@ namespace VisualTweaks
             crispShieldDome = true;
             hexShieldDome = false;
             shieldHexFaceStrength = 0.22f;
-            shieldHexLineStrength = 0.45f;
-            shieldHexDensity = 3f;
+            shieldHexLineStrength = 0.75f;
+            shieldHexDensity = 5f;
             shieldRidgeWidth = 3.6f;
             shieldRidgeBrightness = 0.52f;
             shieldFlareAlpha = 0.30f;

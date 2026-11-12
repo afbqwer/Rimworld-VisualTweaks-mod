@@ -16,53 +16,68 @@ namespace VisualTweaks
     /// What is wanted is a *spherical* tiling. That has a hard constraint: Euler's
     /// formula forbids tiling a closed surface with hexagons alone — exactly twelve
     /// pentagons are required (3V = 5F5 + 6F6, 2E = 5F5 + 6F6, V-E+F = 2). Those
-    /// pentagons are not decoration, they are where the curvature lives.
+    /// pentagons are not decoration, they are where the curvature lives, and they are
+    /// deliberately NOT highlighted: a compromise the geometry needs is not a feature
+    /// to draw attention to.
     ///
     /// The tiling used here is the Voronoi diagram of a subdivided icosahedron's
     /// vertices (a Goldberg polyhedron's dual). Subdividing each of the 20 faces k
-    /// times gives V = 10k^2+2 sites; their cells are 12 pentagons + 10(k^2-1)
-    /// hexagons. k=2 gives 42 cells, k=3 gives 92, k=4 gives 162.
+    /// times gives V = 10k^2+2 sites; k=2 gives 42 cells, k=8 gives 642. Low k reads
+    /// like a football, high k reads like an energy mesh — hence the wider range.
     ///
-    /// Doing that per fragment means 42..162 dot products per pixel, for every
-    /// pixel of a quad that can cover most of the screen on a 25-cell gravship dome.
-    /// Baking it once costs one texture sample per pixel instead — cheaper than the
-    /// four-octave Fbm the dissolve already runs — and the number of cells is then a
-    /// design choice rather than a frame-time cost.
+    /// Doing that per fragment means 42..642 dot products per pixel, over a quad that
+    /// can cover most of the screen on a 25-cell gravship dome. Baking it once costs
+    /// one texture sample per pixel instead — cheaper than the four-octave Fbm the
+    /// dissolve already runs — and cell count becomes a design choice, not a cost.
     ///
     /// ---- what is stored ---------------------------------------------------
     ///
     /// The texture is the *orthographic projection of the upper hemisphere*: texel
     /// (x,y) encodes the direction n = (p.x, p.y, sqrt(1-|p|^2)) for p in the unit
     /// disc. That is the pseudo-3D trick — the disc on screen is treated as a dome,
-    /// so a spherical tiling, viewed from above, is exactly what the eye expects.
+    /// so a spherical tiling viewed from above is exactly what the eye expects.
     ///
     ///   RGB = the winning site's direction, mapped to 0..1. Constant within a cell,
     ///         so it doubles as a flat face normal and as a per-cell id.
-    ///   A   = 0.5 +/- 0.5 * edgeDistance, where the sign marks a pentagon cell.
-    ///         |A-0.5| * 2 is 0 on a cell boundary and rises toward the cell centre.
+    ///   A   = edgeDistance, 0 on a cell boundary and 1 at the cell centre.
+    ///
+    /// edgeDistance is a TRUE Voronoi SDF: the minimum over every neighbouring site
+    /// j of (d1-dj)/|s1-sj|, not just the runner-up's dot product. The minimum of
+    /// continuous functions stays continuous where the nearest competitor changes,
+    /// which keeps the gradient — and therefore the drawn line width — even across
+    /// a whole cell. No channel carries a pentagon flag.
     ///
     /// RGBAHalf rather than RGBA32 on purpose. An 8-bit edge-distance channel has
     /// only ~2 usable quantisation levels in the one-pixel band where the cell line
     /// lives, which makes fwidth() step and the outline shimmer. This mod already
     /// learned that lesson once with the dissolve's lattice hash: a float64 preview
     /// hides what float32 on the GPU does. Half floats give ~0.0005 of edge
-    /// precision and, unlike full RGBAFloat, linear filtering is universally
+    /// precision, and unlike full RGBAFloat, linear filtering is universally
     /// supported on desktop Vulkan — which matters because the lines are
     /// reconstructed by bilinear sampling.
     ///
     /// ---- cost -------------------------------------------------------------
     ///
-    /// Built lazily, only when the hexagonal style is actually enabled. 512^2 texels
-    /// x ~22 candidate dot products (see the bin acceleration below) is a few tens of
-    /// milliseconds, once per density choice. 2 MiB of VRAM, one texture, no per-frame
-    /// CPU work, no extra draw calls, no extra geometry.
+    /// Built lazily, only when the hexagonal style is actually enabled. 1024^2
+    /// texels x ~16 candidate dots (see the bin acceleration below) is a couple of
+    /// hundred milliseconds, once per density choice, and 8 MiB of VRAM for one
+    /// texture shared by every shield. No per-frame CPU work, no extra draw calls,
+    /// no extra geometry. The resolution is what lets k=8 still draw a clean line
+    /// after the texture is magnified onto a large dome.
     /// </summary>
     internal static class ShieldHexMap
     {
         internal const int MinSubdivisions = 2;
-        internal const int MaxSubdivisions = 4;
+        internal const int MaxSubdivisions = 8;
 
-        private const int Size = 512;
+        /// <summary>
+        /// Measured median |d(edgeDistance)/dr|. The shader uses 1.8*k as a floor for
+        /// fwidth(), which otherwise collapses in the V-shaped valley of a cell
+        /// boundary and makes one line break into two bright edges.
+        /// </summary>
+        internal const float GradientPerSubdivision = 1.8f;
+
+        private const int Size = 1024;
         private const int BinCount = 24;
         private const int Candidates = 16;
 
@@ -123,9 +138,8 @@ namespace VisualTweaks
                 boundTo = null;
             }
 
-            // ApplyLook runs every frame on every visible shield. SetTexture is not
-            // free, so only touch the material when the texture itself changed or
-            // when this material has not been bound yet.
+            // SetTexture is not free, so only touch the material when the texture
+            // itself changed or when this material has not been bound yet.
             if (texture != null && (boundTo != material || boundFor != k))
             {
                 material.SetTexture(MapId, texture);
@@ -138,13 +152,13 @@ namespace VisualTweaks
         {
             try
             {
-                List<Vector3> sites = BuildSites(k, out bool[] pentagon);
+                List<Vector3> sites = BuildSites(k);
                 int n = sites.Count;
 
                 // Chord distance between every pair of sites. The Voronoi boundary
                 // between sites i and j is the plane n.(si-sj) = 0; dividing the dot
                 // difference by |si-sj| turns it into a distance in the same units as
-                // the disc, so cell lines keep the same thickness everywhere.
+                // the disc, so every cell line keeps the same thickness.
                 float[][] separation = new float[n][];
                 for (int i = 0; i < n; i++)
                 {
@@ -158,15 +172,16 @@ namespace VisualTweaks
                 }
 
                 int[][] bins = BuildBins(sites);
+                int[][] neighbours = BuildNeighbours(sites);
 
-                // At a cell centre, (d1-d2)/|s1-s2| is roughly sin(theta/2) for the
-                // site spacing theta, and theta scales as 1/k. 0.62/k keeps most cells
-                // near edgeDistance == 1 without letting any of them clip. The exact
-                // scale is irrelevant to the shader: line width is measured with
-                // fwidth(edgeDistance), which adapts to whatever slope it is given.
+                // At a cell centre the SDF is roughly sin(theta/2) for the site
+                // spacing theta, and theta scales as 1/k. The exact scale is not
+                // important to the shader (line width is measured with fwidth), but
+                // keeping most cells near 1 avoids clipping them flat.
                 float eRef = 0.62f / k;
 
                 Color[] pixels = new Color[Size * Size];
+
                 for (int y = 0; y < Size; y++)
                 {
                     float py = -1f + 2f * (y + 0.5f) / Size;
@@ -185,41 +200,84 @@ namespace VisualTweaks
                         {
                             // Outside the disc the shader's silhouette clip is already
                             // zero, so any value is fine. Face normal straight up.
-                            pixels[index] = new Color(0.5f, 0.5f, 1f, 0.5f);
+                            pixels[index] = new Color(0.5f, 0.5f, 1f, 0f);
                             continue;
                         }
 
                         Vector3 dir = new Vector3(px, py, Mathf.Sqrt(1f - r2));
-                        int binCol = Mathf.Clamp((int)((px * 0.5f + 0.5f) * BinCount), 0, BinCount - 1);
+                        int binCol = Mathf.Clamp(
+                            (int)((px * 0.5f + 0.5f) * BinCount),
+                            0,
+                            BinCount - 1);
                         int[] candidates = bins[binRow * BinCount + binCol];
 
-                        float d1 = -2f, d2 = -2f;
-                        int i1 = candidates[0], i2 = candidates[0];
+                        // The coarse bin supplies a STARTING GUESS, not the answer.
+                        // Near the silhouette, n.z = sqrt(1-|p|^2) changes so fast
+                        // across one bin that its pre-ranked sites can miss the true
+                        // winner (measured: ~1% of pixels wrong at k=8). Walk up the
+                        // precomputed neighbour graph until no neighbour is closer;
+                        // on a triangular lattice this converges in a step or two.
+                        float d1 = -2f;
+                        int i1 = candidates[0];
                         for (int c = 0; c < candidates.Length; c++)
                         {
-                            int j = candidates[c];
-                            float d = Vector3.Dot(dir, sites[j]);
+                            float d = Vector3.Dot(dir, sites[candidates[c]]);
                             if (d > d1)
                             {
-                                d2 = d1; i2 = i1;
-                                d1 = d;  i1 = j;
-                            }
-                            else if (d > d2)
-                            {
-                                d2 = d; i2 = j;
+                                d1 = d;
+                                i1 = candidates[c];
                             }
                         }
 
-                        float e = Mathf.Clamp01(
-                            (d1 - d2) / Mathf.Max(separation[i1][i2], 1e-4f) / eRef);
+                        for (int step = 0; step < 8; step++)
+                        {
+                            int next = -1;
+                            float nd = d1;
+                            int[] near = neighbours[i1];
+                            for (int q = 0; q < near.Length; q++)
+                            {
+                                float d = Vector3.Dot(dir, sites[near[q]]);
+                                if (d > nd)
+                                {
+                                    nd = d;
+                                    next = near[q];
+                                }
+                            }
+
+                            if (next < 0)
+                            {
+                                break;
+                            }
+
+                            i1 = next;
+                            d1 = nd;
+                        }
+
+                        // True Voronoi SDF: the walls of a cell are formed only by
+                        // its Delaunay neighbours, all of which are in this list.
+                        // Taking the minimum of continuous functions keeps the field
+                        // smooth where the nearest competitor changes.
+                        float best = 1e9f;
+                        int[] walls = neighbours[i1];
+                        for (int q = 0; q < walls.Length; q++)
+                        {
+                            int j = walls[q];
+                            float wall = (d1 - Vector3.Dot(dir, sites[j]))
+                                / separation[i1][j];
+                            if (wall < best)
+                            {
+                                best = wall;
+                            }
+                        }
+
+                        float e = Mathf.Clamp01(best / eRef);
                         Vector3 face = sites[i1];
-                        float a = 0.5f + (pentagon[i1] ? -0.5f : 0.5f) * e;
 
                         pixels[index] = new Color(
                             face.x * 0.5f + 0.5f,
                             face.y * 0.5f + 0.5f,
                             face.z * 0.5f + 0.5f,
-                            a);
+                            e);
                     }
                 }
 
@@ -255,17 +313,64 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Sites are the barycentric lattice points of the k-times subdivided
-        /// icosahedron, projected back onto the sphere. A point on a face *corner*
-        /// is one of the original 12 icosahedron vertices: those have five neighbours
-        /// instead of six, so their Voronoi cells are the twelve pentagons. Marking
-        /// them here is both exact and far cheaper than counting neighbours later.
+        /// For each site, the eight closest other sites. On this lattice that
+        /// always contains every Delaunay neighbour (six for a hexagon cell, five
+        /// for a pentagon), plus one or two harmless extras whose wall distance is
+        /// larger and therefore never wins the minimum. Built once per bake.
         /// </summary>
-        private static List<Vector3> BuildSites(int k, out bool[] pentagon)
+        private static int[][] BuildNeighbours(List<Vector3> sites)
         {
-            var lookup = new Dictionary<string, int>();
+            int n = sites.Count;
+            int take = Mathf.Min(8, n - 1);
+            int[][] result = new int[n][];
+            float[] scores = new float[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    scores[j] = j == i
+                        ? -2f
+                        : Vector3.Dot(sites[i], sites[j]);
+                }
+
+                int[] kept = new int[take];
+                for (int a = 0; a < take; a++)
+                {
+                    int best = -1;
+                    for (int j = 0; j < n; j++)
+                    {
+                        if (j == i || scores[j] <= -1.5f)
+                        {
+                            continue;
+                        }
+
+                        if (best < 0 || scores[j] > scores[best])
+                        {
+                            best = j;
+                        }
+                    }
+
+                    kept[a] = best;
+                    scores[best] = -2f;
+                }
+
+                result[i] = kept;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Sites are the barycentric lattice points of the k-times subdivided
+        /// icosahedron, projected back onto the sphere. Twelve of them are the original
+        /// icosahedron vertices; their Voronoi cells are the mandatory pentagons. No
+        /// flag is stored for them — the lattice produces the right shapes on its own.
+        /// </summary>
+        private static List<Vector3> BuildSites(int k)
+        {
+            var lookup = new HashSet<string>();
             var sites = new List<Vector3>();
-            var pent = new List<bool>();
 
             for (int f = 0; f < 20; f++)
             {
@@ -281,34 +386,24 @@ namespace VisualTweaks
                         Vector3 p = ((A * m) + (B * i) + (C * j)) / k;
                         p = p.normalized;
 
-                        bool isCorner = m == k || i == k || j == k;
                         string key = p.x.ToString("F5") + "," + p.y.ToString("F5")
                             + "," + p.z.ToString("F5");
-
-                        if (!lookup.TryGetValue(key, out int slot))
+                        if (lookup.Add(key))
                         {
-                            slot = sites.Count;
-                            lookup[key] = slot;
                             sites.Add(p);
-                            pent.Add(isCorner);
-                        }
-                        else if (isCorner)
-                        {
-                            pent[slot] = true;
                         }
                     }
                 }
             }
 
-            pentagon = pent.ToArray();
             return sites;
         }
 
         /// <summary>
         /// Acceleration for the bake: for each coarse direction bin, pre-rank the sites
-        /// and keep the 16 closest. A fragment then only tests those instead of all
-        /// 42..162. The bins are 2/24 wide while the nearest site spacing is ~0.3 at
-        /// k=4, so 16 candidates always contain the true winner and its runner-up.
+        /// and keep 16 as a STARTING GUESS. The texel then walks the neighbour graph
+        /// to the true winner, so a coarse bin can never leave a wrong cell behind —
+        /// which matters near r == 1 where the hemisphere direction changes fastest.
         /// </summary>
         private static int[][] BuildBins(List<Vector3> sites)
         {
@@ -334,7 +429,6 @@ namespace VisualTweaks
                         scores[i] = Vector3.Dot(dir, sites[i]);
                     }
 
-                    // Partial insertion sort: only the top Candidates matter.
                     int take = Mathf.Min(Candidates, n);
                     for (int a = 0; a < take; a++)
                     {

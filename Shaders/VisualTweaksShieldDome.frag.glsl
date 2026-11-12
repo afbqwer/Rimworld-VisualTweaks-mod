@@ -92,12 +92,14 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
                    //                                          // dissolve: break origin x/z, progress, seed
     vec4 _Params4; // @default = vec4(0.0, 0.0, 0.0, 0.0)      // centre x/z in world cells, unused
     vec4 _Params5; // @default = vec4(2.8, 1.2, 5.0, 0.3)      // ridge half px, core sigma px, glow exponent, drift
-    vec4 _Params6; // @default = vec4(0.0, 0.22, 0.45, 1.6)    // hex style, face strength, line strength, line px
+    vec4 _Params6; // @default = vec4(0.0, 0.22, 0.75, 9.0)    // hex style, face, line, SDF gradient floor (1.8*k)
     vec4 _Color;   // @color @default = vec4(1.0, 1.0, 1.0, 1.0)
 } u;
 
 // RGB = winning site's direction (the flat face normal, constant inside a cell).
-// A   = 0.5 +/- 0.5 * edgeDistance, the sign marking the twelve pentagon cells.
+// A   = edgeDistance: 0 on a cell wall, 1 at its centre. No pentagon flag: the
+//       twelve five-sided cells are just what a spherical lattice produces and are
+//       deliberately not drawn any differently from the hexagons.
 layout(set = 2, binding = 1) uniform sampler2D _HexMap; // @default = black
 
 // Deterministic value noise. No texture, so the pattern cannot be stretched or
@@ -148,24 +150,21 @@ float Fbm(vec2 p)
     return v / 0.9375;
 }
 
-// The spherical cell pattern. Returns (flat face shade, cell line, is-pentagon).
+// The spherical cell pattern. Returns (flat face shade, cell line).
 //
 // Nothing here is a grid in screen space: the sampled lattice was projected onto
 // the hemisphere before it was baked, so cells naturally compress and bend as they
 // approach the silhouette. That compression is the pseudo-3D cue; the flat per-face
 // shading is the other half.
-vec3 HexSurface(vec2 p, float t)
+vec2 HexSurface(vec2 p, float aa, float t)
 {
     vec4 baked = texture(_HexMap, p * 0.5 + 0.5);
 
     // Constant inside a cell, so it doubles as a face normal and a per-cell id.
     vec3 face = baked.rgb * 2.0 - 1.0;
 
-    // 0 on a cell boundary, rising toward the cell centre. The sign of the offset
-    // is the pentagon flag, packed into one channel to keep this a single sample.
-    float signedEdge = baked.a - 0.5;
-    float edgeDistance = abs(signedEdge) * 2.0;
-    float pentagon = step(signedEdge, -1e-5);
+    // True Voronoi SDF: 0 on a cell wall, 1 at the cell centre.
+    float e = baked.a;
 
     // Surface normal of the hemisphere this disc is standing in for. nz -> 0 at
     // the silhouette, exactly where a real dome turns away from the viewer.
@@ -178,20 +177,29 @@ vec3 HexSurface(vec2 p, float t)
     float diffuse = clamp(dot(face, light), 0.0, 1.0);
     float fresnel = 1.0 - nz;
 
-    // A little per-cell variation stops the panels looking like a printed mesh.
+    // Deliberately low contrast between neighbouring faces. A faint cell line
+    // next to two differently-shaded panels reads as *two* bright edges welded
+    // together; the line has to be unambiguously the brightest thing at a wall.
     // Hash21 is the float32-safe one above; face.xy stays inside [-1, 1].
     float jitter = Hash21(face.xy * 37.0) - 0.5;
-    float shade = 0.30 + 0.55 * diffuse + 0.35 * fresnel + 0.10 * jitter;
+    float shade = 0.42 + 0.40 * diffuse + 0.28 * fresnel + 0.05 * jitter;
 
-    // One-pixel cell lines at any zoom. fwidth() is taken from the sampled field,
-    // and _Params6.w is a width in *pixels*, not a fraction of a cell — the same
-    // rule the silhouette ridge uses. Because the derivative follows e's local
-    // slope, a baked field whose scale varies slightly between cells still draws
-    // lines of equal thickness.
-    float de = max(fwidth(edgeDistance), 1e-4);
-    float line = 1.0 - smoothstep(0.0, de * u._Params6.w, edgeDistance);
+    // fwidth(e) collapses in the V-shaped valley at a wall: neighbours on
+    // opposite slopes cancel in the derivative, so a thin line breaks into two
+    // uneven bright edges. _Params6.w is 1.8*k, the measured gradient of the
+    // baked field per unit r; multiplied by aa (one pixel in units of r) it gives
+    // a stable slope floor at any cell density. 2.2 is the line width in pixels.
+    float slope = max(fwidth(e), aa * u._Params6.w);
+    float line = 1.0 - smoothstep(0.0, slope * 2.2, e);
 
-    return vec3(clamp(shade, 0.0, 1.5), line, pentagon);
+    // A fine lattice on a distant small dome would put several cell walls in one
+    // pixel, which aliases into shimmering moire. 1/(aa * 1.8k) is the on-screen
+    // width of one cell in pixels; fade the lines out below ~5 px. The panel
+    // shading stays, so the dome still reads as a shell instead of vanishing.
+    float cellPixels = 1.0 / max(aa * u._Params6.w, 1e-4);
+    line *= smoothstep(2.0, 5.0, cellPixels);
+
+    return vec2(clamp(shade, 0.0, 1.5), line);
 }
 
 // The intact dome, as (tint.rgb, unmultiplied alpha). Shared by mode 0 and mode 2
@@ -228,10 +236,9 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
     float bodyTerm;
     if (u._Params6.x > 0.5)
     {
-        vec3 hex = HexSurface(p, t);
-        float faceTerm = u._Params6.y * hex.x * (1.0 + 0.18 * hex.z);
-        hexLine = u._Params6.z * hex.y * (1.0 + 0.45 * hex.z);
-        bodyTerm = faceTerm + hexLine;
+        vec2 hex = HexSurface(p, aa, t);
+        hexLine = u._Params6.z * hex.y;
+        bodyTerm = u._Params6.y * hex.x + hexLine;
     }
     else
     {
@@ -242,7 +249,7 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
 
     vec3 halo = u._Color.rgb;
     vec3 coreTint = mix(halo, vec3(1.0), 0.65);
-    vec3 lineTint = mix(halo, vec3(1.0), 0.55);
+    vec3 lineTint = mix(halo, vec3(1.0), 0.85);
     vec3 tint = (halo * (ridgeTerm + glowTerm + max(bodyTerm - hexLine, 0.0))
             + coreTint * coreTerm + lineTint * hexLine)
         / max(sum, 1e-4);
