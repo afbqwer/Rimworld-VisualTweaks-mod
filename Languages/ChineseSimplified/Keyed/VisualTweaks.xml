@@ -125,7 +125,8 @@
 
   <VisualTweaks_ShieldDome_Group>护盾绘制</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldDome_Enable>替换护盾绘制</VisualTweaks_ShieldDome_Enable>
-  <VisualTweaks_ShieldDome_EnableTip>用自定义着色器重画护盾，包括投射器穹顶和个人护盾腰带，可在下面选择清晰、六边形或类原版三种样式。关闭即刻恢复原版绘制，可直接对比。</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_EnableTip>用自定义着色器重画护盾，包括投射器穹顶和个人护盾腰带；两者可各自选择清晰、六边形或类原版样式。关闭即刻恢复原版绘制，可直接对比。</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_DomeStyle>大型护盾样式</VisualTweaks_ShieldDome_DomeStyle>
   <VisualTweaks_ShieldDome_StyleCrisp>清晰</VisualTweaks_ShieldDome_StyleCrisp>
   <VisualTweaks_ShieldDome_StyleCrispTip>自定义解析式护盾：边缘是一道锐利的环，严格停在拦截判定半径上，不会像原版那样糊成一片。轮廓粗细与亮度就是下面的滑条。</VisualTweaks_ShieldDome_StyleCrispTip>
   <VisualTweaks_ShieldDome_RidgeWidth>轮廓粗细</VisualTweaks_ShieldDome_RidgeWidth>
@@ -164,7 +165,7 @@
   <VisualTweaks_ShieldDome_HexLine>格线亮度</VisualTweaks_ShieldDome_HexLine>
   <VisualTweaks_ShieldDome_HexLineTip>面板之间那条亮线的强度，默认偏亮是为了让线明确压过两侧格面的明暗差，避免看成两条并排的边。线宽按屏幕像素计算，任何缩放和任何护盾尺寸下都一样粗。</VisualTweaks_ShieldDome_HexLineTip>
   <VisualTweaks_ShieldDome_HexDensity>格子密度（大型护盾）</VisualTweaks_ShieldDome_HexDensity>
-  <VisualTweaks_ShieldDome_HexDensityTip>大型投射器穹顶的整球面板数 = 10k²+2：2 = 42 格（像足球），5 = 252 格，8 = 642 格，12 = 1442 格（细密能量网）。其中始终恰好 12 个是五边形，但不作任何特殊标记。这里只是草稿值，拖动不会重建贴图——按下面的按钮才会烘焙并生效。个人护盾腰带使用下面独立的一组密度与分辨率。</VisualTweaks_ShieldDome_HexDensityTip>
+  <VisualTweaks_ShieldDome_HexDensityTip>大型投射器穹顶的整球面板数 = 10k²+2：2 = 42 格（像足球），5 = 252 格，8 = 642 格，12 = 1442 格（细密能量网）。其中始终恰好 12 个是五边形，但不作任何特殊标记。这里只是草稿值，拖动不会重建贴图——按下面的按钮才会烘焙并生效。个人护盾腰带使用下方“个人护盾外观”里独立的一组密度。</VisualTweaks_ShieldDome_HexDensityTip>
   <VisualTweaks_ShieldDome_HexBake>应用密度并重新烘焙</VisualTweaks_ShieldDome_HexBake>
   <VisualTweaks_ShieldDome_HexPending>当前显示的是 k={0}；滑条已改为 k={1}，按上面的按钮应用（重建 2048² 贴图，会有几百毫秒的卡顿，只发生一次）。</VisualTweaks_ShieldDome_HexPending>
   <VisualTweaks_ShieldDome_PersonalHexGroup>个人护盾六边形</VisualTweaks_ShieldDome_PersonalHexGroup>
@@ -173,8 +174,11 @@
   <VisualTweaks_ShieldDome_PersonalHexBake>应用个人护盾设置</VisualTweaks_ShieldDome_PersonalHexBake>
   <VisualTweaks_ShieldDome_PersonalHexPending>当前生效：k={0}；草稿：k={1}，按上面的按钮重新烘焙后生效（512² 贴图，烘焙很快）。</VisualTweaks_ShieldDome_PersonalHexPending>
   <VisualTweaks_ShieldDome_PersonalLookGroup>个人护盾外观</VisualTweaks_ShieldDome_PersonalLookGroup>
+  <VisualTweaks_ShieldDome_PersonalStyle>个人护盾样式</VisualTweaks_ShieldDome_PersonalStyle>
+  <VisualTweaks_ShieldDome_PersonalStyleNote>个人护盾的样式独立于上方大型护盾，可分别选择清晰、六边形或类原版。受击反馈使用下方独立的抖动设置；破裂动画也在下方单独选择（按表面存储，与大型护盾使用同一表面时共用该表面的选择）。</VisualTweaks_ShieldDome_PersonalStyleNote>
   <VisualTweaks_ShieldDome_PersonalOpacity>整体不透明度</VisualTweaks_ShieldDome_PersonalOpacity>
   <VisualTweaks_ShieldDome_PersonalOpacityTip>大型护盾的不透明度来自原版 GetCurrentAlpha：选中的穹顶大约在 0.2~0.62 之间脉动。个人护盾没有这种脉动，直接按 1.0 绘制会显得比周围的穹顶实得多。这里默认 0.4，取该范围的中段；只影响个人护盾，与大型护盾完全独立。</VisualTweaks_ShieldDome_PersonalOpacityTip>
+  <VisualTweaks_ShieldDome_PersonalBreakGroup>个人护盾破裂</VisualTweaks_ShieldDome_PersonalBreakGroup>
   <VisualTweaks_ShieldDome_PersonalHitGroup>个人护盾受击</VisualTweaks_ShieldDome_PersonalHitGroup>
   <VisualTweaks_ShieldDome_PersonalHitNote>以下设置只影响个人护盾腰带，与上方大型护盾的受击动画（扇形/增亮/六边形波）完全独立。关闭替换护盾绘制时，由原版提供不可调的抖动。</VisualTweaks_ShieldDome_PersonalHitNote>
   <VisualTweaks_ShieldDome_PersonalJitter>受击抖动</VisualTweaks_ShieldDome_PersonalJitter>

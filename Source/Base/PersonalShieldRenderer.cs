@@ -13,11 +13,13 @@ namespace VisualTweaks
     /// <c>CompShield.Draw()</c>.
     ///
     /// What is ported from <see cref="ShieldDomeRenderer"/> is everything that is not
-    /// the hit reaction: the same three surfaces (crisp, hexagonal, stock-like), the
-    /// same ridge and lattice settings, a material built from the same code, and the
-    /// same dissolve / panel-loss break animations. Impacts are deliberately absent:
-    /// a belt is one character wide, and a flare, a sector brightening or a lattice
-    /// wave at that size is a few pixels of noise rather than a readable direction.
+    /// the hit reaction: the same three surface types, the same ridge and face/line
+    /// weights, a material built from the same code, and the same dissolve /
+    /// panel-loss break animations. The surface choice itself is independent — a belt
+    /// can draw crisp while the dome draws hex — and so are the lattice density and
+    /// opacity. Impacts are deliberately absent: a belt is one character wide, and a
+    /// flare, a sector brightening or a lattice wave at that size is a few pixels of
+    /// noise rather than a readable direction.
     ///
     /// What has to differ is geometry and visibility, because a belt is not a
     /// projector:
@@ -98,10 +100,12 @@ namespace VisualTweaks
                 return false;
             }
 
-            // Same style and ridge settings as the big dome; only the atlas differs.
+            // Shared ridge/face/line weights, but this material resolves the belt's
+            // own surface style and lattice independently of the dome's.
             Surface.ApplyLook();
 
-            int breakStyle = VisualTweaksSettings.CurrentShieldBreakStyle;
+            int breakStyle = VisualTweaksSettings.CurrentShieldBreakStyleFor(
+                ShieldHexTarget.Personal);
             bool customBreak = breakStyle
                 != VisualTweaksSettings.ShieldBreakVanilla;
             float dissolveMode = breakStyle
@@ -177,7 +181,8 @@ namespace VisualTweaks
             // Crisp and panel silhouettes sit exactly on r == 1, so their quad is
             // exactly the diameter. The stock-like style's soft tail is meant to fade
             // past the rim, so it gets vanilla's own ForceField margin for that tail.
-            float quadMargin = ShieldDomeRenderer.VanillaActive
+            float quadMargin = VisualTweaksSettings.IsVanillaShieldDome(
+                ShieldHexTarget.Personal)
                 ? ShieldDomeRenderer.VanillaQuadMargin
                 : 1f;
 

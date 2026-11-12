@@ -761,6 +761,7 @@ namespace VisualTweaks
             // shell alone; three mutually exclusive styles need a radio row, or two
             // of them end up ticked at once.
             listing.Gap(6f);
+            listing.Label("VisualTweaks_ShieldDome_DomeStyle".Translate());
             int styleIndex = ShieldStyleIndexOf(VisualTweaksSettings.shieldDomeStyle);
             int pickedStyle = SettingsLayout.RadioRow(
                 listing,
@@ -777,7 +778,10 @@ namespace VisualTweaks
             // the first shield that happens to be drawn.
             BakeHexIfNewlyDrawn();
 
-            if (VisualTweaksSettings.HexShieldDome)
+            // Face and line weights are shared by both families' materials; the
+            // lattice density and its rebake are per family, so they sit with the
+            // style they belong to.
+            if (VisualTweaksSettings.AnyHexShieldDome)
             {
                 VisualTweaksSettings.shieldHexFaceStrength = SettingsLayout.Slider(
                     listing,
@@ -793,6 +797,10 @@ namespace VisualTweaks
                     VisualTweaksSettings.MinShieldHexLine,
                     VisualTweaksSettings.MaxShieldHexLine,
                     "VisualTweaks_ShieldDome_HexLineTip".Translate());
+            }
+
+            if (VisualTweaksSettings.HexShieldDome)
+            {
                 VisualTweaksSettings.shieldHexDensity = SettingsLayout.Slider(
                     listing,
                     "VisualTweaks_ShieldDome_HexDensity".Translate(),
@@ -825,59 +833,14 @@ namespace VisualTweaks
                             bakedDensity,
                             draftDensity));
                 }
-
-                // The belt is a different optical problem: a quarter of the
-                // diameter and a twentieth of the screen area. Its lattice is
-                // therefore baked separately, with its own cell count and a fixed
-                // 512² texture; the dome's 5 and 2048 are not defaults it inherits.
-                listing.Gap(6f);
-                SettingsLayout.SubHeader(
-                    listing,
-                    "VisualTweaks_ShieldDome_PersonalHexGroup".Translate());
-
-                VisualTweaksSettings.personalShieldHexDensity = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_PersonalHexDensity".Translate(),
-                    VisualTweaksSettings.personalShieldHexDensity,
-                    VisualTweaksSettings.MinShieldHexDensity,
-                    VisualTweaksSettings.MaxShieldHexDensity,
-                    "VisualTweaks_ShieldDome_PersonalHexDensityTip".Translate(),
-                    step: 1f);
-
-                int personalDraftDensity = Mathf.RoundToInt(
-                    VisualTweaksSettings.personalShieldHexDensity);
-                int personalBakedDensity =
-                    VisualTweaksSettings.personalShieldHexDensityApplied;
-
-                if (SettingsLayout.ButtonRow(
-                        listing,
-                        new[]
-                        {
-                            "VisualTweaks_ShieldDome_PersonalHexBake".Translate()
-                                .ToString()
-                        }) == 0)
-                {
-                    ShieldHexMap.Apply(
-                        ShieldHexTarget.Personal,
-                        personalDraftDensity);
-                    personalBakedDensity =
-                        VisualTweaksSettings.personalShieldHexDensityApplied;
-                }
-
-                if (personalDraftDensity != personalBakedDensity)
-                {
-                    SettingsLayout.Note(
-                        listing,
-                        "VisualTweaks_ShieldDome_PersonalHexPending".Translate(
-                            personalBakedDensity,
-                            personalDraftDensity));
-                }
             }
 
             // The stock-like style has no ridge line, a core or a fresnel exponent to
             // tune: every width is a fraction of the radius, like the texture it
-            // imitates. Showing the ridge sliders would suggest otherwise.
-            if (VisualTweaksSettings.VanillaShieldDome)
+            // imitates. The sliders are shared by both families, so they stay as long
+            // as at least one of them uses a surface that has a ridge.
+            if (VisualTweaksSettings.VanillaShieldDome
+                && VisualTweaksSettings.PersonalVanillaShieldDome)
             {
                 SettingsLayout.Note(
                     listing,
@@ -1022,16 +985,85 @@ namespace VisualTweaks
                 }
             }
 
-            // Personal belts get their own absorption reaction. This is not one of
-            // the dome's impact styles: a belt is too small for a flare or a panel
-            // wave, and its jitter should be tunable without moving the big shield's
-            // hit animation. Hidden while the custom drawing is off because vanilla
-            // then supplies its own unconfigurable jitter.
+            // Personal belts get their own surface, lattice, opacity, break choice
+            // and hit reaction. Only the ridge/face/line weights are shared with the
+            // dome; every decision that reads differently at belt size is separate.
+            // Hidden while the custom drawing is off because vanilla then supplies
+            // its own look, break and unconfigurable jitter.
             if (VisualTweaksSettings.crispShieldDome)
             {
                 SettingsLayout.SubHeader(
                     listing,
                     "VisualTweaks_ShieldDome_PersonalLookGroup".Translate());
+                SettingsLayout.Note(
+                    listing,
+                    "VisualTweaks_ShieldDome_PersonalStyleNote".Translate());
+
+                listing.Label(
+                    "VisualTweaks_ShieldDome_PersonalStyle".Translate());
+                int personalStyleIndex = ShieldStyleIndexOf(
+                    VisualTweaksSettings.personalShieldDomeStyle);
+                int pickedPersonalStyle = SettingsLayout.RadioRow(
+                    listing,
+                    ShieldStyleLabels(),
+                    personalStyleIndex,
+                    ShieldStyleTips());
+                if (pickedPersonalStyle != personalStyleIndex)
+                {
+                    VisualTweaksSettings.personalShieldDomeStyle =
+                        ShieldStyleOrder[pickedPersonalStyle];
+                    BakeHexIfNewlyDrawn();
+                }
+
+                // The belt's lattice is a different optical problem: a quarter of
+                // the diameter and a twentieth of the screen area. It is baked
+                // separately, with its own cell count and a fixed 512² texture.
+                if (VisualTweaksSettings.PersonalHexShieldDome)
+                {
+                    SettingsLayout.SubHeader(
+                        listing,
+                        "VisualTweaks_ShieldDome_PersonalHexGroup".Translate());
+
+                    VisualTweaksSettings.personalShieldHexDensity =
+                        SettingsLayout.Slider(
+                            listing,
+                            "VisualTweaks_ShieldDome_PersonalHexDensity".Translate(),
+                            VisualTweaksSettings.personalShieldHexDensity,
+                            VisualTweaksSettings.MinShieldHexDensity,
+                            VisualTweaksSettings.MaxShieldHexDensity,
+                            "VisualTweaks_ShieldDome_PersonalHexDensityTip".Translate(),
+                            step: 1f);
+
+                    int personalDraftDensity = Mathf.RoundToInt(
+                        VisualTweaksSettings.personalShieldHexDensity);
+                    int personalBakedDensity =
+                        VisualTweaksSettings.personalShieldHexDensityApplied;
+
+                    if (SettingsLayout.ButtonRow(
+                            listing,
+                            new[]
+                            {
+                                "VisualTweaks_ShieldDome_PersonalHexBake".Translate()
+                                    .ToString()
+                            }) == 0)
+                    {
+                        ShieldHexMap.Apply(
+                            ShieldHexTarget.Personal,
+                            personalDraftDensity);
+                        personalBakedDensity =
+                            VisualTweaksSettings.personalShieldHexDensityApplied;
+                    }
+
+                    if (personalDraftDensity != personalBakedDensity)
+                    {
+                        SettingsLayout.Note(
+                            listing,
+                            "VisualTweaks_ShieldDome_PersonalHexPending".Translate(
+                                personalBakedDensity,
+                                personalDraftDensity));
+                    }
+                }
+
                 VisualTweaksSettings.personalShieldOpacity = SettingsLayout.Slider(
                     listing,
                     "VisualTweaks_ShieldDome_PersonalOpacity".Translate(),
@@ -1039,6 +1071,46 @@ namespace VisualTweaks
                     VisualTweaksSettings.MinPersonalShieldOpacity,
                     VisualTweaksSettings.MaxPersonalShieldOpacity,
                     "VisualTweaks_ShieldDome_PersonalOpacityTip".Translate());
+
+                // Break choices are stored per surface, not per family. This row
+                // edits the choice belonging to the belt's current surface, so a belt
+                // on hex can be told to dissolve instead of losing panels without
+                // forcing the dome onto hex as well. When both families use the same
+                // surface they intentionally share that surface's choice.
+                SettingsLayout.SubHeader(
+                    listing,
+                    "VisualTweaks_ShieldDome_PersonalBreakGroup".Translate());
+
+                bool personalHexSurface =
+                    VisualTweaksSettings.PersonalHexShieldDome;
+                int[] personalBreakOrder = personalHexSurface
+                    ? HexBreakOrder
+                    : StandardBreakOrder;
+                int personalBreakIndex = ImpactIndexOf(
+                    personalBreakOrder,
+                    VisualTweaksSettings.CurrentShieldBreakStyleFor(
+                        ShieldHexTarget.Personal));
+                int pickedPersonalBreak = SettingsLayout.RadioRow(
+                    listing,
+                    BreakLabels(personalHexSurface),
+                    personalBreakIndex,
+                    BreakTips(personalHexSurface));
+                if (pickedPersonalBreak != personalBreakIndex)
+                {
+                    int pickedBreakValue = personalBreakOrder[pickedPersonalBreak];
+                    if (personalHexSurface)
+                    {
+                        VisualTweaksSettings.hexShieldBreakStyle = pickedBreakValue;
+                    }
+                    else if (VisualTweaksSettings.PersonalVanillaShieldDome)
+                    {
+                        VisualTweaksSettings.vanillaShieldBreakStyle = pickedBreakValue;
+                    }
+                    else
+                    {
+                        VisualTweaksSettings.crispShieldBreakStyle = pickedBreakValue;
+                    }
+                }
 
                 SettingsLayout.SubHeader(
                     listing,
@@ -1121,8 +1193,13 @@ namespace VisualTweaks
                 }
             }
 
+            // The sliders are shared by both families. Keep them visible when either
+            // one has a break animation, not only when the dome's chosen surface does.
             if (VisualTweaksSettings.CurrentShieldBreakStyle
-                != VisualTweaksSettings.ShieldBreakVanilla)
+                    != VisualTweaksSettings.ShieldBreakVanilla
+                || VisualTweaksSettings.CurrentShieldBreakStyleFor(
+                        ShieldHexTarget.Personal)
+                    != VisualTweaksSettings.ShieldBreakVanilla)
             {
                 VisualTweaksSettings.shieldDissolveTicks = SettingsLayout.Slider(
                     listing,
@@ -1396,8 +1473,11 @@ namespace VisualTweaks
         /// </summary>
         private static void BakeHexIfNewlyDrawn()
         {
-            if (VisualTweaksSettings.HexShieldDome)
+            if (VisualTweaksSettings.AnyHexShieldDome)
             {
+                // Apply records the density for both families and bakes only the one
+                // whose chosen surface uses the shell. Switching the other family to
+                // hex later calls this again, so its atlas is built at that moment.
                 ShieldHexMap.Apply(
                     ShieldHexTarget.Large,
                     VisualTweaksSettings.shieldHexDensityApplied);

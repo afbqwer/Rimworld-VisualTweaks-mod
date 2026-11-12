@@ -125,7 +125,8 @@
 
   <VisualTweaks_ShieldDome_Group>Shield drawing</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldDome_Enable>Replace shield drawing</VisualTweaks_ShieldDome_Enable>
-  <VisualTweaks_ShieldDome_EnableTip>Redraws shields with a custom shader — projector domes and personal shield belts alike; choose the crisp, hexagonal or stock-like style below. Turn it off to get vanilla's drawing back for comparison.</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_EnableTip>Redraws shields with a custom shader — projector domes and personal shield belts alike. Each chooses its own crisp, hexagonal or stock-like style below. Turn it off to get vanilla's drawing back for comparison.</VisualTweaks_ShieldDome_EnableTip>
+  <VisualTweaks_ShieldDome_DomeStyle>Dome surface</VisualTweaks_ShieldDome_DomeStyle>
   <VisualTweaks_ShieldDome_StyleCrisp>Crisp</VisualTweaks_ShieldDome_StyleCrisp>
   <VisualTweaks_ShieldDome_StyleCrispTip>The analytic dome: its edge is a sharp ring that stops exactly on the intercept radius instead of smearing out like the stock texture. Outline thickness and brightness are the sliders below.</VisualTweaks_ShieldDome_StyleCrispTip>
   <VisualTweaks_ShieldDome_RidgeWidth>Outline thickness</VisualTweaks_ShieldDome_RidgeWidth>
@@ -164,7 +165,7 @@
   <VisualTweaks_ShieldDome_HexLine>Cell line brightness</VisualTweaks_ShieldDome_HexLine>
   <VisualTweaks_ShieldDome_HexLineTip>Strength of the bright line between panels. The default is deliberately high so the line clearly outshines the shading step between two adjacent faces, instead of reading as two parallel edges. Its width is measured in screen pixels, so it stays the same at every zoom and on every shield size.</VisualTweaks_ShieldDome_HexLineTip>
   <VisualTweaks_ShieldDome_HexDensity>Cell density (domes)</VisualTweaks_ShieldDome_HexDensity>
-  <VisualTweaks_ShieldDome_HexDensityTip>Panels over the whole sphere = 10k^2+2: 2 = 42 (looks like a football), 5 = 252, 8 = 642, 12 = 1442 (a fine energy mesh). Exactly twelve are always pentagons, but they are not marked in any way. This is a draft value only — dragging it does not rebuild the texture; the button below bakes and applies it. Personal shield belts use their own density and resolution below.</VisualTweaks_ShieldDome_HexDensityTip>
+  <VisualTweaks_ShieldDome_HexDensityTip>Panels over the whole sphere = 10k^2+2: 2 = 42 (looks like a football), 5 = 252, 8 = 642, 12 = 1442 (a fine energy mesh). Exactly twelve are always pentagons, but they are not marked in any way. This is a draft value only — dragging it does not rebuild the texture; the button below bakes and applies it. Personal shield belts use their own density under Personal belt look below.</VisualTweaks_ShieldDome_HexDensityTip>
   <VisualTweaks_ShieldDome_HexBake>Apply density and rebake</VisualTweaks_ShieldDome_HexBake>
   <VisualTweaks_ShieldDome_HexPending>Showing k={0}; the slider is now at k={1}. Press the button above to apply it (rebuilds the 2048^2 texture — a few hundred ms of hitching, once).</VisualTweaks_ShieldDome_HexPending>
   <VisualTweaks_ShieldDome_PersonalHexGroup>Personal belt lattice</VisualTweaks_ShieldDome_PersonalHexGroup>
@@ -173,8 +174,11 @@
   <VisualTweaks_ShieldDome_PersonalHexBake>Apply belt settings</VisualTweaks_ShieldDome_PersonalHexBake>
   <VisualTweaks_ShieldDome_PersonalHexPending>Active: k={0}; draft: k={1}. Press the button above to rebake (a 512² texture, so it is quick).</VisualTweaks_ShieldDome_PersonalHexPending>
   <VisualTweaks_ShieldDome_PersonalLookGroup>Personal belt look</VisualTweaks_ShieldDome_PersonalLookGroup>
+  <VisualTweaks_ShieldDome_PersonalStyle>Belt surface</VisualTweaks_ShieldDome_PersonalStyle>
+  <VisualTweaks_ShieldDome_PersonalStyleNote>Belts choose their surface independently of the dome above — crisp, hexagonal or stock-like. Hit feedback uses its own jitter settings below, and the break animation has its own choice below too (stored per surface, so both families share that choice when they use the same surface).</VisualTweaks_ShieldDome_PersonalStyleNote>
   <VisualTweaks_ShieldDome_PersonalOpacity>Overall opacity</VisualTweaks_ShieldDome_PersonalOpacity>
   <VisualTweaks_ShieldDome_PersonalOpacityTip>An interceptor dome's opacity comes from vanilla's GetCurrentAlpha, which pulses roughly between 0.2 and 0.62 when selected. A belt has no such rule, and drawing it at 1.0 made it look far more solid than every nearby dome. The default 0.4 sits in the middle of that range. Belts only and completely independent of the dome.</VisualTweaks_ShieldDome_PersonalOpacityTip>
+  <VisualTweaks_ShieldDome_PersonalBreakGroup>Belt break animation</VisualTweaks_ShieldDome_PersonalBreakGroup>
   <VisualTweaks_ShieldDome_PersonalHitGroup>Personal belt impacts</VisualTweaks_ShieldDome_PersonalHitGroup>
   <VisualTweaks_ShieldDome_PersonalHitNote>These settings affect personal shield belts only and are completely independent of the dome hit animation above (flare, brighten sector, hex wave). With the custom drawing off, vanilla supplies its own unconfigurable jitter.</VisualTweaks_ShieldDome_PersonalHitNote>
   <VisualTweaks_ShieldDome_PersonalJitter>Hit jitter</VisualTweaks_ShieldDome_PersonalJitter>

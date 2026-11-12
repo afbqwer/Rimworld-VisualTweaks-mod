@@ -8,12 +8,11 @@ namespace VisualTweaks
     /// <summary>
     /// One shield-shaped material and the look uniforms it carries.
     ///
-    /// There is one instance per <see cref="ShieldHexTarget"/>, because the baked
-    /// hex atlas is a material texture: a belt and a projector dome must be able to
-    /// sample different lattices in the same frame. Everything else about the
-    /// material is identical and comes from the same global settings, so the two
-    /// surfaces can never disagree about style, ridge weight or face shading — only
-    /// about which atlas they bind.
+    /// There is one instance per <see cref="ShieldHexTarget"/>, because both the
+    /// chosen surface style and the baked hex atlas are material state: a belt may
+    /// draw crisp while the dome draws hex, and the two must be able to sample
+    /// different lattices in the same frame. Ridge weight and the face/line weights
+    /// remain shared, so the two families cannot drift apart there.
     ///
     /// Per-draw values (alpha, radius, centre, break progress) deliberately do not
     /// live here. They travel as a DrawPropertyBlock, which lets both materials be
@@ -87,7 +86,8 @@ namespace VisualTweaks
         /// crisp would flash panels that are not on screen.
         /// </summary>
         internal bool HexActive =>
-            VisualTweaksSettings.HexShieldDome && ShieldHexMap.Available(target);
+            VisualTweaksSettings.IsHexShieldDome(target)
+            && ShieldHexMap.Available(target);
 
         /// <summary>
         /// The material, created on first use. Null means "draw nothing"; every
@@ -168,7 +168,7 @@ namespace VisualTweaks
             // shader's gradient constant has to describe the texture that actually
             // exists, not the one being previewed in a UI.
             int density = ShieldHexMap.AppliedSubdivisions(target);
-            bool wantHex = VisualTweaksSettings.HexShieldDome;
+            bool wantHex = VisualTweaksSettings.IsHexShieldDome(target);
             if (wantHex)
             {
                 ShieldHexMap.Bind(mat, target, density);
@@ -178,7 +178,7 @@ namespace VisualTweaks
             // smooth dome keeps the shield readable and matches the shader bridge's
             // "lose the effect, never the feature" rule. The stock-like style has no
             // asset to fail, so it is passed through unconditionally.
-            float style = VisualTweaksSettings.VanillaShieldDome
+            float style = VisualTweaksSettings.IsVanillaShieldDome(target)
                 ? 2f
                 : HexActive ? 1f : 0f;
 

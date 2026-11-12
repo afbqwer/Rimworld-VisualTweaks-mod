@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Verse;
 
 namespace VisualTweaks
@@ -171,7 +171,7 @@ namespace VisualTweaks
         // Which surface the replacement dome draws. Crisp is the original analytic
         // ring; Hex is the spherical panel shell; Vanilla is a soft, wide-gradient
         // reproduction of the stock ForceField read (rebuilt in the shader, never
-        // extracted from the game).
+        // extracted from the game). Belts have their own choice just below.
         //
         // An int rather than three bools: the three styles are mutually exclusive,
         // and with checkboxes two of them could be on at once. The old
@@ -183,6 +183,12 @@ namespace VisualTweaks
 
         public static int shieldDomeStyle = ShieldDomeStyleCrisp;
 
+        // Belts choose their surface independently. They are a quarter of a dome's
+        // diameter but are always shown at one steady level, so a style that reads
+        // well on a 25-cell projector does not necessarily read well on a 1.2-cell
+        // belt. Migrated from shieldDomeStyle for saves written before this existed.
+        public static int personalShieldDomeStyle = ShieldDomeStyleCrisp;
+
         // Legacy save value; only read during ExposeData migration.
         private static bool hexShieldDome;
 
@@ -191,6 +197,45 @@ namespace VisualTweaks
 
         /// <summary>True when the stock-like soft dome is the chosen style.</summary>
         public static bool VanillaShieldDome => shieldDomeStyle == ShieldDomeStyleVanilla;
+
+        /// <summary>True when the belt's independently chosen surface is the shell.</summary>
+        public static bool PersonalHexShieldDome =>
+            personalShieldDomeStyle == ShieldDomeStyleHex;
+
+        /// <summary>True when the belt's independently chosen surface is stock-like.</summary>
+        public static bool PersonalVanillaShieldDome =>
+            personalShieldDomeStyle == ShieldDomeStyleVanilla;
+
+        /// <summary>True when either kind of shield needs a baked lattice.</summary>
+        public static bool AnyHexShieldDome => HexShieldDome || PersonalHexShieldDome;
+
+        /// <summary>The surface style chosen for one shield family.</summary>
+        internal static int ShieldDomeStyleFor(ShieldHexTarget target) =>
+            target == ShieldHexTarget.Personal
+                ? personalShieldDomeStyle
+                : shieldDomeStyle;
+
+        /// <summary>True when this family's chosen surface samples the hex atlas.</summary>
+        internal static bool IsHexShieldDome(ShieldHexTarget target) =>
+            ShieldDomeStyleFor(target) == ShieldDomeStyleHex;
+
+        /// <summary>True when this family's chosen surface is stock-like.</summary>
+        internal static bool IsVanillaShieldDome(ShieldHexTarget target) =>
+            ShieldDomeStyleFor(target) == ShieldDomeStyleVanilla;
+
+        /// <summary>
+        /// The break animation for one family. Break choices are stored per surface
+        /// (crisp / stock-like / hex), so a belt that picks hex gets the same break
+        /// choice the dome would get for that surface, while the two families can
+        /// still use different surfaces.
+        /// </summary>
+        internal static int CurrentShieldBreakStyleFor(ShieldHexTarget target)
+        {
+            int style = ShieldDomeStyleFor(target);
+            return style == ShieldDomeStyleHex ? hexShieldBreakStyle
+                : style == ShieldDomeStyleVanilla ? vanillaShieldBreakStyle
+                : crispShieldBreakStyle;
+        }
 
         // How a hit is answered. This is independent of the dome surface, but the
         // valid choices differ: the panel shell has its own lattice wave, while the
@@ -610,6 +655,19 @@ namespace VisualTweaks
                 shieldDomeStyle = hexShieldDome
                     ? ShieldDomeStyleHex
                     : ShieldDomeStyleCrisp;
+            }
+
+            // Saves written before belts had their own surface simply keep whatever
+            // the shared style was, so upgrading does not change how they look.
+            // From then on the two are independent.
+            Scribe_Values.Look(
+                ref personalShieldDomeStyle,
+                "personalShieldDomeStyle",
+                -1);
+            if (personalShieldDomeStyle < ShieldDomeStyleCrisp
+                || personalShieldDomeStyle > ShieldDomeStyleVanilla)
+            {
+                personalShieldDomeStyle = shieldDomeStyle;
             }
 
             // One choice per surface. Saves written before this setting existed take
@@ -1055,6 +1113,7 @@ namespace VisualTweaks
             alwaysShowShields = false;
             crispShieldDome = true;
             shieldDomeStyle = ShieldDomeStyleCrisp;
+            personalShieldDomeStyle = ShieldDomeStyleCrisp;
             hexShieldDome = false;
             crispShieldImpactStyle = ShieldImpactFlare;
             vanillaShieldImpactStyle = ShieldImpactBrighten;

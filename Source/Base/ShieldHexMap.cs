@@ -244,13 +244,14 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// True when something would actually sample a texture: the hex style is
-        /// picked, the custom dome that draws it is on, and its shader compiled.
-        /// Baking otherwise costs tens of MiB and a fraction of a second for images
-        /// nothing reads.
+        /// True when this family would actually sample a texture: its chosen surface
+        /// is the hex shell, the custom drawing that samples it is on, and the shader
+        /// compiled. Baking otherwise costs MiB and a fraction of a second for an
+        /// image nothing reads. The two families are independent — a belt can use the
+        /// shell while the dome stays crisp, and then only the belt's atlas is baked.
         /// </summary>
-        private static bool CanBeDrawn =>
-            VisualTweaksSettings.HexShieldDome
+        private static bool CanBeDrawn(ShieldHexTarget target) =>
+            VisualTweaksSettings.IsHexShieldDome(target)
             && VisualTweaksSettings.crispShieldDome
             && ShieldDomeBridge.ShaderReady;
 
@@ -262,7 +263,9 @@ namespace VisualTweaks
         /// </summary>
         internal static void Prewarm()
         {
-            if (!CanBeDrawn)
+            bool bakeLarge = CanBeDrawn(ShieldHexTarget.Large);
+            bool bakePersonal = CanBeDrawn(ShieldHexTarget.Personal);
+            if (!bakeLarge && !bakePersonal)
             {
                 return;
             }
@@ -277,17 +280,30 @@ namespace VisualTweaks
                 MaxSubdivisions);
 
             System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
-            EnsureBuilt(LargeSurface, largeK);
-            EnsureBuilt(PersonalSurface, personalK);
+            if (bakeLarge)
+            {
+                EnsureBuilt(LargeSurface, largeK);
+            }
+
+            if (bakePersonal)
+            {
+                EnsureBuilt(PersonalSurface, personalK);
+            }
+
             watch.Stop();
 
             if (LargeSurface.Available || PersonalSurface.Available)
             {
-                VisualTweaksLog.Info("hex shield maps baked at startup (dome k="
-                    + largeK + " at " + LargeSize + "^2"
-                    + (LargeSurface.Available ? "" : " failed")
-                    + "; belt k=" + personalK + " at " + PersonalSize + "^2"
-                    + (PersonalSurface.Available ? "" : " failed")
+                VisualTweaksLog.Info("hex shield maps baked at startup ("
+                    + (bakeLarge
+                        ? "dome k=" + largeK + " at " + LargeSize + "^2"
+                            + (LargeSurface.Available ? "" : " failed")
+                        : "dome off")
+                    + "; "
+                    + (bakePersonal
+                        ? "belt k=" + personalK + " at " + PersonalSize + "^2"
+                            + (PersonalSurface.Available ? "" : " failed")
+                        : "belt off")
                     + "; " + watch.ElapsedMilliseconds + " ms).");
             }
         }
@@ -312,7 +328,7 @@ namespace VisualTweaks
                 VisualTweaksSettings.shieldHexDensityApplied = k;
             }
 
-            if (!CanBeDrawn)
+            if (!CanBeDrawn(target))
             {
                 return;
             }
