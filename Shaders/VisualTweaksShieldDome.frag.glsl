@@ -114,9 +114,12 @@
 // width: like the stock texture, every dimension is a fraction of the radius, so
 // the same shield looks the same at any zoom.
 //
-// Hit reactions and the break reuse the smooth style's paths deliberately. There is
-// no per-panel identity here, because there are no panels: a painted flare and the
-// noise-driven tear are exactly what a continuous soft surface should do.
+// The break reuses the smooth style's noise-driven tear deliberately: there is no
+// per-panel identity here, because there are no panels. The hit reaction does not
+// reuse the painted flare, though. Vanilla's cone is an additive *sector of the same
+// dome*, so a struck stock-like shield brightens in a sector instead of growing a
+// wedge on top of itself. That is mode 4, and it is clipped to r == 1 so its edge
+// can never disagree with the soft rim the way a free-floating flare would.
 
 layout(location = 0) in vec2 vWorld;
 
@@ -127,6 +130,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
     vec4 _Params;  // @default = vec4(0.0, 1.0, 0.0, 5.0)      // mode, alpha, seconds, world radius (cells)
     vec4 _Params2; // @default = vec4(0.45, 0.35, 0.30, 0.05)  // ridge, core, glow, body weights
     vec4 _Params3; // @default = vec4(1.0, 0.0, 0.94, 0.2)     // flare dir x/z, cos(half angle), inner radius
+                   //                                          // stock hit: dir x/z, cos(half angle), unused
                    //                                          // dissolve: break origin x/z, progress, seed
                    //                                          // hex hit: dir x/z, progress, reach share
     vec4 _Params4; // @default = vec4(0.0, 0.0, 0.0, 0.0)      // centre x/z in world cells, unused
@@ -448,11 +452,12 @@ void main()
     }
     else if (mode < 1.5)
     {
-        // ---- interception flare -------------------------------------------
+        // ---- interception flare (crisp style) -----------------------------
         //
         // One quad per impact. Angular profile and radial falloff are both soft,
         // so two flares from neighbouring directions blend into a brighter patch
-        // instead of stacking into an opaque slice.
+        // instead of stacking into an opaque slice. The stock-like style does not
+        // use this branch; it uses mode 4, where the dome itself brightens.
         float cosHalf = u._Params3.z;
 
         // 0 at the side of the flare, 1 on its axis. Feathering the top of this
@@ -616,7 +621,7 @@ void main()
 
         outColor = vec4(tint, total * u._Params.y * edge * surge * endFade);
     }
-    else
+    else if (mode < 3.5)
     {
         // ---- hexagonal impact flash ---------------------------------------
         //
@@ -698,5 +703,39 @@ void main()
 
         vec3 hot = mix(u._Color.rgb, vec3(1.0), 0.9);
         outColor = vec4(hot, lit * panel * u._Params.y * edge);
+    }
+    else
+    {
+        // ---- stock-like impact: brighten the dome in a sector -------------
+        //
+        // Mode 4. Vanilla's ForceFieldCone is not a separate wedge laid over the
+        // shield: it is an additive sector of the same soft surface. What the eye
+        // sees is the shield inside that sector becoming more opaque, with the
+        // sector's outer edge following the rim instead of crossing it.
+        //
+        // So the extra light here is the dome's own shade and silhouette, masked to
+        // the impact's angular sector. Rim and haze brighten together because they
+        // are the same surface. Nothing about the radial profile is re-drawn: it is
+        // the dome's alpha multiplied by the sector, including the stock dome's own
+        // soft `edge`. That is what keeps the hit attached to the visual rim — an
+        // independent radial ramp (the old flare) reached outward at full strength
+        // and read as a wedge hovering outside the soft edge.
+        float cosHalf = u._Params3.z;
+        float axis = clamp(
+            (dot(n, u._Params3.xy) - cosHalf) / max(1.0 - cosHalf, 1e-3),
+            0.0,
+            1.0);
+
+        // Mostly flat inside the sector, feathered only near its two sides. A long
+        // ramp (mode 1's 0.8) makes a beam with a bright axis; vanilla's cone reads
+        // as a region that lit up, not as a searchlight.
+        float sector = smoothstep(0.0, 0.45, axis);
+
+        vec4 dome = DomeColor(r, p, aa, ang, t);
+
+        // Additive, exactly like the dome: the same surface written a second time
+        // inside the sector, faded by the same edge the dome itself uses. Strong
+        // hits and overlapping directions accumulate.
+        outColor = vec4(dome.rgb, dome.a * sector * u._Params.y * edge);
     }
 }

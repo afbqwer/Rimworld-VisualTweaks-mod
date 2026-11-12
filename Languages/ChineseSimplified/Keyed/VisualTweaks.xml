@@ -132,12 +132,12 @@
   <VisualTweaks_ShieldDome_RidgeWidthTip>外轮廓是一条带，不是一条线；这里是它的半宽（屏幕像素）。任何缩放、任何护盾半径下厚度都一样。嫌细就加这个，不是加亮度。</VisualTweaks_ShieldDome_RidgeWidthTip>
   <VisualTweaks_ShieldDome_RidgeBrightness>轮廓亮度</VisualTweaks_ShieldDome_RidgeBrightness>
   <VisualTweaks_ShieldDome_RidgeBrightnessTip>外轮廓那条带的亮度。调到 0 只剩一条细热芯和内辉，轮廓会重新显得薄——要更厚请调上面的粗细。</VisualTweaks_ShieldDome_RidgeBrightnessTip>
-  <VisualTweaks_ShieldDome_FlareAlpha>受击火舌不透明度</VisualTweaks_ShieldDome_FlareAlpha>
-  <VisualTweaks_ShieldDome_FlareAlphaTip>一次拦截产生的受击效果的峰值不透明度。原版锥形最高 0.82，看起来像一块实心扇形压在护盾上；这里默认只有它的三分之一。多发射击会各自画一份并叠加变亮。这一项只影响平滑样式；六边形样式有自己的「受击闪光强度」与「受击扩散范围」。</VisualTweaks_ShieldDome_FlareAlphaTip>
-  <VisualTweaks_ShieldDome_FlareSize>火舌大小</VisualTweaks_ShieldDome_FlareSize>
-  <VisualTweaks_ShieldDome_FlareSizeTip>火舌宽度的整体倍率。宽度本身跟随弹道伤害，但受「不超过护盾半径 45%」的上限约束：小护盾上很快就到顶（否则扇形会盖住整个穹顶），大护盾上重武器才会明显更宽。护盾涟漪是另一个功能，它的设置不会影响火舌。</VisualTweaks_ShieldDome_FlareSizeTip>
-  <VisualTweaks_ShieldDome_FlareDamage>火舌伤害影响</VisualTweaks_ShieldDome_FlareDamage>
-  <VisualTweaks_ShieldDome_FlareDamageTip>火舌亮度跟随击中伤害的程度。0 时各种武器一样亮；越大重武器越醒目。结果始终限制在 0.55–1.8 倍之间，所以电荷长枪不会糊满整个穹顶，小口径子弹也不会看不见。</VisualTweaks_ShieldDome_FlareDamageTip>
+  <VisualTweaks_ShieldDome_FlareAlpha>受击增亮强度</VisualTweaks_ShieldDome_FlareAlpha>
+  <VisualTweaks_ShieldDome_FlareAlphaTip>一次拦截产生的峰值亮度。清晰样式在受击方向画一道火舌；类原版样式则让扇形区域内的护盾本体变亮（和原版一样是同一层护盾，不是另一块扇形贴片）。两者共用这一项。原版锥形最高 0.82，看起来像一块实心扇形压在护盾上；这里默认只有它的三分之一。多发射击会各自画一份并叠加变亮。六边形样式有自己的「受击闪光强度」与「受击扩散范围」。</VisualTweaks_ShieldDome_FlareAlphaTip>
+  <VisualTweaks_ShieldDome_FlareSize>受击范围大小</VisualTweaks_ShieldDome_FlareSize>
+  <VisualTweaks_ShieldDome_FlareSizeTip>受击范围的整体倍率：清晰样式是火舌的角宽，类原版样式是增亮扇区的角宽。宽度本身跟随弹道伤害，但受「不超过护盾半径 45%」的上限约束：小护盾上很快就到顶（否则扇形会盖住整个穹顶），大护盾上重武器才会明显更宽。护盾涟漪是另一个功能，它的设置不会影响受击效果。</VisualTweaks_ShieldDome_FlareSizeTip>
+  <VisualTweaks_ShieldDome_FlareDamage>受击伤害影响</VisualTweaks_ShieldDome_FlareDamage>
+  <VisualTweaks_ShieldDome_FlareDamageTip>受击亮度跟随击中伤害的程度，两种样式共用。0 时各种武器一样亮；越大重武器越醒目。结果始终限制在 0.55–1.8 倍之间，所以电荷长枪不会糊满整个穹顶，小口径子弹也不会看不见。</VisualTweaks_ShieldDome_FlareDamageTip>
   <VisualTweaks_ShieldDome_Hex>六边形</VisualTweaks_ShieldDome_Hex>
   <VisualTweaks_ShieldDome_HexTip>把护盾面换成球面的六边形/五边形面板：格子越靠边缘越被压扁，每一格有独立的明暗，看起来像半个球壳而不是平贴的蜂窝。球面上纯六边形铺不满，所以必然有十二个五边形——它们只是球面铺不满时的几何妥协，因此不额外着色、不强调。受击与破裂也按面板进行：命中时受击点附近的面板闪白光并向四周传导，破裂时面板按从受击点向外的顺序逐块熄灭。绘制次数不变。需要先开启上面的「清晰边缘护盾」。</VisualTweaks_ShieldDome_HexTip>
   <VisualTweaks_ShieldDome_StyleVanilla>类原版</VisualTweaks_ShieldDome_StyleVanilla>
@@ -152,7 +152,7 @@
   <VisualTweaks_ShieldDome_HexBake>应用密度并重新烘焙</VisualTweaks_ShieldDome_HexBake>
   <VisualTweaks_ShieldDome_HexPending>当前显示的是 k={0}；滑条已改为 k={1}，按上面的按钮应用（重建 2048² 贴图，会有几百毫秒的卡顿，只发生一次）。</VisualTweaks_ShieldDome_HexPending>
   <VisualTweaks_ShieldDome_HexImpact>受击闪光强度</VisualTweaks_ShieldDome_HexImpact>
-  <VisualTweaks_ShieldDome_HexImpactTip>六边形样式下，一次拦截点亮面板的峰值亮度。与上面平滑样式的「火舌不透明度」是两回事：这里直接就是最终亮度，没有额外的内部倍数。</VisualTweaks_ShieldDome_HexImpactTip>
+  <VisualTweaks_ShieldDome_HexImpactTip>六边形样式下，一次拦截点亮面板的峰值亮度。与上面清晰样式的「受击增亮强度」是两回事：这里直接就是最终亮度，没有额外的内部倍数。</VisualTweaks_ShieldDome_HexImpactTip>
   <VisualTweaks_ShieldDome_HexImpactReach>受击扩散范围</VisualTweaks_ShieldDome_HexImpactReach>
   <VisualTweaks_ShieldDome_HexImpactReachTip>光从命中点向外走多远，以「到对侧边缘的距离」为 1。这个比例与格子密度无关，所以调高密度时闪光的大小不会跟着缩小。</VisualTweaks_ShieldDome_HexImpactReachTip>
   <VisualTweaks_ShieldDome_Dissolve>护盾破裂溶解</VisualTweaks_ShieldDome_Dissolve>

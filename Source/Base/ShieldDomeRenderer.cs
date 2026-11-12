@@ -10,8 +10,8 @@ using NVector4 = System.Numerics.Vector4;
 namespace VisualTweaks
 {
     /// <summary>
-    /// Draws the custom shield dome, and one flare per recorded impact, in place of
-    /// vanilla's two quads.
+    /// Draws the custom shield dome, and one impact quad per recorded impact, in
+    /// place of vanilla's two quads.
     ///
     /// Called from the <c>PostDraw</c> prefix, i.e. from inside the thing draw pass at
     /// the shield's own position. That is deliberate: it inherits vanilla's visibility
@@ -19,7 +19,7 @@ namespace VisualTweaks
     /// it keeps the shield's place in the transparent queue without a second
     /// registration path to keep in sync.
     ///
-    /// One material, one draw for the dome plus one per live flare. Everything that
+    /// One material, one draw for the dome plus one per live impact. Everything that
     /// differs per draw (alpha, radius, colour, bearing) travels as a draw property;
     /// only the look constants live on the material, so the number of shields changes
     /// the number of draw calls and nothing else.
@@ -278,16 +278,27 @@ namespace VisualTweaks
                 // last thing written to the surface. A burst that was still fading
                 // when the shield broke should keep fading, not vanish with it.
                 //
-                // Which one is not a matter of taste: a painted wedge describes a
-                // continuous surface, and a shell of tiles is the one thing it is not.
-                // Same data, same draw count, different answer.
+                // Which one is not a matter of taste. A painted wedge describes the
+                // crisp dome; a shell of tiles is the one thing it is not, so the
+                // panel style answers in panels. The stock-like style matches what
+                // vanilla actually draws: an additive sector of the same soft dome,
+                // so the shield brightens in that sector without gaining a second,
+                // detached silhouette. Same data, same draw count, different answer.
                 drew |= HexActive
                     ? DrawHexImpacts(comp, mat, matrix, tint, centerParam, radius, time)
-                    : DrawFlares(comp, mat, matrix, tint, centerParam, radius, time);
+                    : DrawFlares(
+                        comp,
+                        mat,
+                        matrix,
+                        tint,
+                        centerParam,
+                        radius,
+                        time,
+                        VanillaActive);
 
                 if (dissolve != null)
                 {
-                    // Mode 2. _Params3 switches meaning from a flare's direction to
+                    // Mode 2. _Params3 switches meaning from an impact's direction to
                     // the tear's origin / progress / seed; no extra uniform is needed.
                     properties[0] = DrawProperty.Vector(
                         ParamsId,
@@ -425,6 +436,13 @@ namespace VisualTweaks
             return drew;
         }
 
+        /// <summary>
+        /// Draws one quad per live impact. Mode 1 is the crisp style's painted flare;
+        /// mode 4 is the stock-like style's sector brightening. The geometry, the
+        /// per-impact alpha and the angular width are identical, so the two styles
+        /// answer the same hit with the same amount of light — only the shader's
+        /// interpretation of that light differs.
+        /// </summary>
         private static bool DrawFlares(
             CompProjectileInterceptor comp,
             Material material,
@@ -432,7 +450,8 @@ namespace VisualTweaks
             NVector4 tint,
             NVector4 centerParam,
             float radius,
-            float time)
+            float time,
+            bool stockSector)
         {
             List<ShieldImpactLog.Impact>? impacts = ShieldImpactLog.Peek(comp);
             TickManager? tickManager = Find.TickManager;
@@ -490,7 +509,12 @@ namespace VisualTweaks
                     innerRadius);
 
                 properties[0] = DrawProperty.Vector(
-                    ParamsId, new NVector4(1f, flareAlpha, time, radius));
+                    ParamsId,
+                    new NVector4(
+                        stockSector ? 4f : 1f,
+                        flareAlpha,
+                        time,
+                        radius));
                 properties[1] = DrawProperty.Vector(Params3Id, direction);
                 properties[2] = DrawProperty.Vector(Params4Id, centerParam);
                 properties[3] = DrawProperty.Color(ColorId, tint);

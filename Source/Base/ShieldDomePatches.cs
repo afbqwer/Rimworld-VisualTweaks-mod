@@ -28,10 +28,10 @@ namespace VisualTweaks
     /// tick collapse to the last one processed — a bug the drawing side cannot work
     /// around, because by then the data is gone. The second patch here records the
     /// bearing at the same point vanilla decides its own, and
-    /// <see cref="ShieldImpactLog"/> keeps a short list; the renderer draws one flare
-    /// per direction. That also removes this class's old dependency on the private
-    /// field, and with it the one place a vanilla rename could have silently flipped
-    /// the flare to the wrong side.
+    /// <see cref="ShieldImpactLog"/> keeps a short list; the renderer draws one impact
+    /// reaction per direction. That also removes this class's old dependency on the
+    /// private field, and with it the one place a vanilla rename could have silently
+    /// flipped the reaction to the wrong side.
     ///
     /// The four shutdown entry points are observed as well, to start the dissolve.
     /// That animation cannot be driven by <c>GetCurrentAlpha()</c>: it collapses to
@@ -53,7 +53,7 @@ namespace VisualTweaks
                 // Without the alpha terms there is no honest way to know whether the
                 // shield should be visible at all, so do not install either patch: an
                 // always-on dome on every hidden shield would be far worse than the
-                // stock look, and a flare log with nothing to draw is pure overhead.
+                // stock look, and an impact log with nothing to draw is pure overhead.
                 Log.Warning("[Visual Tweaks] Shield dome needs CompProjectileInterceptor."
                     + AlphaMethodName + "; patch not applied.");
                 return;
@@ -204,7 +204,7 @@ namespace VisualTweaks
             if (target == null || postfix == null)
             {
                 Log.Warning("[Visual Tweaks] Cannot patch CompProjectileInterceptor.CheckIntercept"
-                    + " for impact bearings; flare directions will be missing.");
+                    + " for impact bearings; impact directions will be missing.");
                 return;
             }
 
@@ -248,10 +248,10 @@ namespace VisualTweaks
                     return true;
                 }
 
-                // The dome's visibility and a flare's existence are independent: an
-                // unselected player shield is fully transparent but still shows where
-                // it was just hit, which is what vanilla does too. The renderer decides
-                // whether either has anything to say.
+                // The dome's visibility and an impact reaction's existence are
+                // independent: an unselected player shield is fully transparent but
+                // still shows where it was just hit, which is what vanilla does too.
+                // The renderer decides whether either has anything to say.
                 if (ShieldDomeRenderer.Draw(__instance, alphaOfLocal(__instance)))
                 {
                     return false;
@@ -275,7 +275,7 @@ namespace VisualTweaks
         /// <summary>
         /// Parameter names must match the target's, including <c>lastExactPos</c> and
         /// <c>projectile</c>: Harmony binds by name, and a rename here silently yields a
-        /// zero vector — i.e. every flare pointing along +x — or a zero damage.
+        /// zero vector — i.e. every impact pointing along +x — or a zero damage.
         /// </summary>
         private static void CheckInterceptPostfix(
             CompProjectileInterceptor __instance,
