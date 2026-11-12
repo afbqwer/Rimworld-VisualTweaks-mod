@@ -703,11 +703,14 @@ namespace VisualTweaks
 
         /// <summary>
         /// Every shield visual lives here, ordered by what the player is configuring:
-        /// the two replacement switches, the projector dome, the personal belt, then
-        /// the hit ripple. Each style section is hidden while its own switch is off.
+        /// the hit ripple first, then the two replacement switches, the projector dome
+        /// and the personal belt. Each style section is hidden while its own switch
+        /// is off.
         /// </summary>
         private static void DoShieldTab(Listing_Standard listing)
         {
+            DrawShieldRippleSection(listing);
+
             SettingsLayout.Header(listing, "VisualTweaks_Shield_GroupCommon".Translate());
 
             listing.CheckboxLabeled(
@@ -743,7 +746,6 @@ namespace VisualTweaks
                     "VisualTweaks_ShieldDome_OffNote".Translate());
             }
 
-            DrawShieldRippleSection(listing);
             SettingsLayout.Finish(listing);
         }
 
