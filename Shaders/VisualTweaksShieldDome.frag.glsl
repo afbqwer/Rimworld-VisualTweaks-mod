@@ -201,12 +201,27 @@ vec2 HexSurface(vec2 p, float aa, float t)
     // _Params6.w is 1/eRef. 2.2 is the line width in screen pixels.
     float eGrad = u._Params6.w / max(nz, 0.12);
     float slope = aa * eGrad;
-    float line = 1.0 - smoothstep(0.0, slope * 2.2, e);
 
-    // One cell spans 2*eRef in r here, i.e. 2*nz/(eRef*aa) pixels. Below ~5 px a
-    // fine lattice would alias into moire, so the lines fade while the panel
-    // shading stays — a distant dome reads as a shell, not as a grid.
+    // One cell spans 2*eRef in r here, i.e. 2*nz/(eRef*aa) pixels.
     float cellPixels = 2.0 * nz / max(u._Params6.w * aa, 1e-6);
+
+    // Width as a SHARE of the cell, not a fixed pixel count.
+    //
+    // A constant 2.2 px was right physically and wrong visually: zoomed in, cells
+    // grow and a 2.2 px line covers ~2% of a cell (reads as a hairline); zoomed
+    // out, cells shrink and the same line covers ~15% (reads as thick grout).
+    // Scaling with the cell keeps the *visual weight* constant, which is what a
+    // lattice of panels should do.
+    //
+    // Clamped in absolute pixels at both ends. Below 1 px the line only aliases;
+    // above 6 px a single cell stops reading as a panel and starts reading as a
+    // frame. Inside the clamps the share is exact, so the two ends of the zoom
+    // range look like the same drawing.
+    float lineWidthPx = clamp(cellPixels * 0.055, 1.0, 6.0);
+    float line = 1.0 - smoothstep(0.0, lineWidthPx * slope, e);
+
+    // Below ~5 px per cell the lattice aliases into moire, so the lines fade while
+    // the panel shading stays — a distant dome reads as a shell, not as a grid.
     line *= smoothstep(2.0, 5.0, cellPixels);
 
     return vec2(clamp(shade, 0.0, 1.5), line);
