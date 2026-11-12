@@ -131,10 +131,10 @@
   <VisualTweaks_ShieldDome_Hex>Hexagonal</VisualTweaks_ShieldDome_Hex>
   <VisualTweaks_ShieldDome_HexTip>Spherical hex/pentagon panels with flat per-cell shading, so it reads as half a sphere. The defaults are Hex wave for hits and Hex dissipate for breaks; both can be changed below.</VisualTweaks_ShieldDome_HexTip>
   <VisualTweaks_ShieldDome_StyleVanilla>Stock-like</VisualTweaks_ShieldDome_StyleVanilla>
-  <VisualTweaks_ShieldDome_StyleVanillaTip>Imitates the matching stock texture: a narrow rim with a wide glow for domes, and a gradient-filled soft bubble for belts; glow spills slightly past the intercept radius.</VisualTweaks_ShieldDome_StyleVanillaTip>
+  <VisualTweaks_ShieldDome_StyleVanillaTip>Imitates the stock textures: a narrow rim for domes, a soft bubble for belts.</VisualTweaks_ShieldDome_StyleVanillaTip>
   <VisualTweaks_ShieldDome_StyleBubble>Shield bubble</VisualTweaks_ShieldDome_StyleBubble>
-  <VisualTweaks_ShieldDome_StyleBubbleTip>Puts the personal shield's bubble on a projector dome: a gradient-filled interior, a wider rim, and a quick outer cutoff.</VisualTweaks_ShieldDome_StyleBubbleTip>
-  <VisualTweaks_ShieldDome_VanillaNote>The stock-like and bubble styles use fixed rim and haze proportions, so they have no outline sliders.</VisualTweaks_ShieldDome_VanillaNote>
+  <VisualTweaks_ShieldDome_StyleBubbleTip>Uses the personal shield's soft bubble on a large shield.</VisualTweaks_ShieldDome_StyleBubbleTip>
+  <VisualTweaks_ShieldDome_VanillaNote>Stock-like and bubble styles use fixed proportions, with no outline sliders.</VisualTweaks_ShieldDome_VanillaNote>
   <VisualTweaks_ShieldDome_HexFace>Panel brightness</VisualTweaks_ShieldDome_HexFace>
   <VisualTweaks_ShieldDome_HexFaceTip>Fill brightness of each panel; too high drowns the cell lines.</VisualTweaks_ShieldDome_HexFaceTip>
   <VisualTweaks_ShieldDome_HexLine>Cell line brightness</VisualTweaks_ShieldDome_HexLine>
@@ -188,25 +188,25 @@
   <VisualTweaks_ShieldDome_PersonalOpacityTip>Belts lack vanilla's pulsing alpha; the default 0.4 matches nearby shields.</VisualTweaks_ShieldDome_PersonalOpacityTip>
   <VisualTweaks_ShieldDome_PersonalHitGroup>Hit effect</VisualTweaks_ShieldDome_PersonalHitGroup>
   <VisualTweaks_ShieldDome_PersonalDisableHitDust>Disable hit dust</VisualTweaks_ShieldDome_PersonalDisableHitDust>
-  <VisualTweaks_ShieldDome_PersonalDisableHitDustTip>On removes vanilla's dust puffs when this mod's personal shield absorbs a hit; the flash, sound and break burst remain.</VisualTweaks_ShieldDome_PersonalDisableHitDustTip>
+  <VisualTweaks_ShieldDome_PersonalDisableHitDustTip>On removes hit dust; the flash and sound remain.</VisualTweaks_ShieldDome_PersonalDisableHitDustTip>
   <VisualTweaks_ShieldDome_PersonalHitJitter>Jitter</VisualTweaks_ShieldDome_PersonalHitJitter>
-  <VisualTweaks_ShieldDome_PersonalHitJitterTip>The bubble is pushed along the shot and shrinks, then fades — vanilla's own reaction.</VisualTweaks_ShieldDome_PersonalHitJitterTip>
+  <VisualTweaks_ShieldDome_PersonalHitJitterTip>The bubble is pushed and shrinks when a hit is blocked, like vanilla.</VisualTweaks_ShieldDome_PersonalHitJitterTip>
   <VisualTweaks_ShieldDome_PersonalHitBrighten>Brighten</VisualTweaks_ShieldDome_PersonalHitBrighten>
-  <VisualTweaks_ShieldDome_PersonalHitBrightenTip>The struck angular sector of the surface lights up, fading toward the centre.</VisualTweaks_ShieldDome_PersonalHitBrightenTip>
+  <VisualTweaks_ShieldDome_PersonalHitBrightenTip>The struck sector of the surface lights up.</VisualTweaks_ShieldDome_PersonalHitBrightenTip>
   <VisualTweaks_ShieldDome_PersonalHitHexWave>Hex spread</VisualTweaks_ShieldDome_PersonalHitHexWave>
-  <VisualTweaks_ShieldDome_PersonalHitHexWaveTip>Panels near the impact light up and spread outward through the belt's hex lattice, even when the surface itself is not hexagonal.</VisualTweaks_ShieldDome_PersonalHitHexWaveTip>
+  <VisualTweaks_ShieldDome_PersonalHitHexWaveTip>Panels near the impact light up and spread outward.</VisualTweaks_ShieldDome_PersonalHitHexWaveTip>
   <VisualTweaks_ShieldDome_PersonalJitterDistance>Jitter strength</VisualTweaks_ShieldDome_PersonalJitterDistance>
-  <VisualTweaks_ShieldDome_PersonalJitterDistanceTip>Maximum displacement in cells; the bubble shrinks by the same amount. Vanilla uses 0.05.</VisualTweaks_ShieldDome_PersonalJitterDistanceTip>
+  <VisualTweaks_ShieldDome_PersonalJitterDistanceTip>Maximum displacement in cells. Vanilla uses 0.05.</VisualTweaks_ShieldDome_PersonalJitterDistanceTip>
   <VisualTweaks_ShieldDome_PersonalBrighten>Brighten strength</VisualTweaks_ShieldDome_PersonalBrighten>
-  <VisualTweaks_ShieldDome_PersonalBrightenTip>Peak brightness of the struck sector.</VisualTweaks_ShieldDome_PersonalBrightenTip>
+  <VisualTweaks_ShieldDome_PersonalBrightenTip>Brightness of the struck sector.</VisualTweaks_ShieldDome_PersonalBrightenTip>
   <VisualTweaks_ShieldDome_PersonalBrightenAngle>Brighten angle (°)</VisualTweaks_ShieldDome_PersonalBrightenAngle>
-  <VisualTweaks_ShieldDome_PersonalBrightenAngleTip>Full width of the brightened sector; vanilla's cone is 30°. Damage does not change it.</VisualTweaks_ShieldDome_PersonalBrightenAngleTip>
+  <VisualTweaks_ShieldDome_PersonalBrightenAngleTip>Full width of the sector. Vanilla uses 30°.</VisualTweaks_ShieldDome_PersonalBrightenAngleTip>
   <VisualTweaks_ShieldDome_PersonalHexImpact>Flash strength</VisualTweaks_ShieldDome_PersonalHexImpact>
-  <VisualTweaks_ShieldDome_PersonalHexImpactTip>Peak brightness of the panels lit by Hex spread.</VisualTweaks_ShieldDome_PersonalHexImpactTip>
+  <VisualTweaks_ShieldDome_PersonalHexImpactTip>Brightness of the lit panels.</VisualTweaks_ShieldDome_PersonalHexImpactTip>
   <VisualTweaks_ShieldDome_PersonalHexImpactReach>Flash reach</VisualTweaks_ShieldDome_PersonalHexImpactReach>
-  <VisualTweaks_ShieldDome_PersonalHexImpactReachTip>How far the light travels from the impact, as a share of the distance to the far rim.</VisualTweaks_ShieldDome_PersonalHexImpactReachTip>
+  <VisualTweaks_ShieldDome_PersonalHexImpactReachTip>How far the light spreads.</VisualTweaks_ShieldDome_PersonalHexImpactReachTip>
   <VisualTweaks_ShieldDome_PersonalHitDuration>Hit effect duration</VisualTweaks_ShieldDome_PersonalHitDuration>
-  <VisualTweaks_ShieldDome_PersonalHitDurationTip>Ticks any hit effect lasts; 60 ticks = 1 second. Vanilla's jitter used 8.</VisualTweaks_ShieldDome_PersonalHitDurationTip>
+  <VisualTweaks_ShieldDome_PersonalHitDurationTip>How long the effect lasts; 60 ticks = 1 second.</VisualTweaks_ShieldDome_PersonalHitDurationTip>
 
   <VisualTweaks_ShieldRipple_Group>Hit ripple</VisualTweaks_ShieldRipple_Group>
   <VisualTweaks_ShieldRipple_Enable>Ripple when a hit is blocked</VisualTweaks_ShieldRipple_Enable>
