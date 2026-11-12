@@ -233,9 +233,9 @@ namespace VisualTweaks
             try
             {
                 // Flares first: they are additive, so order does not change the
-                // picture, but submitting them under the dome keeps the rim the last
-                // thing written to the surface. A burst that was still fading when the
-                // shield broke should keep fading, not vanish with the dome.
+                // picture, but submitting them under the dome keeps the rim the
+                // last thing written to the surface. A burst that was still fading
+                // when the shield broke should keep fading, not vanish with it.
                 drew |= DrawFlares(comp, mat, matrix, tint, centerParam, radius, time);
 
                 if (dissolve != null)

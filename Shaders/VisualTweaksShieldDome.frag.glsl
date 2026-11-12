@@ -56,6 +56,11 @@
 // a 2-cell bubble and a 25-cell gravship dome break into the same number of
 // pieces rather than the large one simply turning into sand.
 //
+// The square grid seen in the first in-game screenshot was a float32 precision
+// failure in the lattice hash, not a property of this pattern — a float64 web
+// preview looks correct. Hash21 below is hardened and the seed is kept small;
+// the dissolve algorithm itself is untouched.
+//
 // Everything is still clipped by `edge` at r == 1: even while falling apart the
 // shield never paints outside the circle it blocks.
 
@@ -77,11 +82,23 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
 // Deterministic value noise. No texture, so the pattern cannot be stretched or
 // tiled by a different plane10 UV orientation, and the seed is a uniform the CPU
 // can change per break.
+//
+// float32-safe on purpose. The obvious one-liner
+//     p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32);
+// dies on the GPU: value noise feeds it *integer lattice indices*, and once those
+// reach a few thousand, p * 456.21 is large enough that fract() has no fractional
+// bits left to keep. Adjacent cells then hash to the same value and the noise
+// collapses into square blocks. A float64 web preview cannot reproduce this.
+// Wrapping to a small period before a small multiplier fixes it at the source:
+// at |p| < 997, p * 0.1031 stays below 103, where float32 still has plenty of
+// fractional bits. The period is deliberately larger than any lattice index this
+// shader can reach (Fbm's fourth octave peaks around 190), so no octave wraps.
 float Hash21(vec2 p)
 {
-    p = fract(p * vec2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-    return fract(p.x * p.y);
+    p = mod(p, 997.0);
+    vec3 q = fract(vec3(p.xyx) * 0.1031);
+    q += dot(q, q.yzx + 33.33);
+    return fract((q.x + q.y) * q.z);
 }
 
 float ValueNoise(vec2 p)
@@ -225,18 +242,16 @@ void main()
         // how big the building happens to be.
         vec2 p = d / radius;
 
-        // Tear front: distance from the point that failed, with a low-frequency
-        // perturbation. The perturbation is what makes the front split into
-        // fingers instead of sweeping across as a clean circle.
+        // Tear front: distance from the point that failed, perturbed by
+        // low-frequency noise so it splits into fingers instead of sweeping
+        // across as a clean circle.
         float noise = Fbm(p * 3.5 + vec2(seed, seed * 1.37));
         float spread = length(p - originDir) * 0.5;
         float field = clamp(spread + (noise - 0.5) * 0.42, 0.0, 1.0);
 
-        // Threshold sweeps from just below the field's minimum to just above its
-        // maximum, so progress 0 leaves the whole surface and progress 1 leaves
-        // none of it. The feather is the field's own screen derivative: one pixel
-        // of tear edge at any zoom.
         float threshold = progress * 1.15 - 0.15;
+
+        // One pixel of tear edge at any zoom.
         float fw = max(fwidth(field), 0.006);
         float remaining = smoothstep(threshold - fw, threshold + fw, field);
 
@@ -246,13 +261,17 @@ void main()
         float front = exp(-pow((field - threshold) / (fw * 3.0 + 0.022), 2.0))
             * remaining;
 
-        // Cracks: ridges of a finer noise, visible only in the strip of surface
-        // that is about to go. Zero at progress 0 so the shield does not come
-        // pre-cracked.
+        // Cracks: ridges of a finer noise over the strip of surface that is about
+        // to go. Zero at progress 0 so the shield does not come pre-cracked.
+        //
+        // This is the original look, restored. The nested square rings in the
+        // first in-game screenshot were NOT this pattern: they were a float32
+        // hash collapse in Hash21 feeding the same lattice index to many cells.
+        // A float64 web preview could not show it.
         float crackNoise = ValueNoise(p * 19.0 + vec2(seed * 2.1, seed * 0.7));
         float crackRidge = 1.0 - smoothstep(0.0, 0.10, abs(crackNoise - 0.5));
         float nearFront =
-            (1.0 - smoothstep(0.0, 0.26, max(field - threshold, 0.0))) * remaining;
+            (1.0 - smoothstep(0.0, 0.26, field - threshold)) * remaining;
         float crack = crackRidge * nearFront * smoothstep(0.0, 0.06, progress);
 
         vec4 dome = DomeColor(r, aa, ang, t);

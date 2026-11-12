@@ -99,7 +99,19 @@ namespace VisualTweaks
                 Mathf.RoundToInt(VisualTweaksSettings.shieldDissolveTicks));
             state.OriginX = ox;
             state.OriginZ = oz;
-            state.Seed = parent.thingIDNumber * 0.017f + now * 0.0031f;
+            // Seed must stay small. It is added to the noise lattice coordinates
+            // in the shader, and the GPU works in float32: once a lattice index
+            // reaches a few thousand, fract(index * 456.21) loses its fractional
+            // bits and neighbouring cells hash to the same value. The result is
+            // large square blocks in-game while the same formula looks perfectly
+            // organic in a float64 web preview. Feeding raw TicksGame here was the
+            // cause — a few hours of play is already several thousand.
+            //
+            // HashCombineInt gives a different pattern per break without ever
+            // producing a large number, and the shader's hash is independently
+            // hardened so a future large seed cannot reintroduce the bug.
+            int hash = Gen.HashCombineInt(parent.thingIDNumber, now);
+            state.Seed = (hash & 0xFFFF) / 65535f * 4f;
             state.SawInactive = false;
         }
 
