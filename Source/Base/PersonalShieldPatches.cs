@@ -432,7 +432,7 @@ namespace VisualTweaks
             if (fatal
                 || !ShieldDomeBridge.ShouldReplace(comp)
                 || VisualTweaksSettings.CurrentShieldBreakStyle
-                    == VisualTweaksSettings.ShieldBreakVanilla)
+                    == ShieldBreakStyle.Vanilla)
             {
                 return;
             }

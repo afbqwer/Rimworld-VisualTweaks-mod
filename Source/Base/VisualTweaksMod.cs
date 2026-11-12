@@ -365,32 +365,25 @@ namespace VisualTweaks
         // A belt's Vanilla choice already is the ShieldBubble profile, so the belt
         // has three options. The dome adds that bubble as a fourth, next to its own
         // ForceField stock-like style.
-        private static readonly int[] PersonalShieldStyleOrder =
+        private static readonly ShieldDomeStyle[] PersonalShieldStyleOrder =
         {
-            VisualTweaksSettings.ShieldDomeStyleCrisp,
-            VisualTweaksSettings.ShieldDomeStyleHex,
-            VisualTweaksSettings.ShieldDomeStyleVanilla
+            ShieldDomeStyle.Crisp,
+            ShieldDomeStyle.Hex,
+            ShieldDomeStyle.Vanilla
         };
 
-        private static readonly int[] LargeShieldStyleOrder =
+        private static readonly ShieldDomeStyle[] LargeShieldStyleOrder =
         {
-            VisualTweaksSettings.ShieldDomeStyleCrisp,
-            VisualTweaksSettings.ShieldDomeStyleHex,
-            VisualTweaksSettings.ShieldDomeStyleVanilla,
-            VisualTweaksSettings.ShieldDomeStyleBubble
+            ShieldDomeStyle.Crisp,
+            ShieldDomeStyle.Hex,
+            ShieldDomeStyle.Vanilla,
+            ShieldDomeStyle.Bubble
         };
 
-        private static int ShieldStyleIndexOf(int[] order, int style)
+        private static int IndexOf<T>(T[] order, T value)
         {
-            for (int i = 0; i < order.Length; i++)
-            {
-                if (order[i] == style)
-                {
-                    return i;
-                }
-            }
-
-            return 0;
+            int index = System.Array.IndexOf(order, value);
+            return index < 0 ? 0 : index;
         }
 
         private static string[] ShieldStyleLabels(bool withBubble)
@@ -431,30 +424,17 @@ namespace VisualTweaks
 
         // Display order of the hit animations. The panel surface has a third option;
         // the other two surfaces share the flare/brighten pair.
-        private static readonly int[] StandardImpactOrder =
+        private static readonly ShieldImpactStyle[] StandardImpactOrder =
         {
-            VisualTweaksSettings.ShieldImpactFlare,
-            VisualTweaksSettings.ShieldImpactBrighten
+            ShieldImpactStyle.Flare,
+            ShieldImpactStyle.Brighten
         };
 
-        private static readonly int[] HexImpactOrder =
+        private static readonly ShieldImpactStyle[] HexImpactOrder =
         {
-            VisualTweaksSettings.ShieldImpactBrighten,
-            VisualTweaksSettings.ShieldImpactHexWave
+            ShieldImpactStyle.Brighten,
+            ShieldImpactStyle.HexWave
         };
-
-        private static int ImpactIndexOf(int[] order, int value)
-        {
-            for (int i = 0; i < order.Length; i++)
-            {
-                if (order[i] == value)
-                {
-                    return i;
-                }
-            }
-
-            return 0;
-        }
 
         private static string[] ImpactLabels(bool hexSurface)
         {
@@ -487,25 +467,12 @@ namespace VisualTweaks
         }
 
         // Display order of the belt's hit reactions.
-        private static readonly int[] PersonalHitOrder =
+        private static readonly PersonalShieldHitStyle[] PersonalHitOrder =
         {
-            VisualTweaksSettings.PersonalShieldHitJitter,
-            VisualTweaksSettings.PersonalShieldHitBrighten,
-            VisualTweaksSettings.PersonalShieldHitHexWave
+            PersonalShieldHitStyle.Jitter,
+            PersonalShieldHitStyle.Brighten,
+            PersonalShieldHitStyle.HexWave
         };
-
-        private static int PersonalHitIndexOf(int value)
-        {
-            for (int i = 0; i < PersonalHitOrder.Length; i++)
-            {
-                if (PersonalHitOrder[i] == value)
-                {
-                    return i;
-                }
-            }
-
-            return 0;
-        }
 
         private static string[] PersonalHitLabels()
         {
@@ -529,17 +496,17 @@ namespace VisualTweaks
 
         // Break animation order. The shell gains its panel-loss option; Vanilla is
         // still listed first so the custom animation can be turned off.
-        private static readonly int[] StandardBreakOrder =
+        private static readonly ShieldBreakStyle[] StandardBreakOrder =
         {
-            VisualTweaksSettings.ShieldBreakVanilla,
-            VisualTweaksSettings.ShieldBreakDissolve
+            ShieldBreakStyle.Vanilla,
+            ShieldBreakStyle.Dissolve
         };
 
-        private static readonly int[] HexBreakOrder =
+        private static readonly ShieldBreakStyle[] HexBreakOrder =
         {
-            VisualTweaksSettings.ShieldBreakVanilla,
-            VisualTweaksSettings.ShieldBreakDissolve,
-            VisualTweaksSettings.ShieldBreakHexDissipate
+            ShieldBreakStyle.Vanilla,
+            ShieldBreakStyle.Dissolve,
+            ShieldBreakStyle.HexDissipate
         };
 
         private static string[] BreakLabels(bool hexSurface)
@@ -862,7 +829,7 @@ namespace VisualTweaks
             SettingsLayout.SubHeader(listing, "VisualTweaks_ShieldDome_LookGroup".Translate());
 
             listing.Label("VisualTweaks_ShieldDome_DomeStyle".Translate());
-            int styleIndex = ShieldStyleIndexOf(
+            int styleIndex = IndexOf(
                 LargeShieldStyleOrder,
                 VisualTweaksSettings.shieldDomeStyle);
             int pickedStyle = SettingsLayout.RadioRow(
@@ -919,7 +886,7 @@ namespace VisualTweaks
             DrawBreakChoice(listing, false);
 
             if (VisualTweaksSettings.CurrentShieldBreakStyle
-                != VisualTweaksSettings.ShieldBreakVanilla)
+                != ShieldBreakStyle.Vanilla)
             {
                 DrawDissolveSliders(listing);
             }
@@ -942,7 +909,7 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldDome_LookGroup".Translate());
 
             listing.Label("VisualTweaks_ShieldDome_PersonalStyle".Translate());
-            int styleIndex = ShieldStyleIndexOf(
+            int styleIndex = IndexOf(
                 PersonalShieldStyleOrder,
                 VisualTweaksSettings.personalShieldDomeStyle);
             int pickedStyle = SettingsLayout.RadioRow(
@@ -994,9 +961,9 @@ namespace VisualTweaks
             // The timing sliders are shared, so show them here only when the dome
             // section did not (its own break animation is Vanilla there).
             if (VisualTweaksSettings.CurrentShieldBreakStyleFor(ShieldHexTarget.Personal)
-                    != VisualTweaksSettings.ShieldBreakVanilla
+                    != ShieldBreakStyle.Vanilla
                 && VisualTweaksSettings.CurrentShieldBreakStyle
-                    == VisualTweaksSettings.ShieldBreakVanilla)
+                    == ShieldBreakStyle.Vanilla)
             {
                 DrawDissolveSliders(listing);
             }
@@ -1004,7 +971,8 @@ namespace VisualTweaks
             SettingsLayout.SubHeader(
                 listing,
                 "VisualTweaks_ShieldDome_PersonalHitGroup".Translate());
-            int hitIndex = PersonalHitIndexOf(
+            int hitIndex = IndexOf(
+                PersonalHitOrder,
                 VisualTweaksSettings.personalShieldHitStyle);
             int pickedHit = SettingsLayout.RadioRow(
                 listing,
@@ -1030,8 +998,9 @@ namespace VisualTweaks
                 ref VisualTweaksSettings.personalShieldDisableHitDust,
                 "VisualTweaks_ShieldDome_PersonalDisableHitDustTip".Translate());
 
-            int hitStyle = VisualTweaksSettings.personalShieldHitStyle;
-            if (hitStyle == VisualTweaksSettings.PersonalShieldHitJitter)
+            PersonalShieldHitStyle hitStyle =
+                VisualTweaksSettings.personalShieldHitStyle;
+            if (hitStyle == PersonalShieldHitStyle.Jitter)
             {
                 VisualTweaksSettings.personalShieldJitterDistance =
                     SettingsLayout.Slider(
@@ -1043,7 +1012,7 @@ namespace VisualTweaks
                         "VisualTweaks_ShieldDome_PersonalJitterDistanceTip".Translate(),
                         step: 0.01f);
             }
-            else if (hitStyle == VisualTweaksSettings.PersonalShieldHitBrighten)
+            else if (hitStyle == PersonalShieldHitStyle.Brighten)
             {
                 VisualTweaksSettings.personalShieldBrightenStrength =
                     SettingsLayout.Slider(
@@ -1063,7 +1032,7 @@ namespace VisualTweaks
                         "VisualTweaks_ShieldDome_PersonalBrightenAngleTip".Translate(),
                         step: 1f);
             }
-            else if (hitStyle == VisualTweaksSettings.PersonalShieldHitHexWave)
+            else if (hitStyle == PersonalShieldHitStyle.HexWave)
             {
                 VisualTweaksSettings.personalShieldHexImpactStrength =
                     SettingsLayout.Slider(
@@ -1213,14 +1182,16 @@ namespace VisualTweaks
         private static void DrawDomeImpactChoice(Listing_Standard listing)
         {
             bool hexSurface = VisualTweaksSettings.HexShieldDome;
-            int[] order = hexSurface ? HexImpactOrder : StandardImpactOrder;
-            int current = hexSurface
+            ShieldImpactStyle[] order = hexSurface
+                ? HexImpactOrder
+                : StandardImpactOrder;
+            ShieldImpactStyle current = hexSurface
                 ? VisualTweaksSettings.hexShieldImpactStyle
                 : VisualTweaksSettings.StockLikeShieldDome
                     ? VisualTweaksSettings.vanillaShieldImpactStyle
                     : VisualTweaksSettings.crispShieldImpactStyle;
 
-            int index = ImpactIndexOf(order, current);
+            int index = IndexOf(order, current);
             int picked = SettingsLayout.RadioRow(
                 listing,
                 ImpactLabels(hexSurface),
@@ -1228,7 +1199,7 @@ namespace VisualTweaks
                 ImpactTips(hexSurface));
             if (picked != index)
             {
-                int value = order[picked];
+                ShieldImpactStyle value = order[picked];
                 if (hexSurface)
                 {
                     VisualTweaksSettings.hexShieldImpactStyle = value;
@@ -1244,7 +1215,7 @@ namespace VisualTweaks
             }
 
             if (VisualTweaksSettings.CurrentShieldImpactStyle
-                == VisualTweaksSettings.ShieldImpactHexWave)
+                == ShieldImpactStyle.HexWave)
             {
                 VisualTweaksSettings.shieldHexImpactStrength = SettingsLayout.Slider(
                     listing,
@@ -1279,7 +1250,7 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldDome_FlareDamageTip".Translate());
 
             if (VisualTweaksSettings.CurrentShieldImpactStyle
-                == VisualTweaksSettings.ShieldImpactFlare)
+                == ShieldImpactStyle.Flare)
             {
                 VisualTweaksSettings.shieldFlareSizeScale = SettingsLayout.Slider(
                     listing,
@@ -1312,12 +1283,14 @@ namespace VisualTweaks
             bool hexSurface = personal
                 ? VisualTweaksSettings.PersonalHexShieldDome
                 : VisualTweaksSettings.HexShieldDome;
-            int[] order = hexSurface ? HexBreakOrder : StandardBreakOrder;
-            int current = personal
+            ShieldBreakStyle[] order = hexSurface
+                ? HexBreakOrder
+                : StandardBreakOrder;
+            ShieldBreakStyle current = personal
                 ? VisualTweaksSettings.CurrentShieldBreakStyleFor(ShieldHexTarget.Personal)
                 : VisualTweaksSettings.CurrentShieldBreakStyle;
 
-            int index = ImpactIndexOf(order, current);
+            int index = IndexOf(order, current);
             int picked = SettingsLayout.RadioRow(
                 listing,
                 BreakLabels(hexSurface),
@@ -1328,7 +1301,7 @@ namespace VisualTweaks
                 return;
             }
 
-            int value = order[picked];
+            ShieldBreakStyle value = order[picked];
             if (hexSurface)
             {
                 VisualTweaksSettings.hexShieldBreakStyle = value;

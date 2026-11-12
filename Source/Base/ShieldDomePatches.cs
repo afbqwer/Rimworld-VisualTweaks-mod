@@ -264,7 +264,7 @@ namespace VisualTweaks
                 || comp == null
                 || !ShieldDomeBridge.ShouldReplace(comp)
                 || VisualTweaksSettings.CurrentShieldBreakStyle
-                    == VisualTweaksSettings.ShieldBreakVanilla)
+                    == ShieldBreakStyle.Vanilla)
             {
                 return;
             }

@@ -190,11 +190,10 @@ namespace VisualTweaks
             // custom break at all", which restores the one-frame disappearance;
             // Dissolve is the continuous tear; HexDissipate is the panel loss and
             // needs the baked lattice, so a missing texture falls back to the tear.
-            int breakStyle = VisualTweaksSettings.CurrentShieldBreakStyle;
-            bool customBreak = breakStyle
-                != VisualTweaksSettings.ShieldBreakVanilla;
+            ShieldBreakStyle breakStyle = VisualTweaksSettings.CurrentShieldBreakStyle;
+            bool customBreak = breakStyle != ShieldBreakStyle.Vanilla;
             float dissolveMode = breakStyle
-                == VisualTweaksSettings.ShieldBreakHexDissipate && HexActive
+                == ShieldBreakStyle.HexDissipate && HexActive
                 ? 5f
                 : 2f;
 
@@ -275,13 +274,14 @@ namespace VisualTweaks
                     // its own choice in the settings. A hex wave selected while the map is
                     // unavailable falls back to the flare, matching the dome's own fallback
                     // to the crisp surface in that case.
-                    int impactStyle = VisualTweaksSettings.CurrentShieldImpactStyle;
-                    if (impactStyle == VisualTweaksSettings.ShieldImpactHexWave && !HexActive)
+                    ShieldImpactStyle impactStyle =
+                        VisualTweaksSettings.CurrentShieldImpactStyle;
+                    if (impactStyle == ShieldImpactStyle.HexWave && !HexActive)
                     {
-                        impactStyle = VisualTweaksSettings.ShieldImpactFlare;
+                        impactStyle = ShieldImpactStyle.Flare;
                     }
 
-                    if (impactStyle == VisualTweaksSettings.ShieldImpactHexWave)
+                    if (impactStyle == ShieldImpactStyle.HexWave)
                     {
                         drew |= DrawHexImpacts(
                             comp, mat, matrix, tint, centerParam, radius, time);
@@ -296,7 +296,7 @@ namespace VisualTweaks
                             centerParam,
                             radius,
                             time,
-                            impactStyle == VisualTweaksSettings.ShieldImpactBrighten);
+                            impactStyle == ShieldImpactStyle.Brighten);
                     }
                 }
 

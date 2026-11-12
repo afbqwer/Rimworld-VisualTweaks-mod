@@ -194,13 +194,13 @@ namespace VisualTweaks
             // Stock-like is 2 for the ForceField profile and 3 for the ShieldBubble
             // profile. A belt's regular Vanilla choice is the bubble; a dome can pick
             // either profile. Hex still falls back to crisp when its atlas failed.
-            int chosen = VisualTweaksSettings.ShieldDomeStyleFor(target);
+            ShieldDomeStyle chosen = VisualTweaksSettings.ShieldDomeStyleFor(target);
             float style;
-            if (chosen == VisualTweaksSettings.ShieldDomeStyleVanilla)
+            if (chosen == ShieldDomeStyle.Vanilla)
             {
                 style = target == ShieldHexTarget.Personal ? 3f : 2f;
             }
-            else if (chosen == VisualTweaksSettings.ShieldDomeStyleBubble)
+            else if (chosen == ShieldDomeStyle.Bubble)
             {
                 style = 3f;
             }

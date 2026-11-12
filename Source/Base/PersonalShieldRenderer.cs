@@ -101,13 +101,14 @@ namespace VisualTweaks
                 return false;
             }
 
-            int breakStyle = VisualTweaksSettings.CurrentShieldBreakStyleFor(
-                ShieldHexTarget.Personal);
-            int hitStyle = VisualTweaksSettings.personalShieldHitStyle;
-            bool customBreak = breakStyle
-                != VisualTweaksSettings.ShieldBreakVanilla;
+            ShieldBreakStyle breakStyle =
+                VisualTweaksSettings.CurrentShieldBreakStyleFor(
+                    ShieldHexTarget.Personal);
+            PersonalShieldHitStyle hitStyle =
+                VisualTweaksSettings.personalShieldHitStyle;
+            bool customBreak = breakStyle != ShieldBreakStyle.Vanilla;
             float dissolveMode = breakStyle
-                == VisualTweaksSettings.ShieldBreakHexDissipate
+                == ShieldBreakStyle.HexDissipate
                 && Surface.HexActive
                 ? 5f
                 : 2f;
@@ -174,7 +175,7 @@ namespace VisualTweaks
             Vector3 jitterOffset = Vector3.zero;
             float jitterShrink = 0f;
             if (dissolve == null
-                && hitStyle == VisualTweaksSettings.PersonalShieldHitJitter)
+                && hitStyle == PersonalShieldHitStyle.Jitter)
             {
                 TryGetJitter(comp, out jitterOffset, out jitterShrink);
             }
@@ -294,12 +295,12 @@ namespace VisualTweaks
             NVector4 centerParam,
             float radius,
             float time,
-            int hitStyle)
+            PersonalShieldHitStyle hitStyle)
         {
             // Jitter moves the surface instead of drawing a quad, and an unknown
             // style is safer as no extra draw than as a wrong one.
-            if (hitStyle != VisualTweaksSettings.PersonalShieldHitBrighten
-                && hitStyle != VisualTweaksSettings.PersonalShieldHitHexWave)
+            if (hitStyle != PersonalShieldHitStyle.Brighten
+                && hitStyle != PersonalShieldHitStyle.HexWave)
             {
                 return false;
             }
@@ -331,7 +332,7 @@ namespace VisualTweaks
             float dx = -toward.x;
             float dz = -toward.z;
 
-            bool hexSpread = hitStyle == VisualTweaksSettings.PersonalShieldHitHexWave
+            bool hexSpread = hitStyle == PersonalShieldHitStyle.HexWave
                 && ShieldHexMap.Available(ShieldHexTarget.Personal);
 
             if (hexSpread)
@@ -412,7 +413,7 @@ namespace VisualTweaks
             shrink = 0f;
 
             if (VisualTweaksSettings.personalShieldHitStyle
-                != VisualTweaksSettings.PersonalShieldHitJitter)
+                != PersonalShieldHitStyle.Jitter)
             {
                 return false;
             }

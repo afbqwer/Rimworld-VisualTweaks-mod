@@ -3,6 +3,39 @@ using Verse;
 
 namespace VisualTweaks
 {
+    /// <summary>Surface drawn for a replacement shield.</summary>
+    public enum ShieldDomeStyle
+    {
+        Crisp = 0,
+        Hex = 1,
+        Vanilla = 2,
+        Bubble = 3
+    }
+
+    /// <summary>How a shield answers an intercepted hit.</summary>
+    public enum ShieldImpactStyle
+    {
+        Flare = 0,
+        Brighten = 1,
+        HexWave = 2
+    }
+
+    /// <summary>How a shield animates when it goes down.</summary>
+    public enum ShieldBreakStyle
+    {
+        Vanilla = 0,
+        Dissolve = 1,
+        HexDissipate = 2
+    }
+
+    /// <summary>How a personal belt answers an absorbed hit.</summary>
+    public enum PersonalShieldHitStyle
+    {
+        Jitter = 0,
+        Brighten = 1,
+        HexWave = 2
+    }
+
     public sealed class VisualTweaksSettings : ModSettings
     {
         public const int StyleComet = 0;
@@ -189,29 +222,24 @@ namespace VisualTweaks
         // a fourth choice, so a projector can wear the same filled sphere. Belts
         // have their own choice just below.
         //
-        // An int rather than four bools: the styles are mutually exclusive, and with
+        // An enum rather than four bools: the styles are mutually exclusive, and with
         // checkboxes two of them could be on at once.
-        public const int ShieldDomeStyleCrisp = 0;
-        public const int ShieldDomeStyleHex = 1;
-        public const int ShieldDomeStyleVanilla = 2;
-        public const int ShieldDomeStyleBubble = 3;
-
-        public static int shieldDomeStyle = ShieldDomeStyleCrisp;
+        public static ShieldDomeStyle shieldDomeStyle = ShieldDomeStyle.Vanilla;
 
         // Belts choose their surface independently. They are a quarter of a dome's
         // diameter but are always shown at one steady level, so a style that reads
         // well on a 25-cell projector does not necessarily read well on a 1.2-cell
         // belt.
-        public static int personalShieldDomeStyle = ShieldDomeStyleCrisp;
+        public static ShieldDomeStyle personalShieldDomeStyle = ShieldDomeStyle.Vanilla;
 
         /// <summary>True when the spherical panel shell is the chosen style.</summary>
-        public static bool HexShieldDome => shieldDomeStyle == ShieldDomeStyleHex;
+        public static bool HexShieldDome => shieldDomeStyle == ShieldDomeStyle.Hex;
 
         /// <summary>True when the stock ForceField dome is the chosen style.</summary>
-        public static bool VanillaShieldDome => shieldDomeStyle == ShieldDomeStyleVanilla;
+        public static bool VanillaShieldDome => shieldDomeStyle == ShieldDomeStyle.Vanilla;
 
         /// <summary>True when the belt's ShieldBubble is worn by the dome.</summary>
-        public static bool BubbleShieldDome => shieldDomeStyle == ShieldDomeStyleBubble;
+        public static bool BubbleShieldDome => shieldDomeStyle == ShieldDomeStyle.Bubble;
 
         /// <summary>
         /// True when the large shield uses either stock-like surface. Both are soft,
@@ -222,24 +250,24 @@ namespace VisualTweaks
 
         /// <summary>True when the belt's independently chosen surface is the shell.</summary>
         public static bool PersonalHexShieldDome =>
-            personalShieldDomeStyle == ShieldDomeStyleHex;
+            personalShieldDomeStyle == ShieldDomeStyle.Hex;
 
         /// <summary>True when the belt's independently chosen surface is stock-like.</summary>
         public static bool PersonalVanillaShieldDome =>
-            personalShieldDomeStyle == ShieldDomeStyleVanilla;
+            personalShieldDomeStyle == ShieldDomeStyle.Vanilla;
 
         /// <summary>True when either kind of shield needs a baked lattice.</summary>
         public static bool AnyHexShieldDome => HexShieldDome || PersonalHexShieldDome;
 
         /// <summary>The surface style chosen for one shield family.</summary>
-        internal static int ShieldDomeStyleFor(ShieldHexTarget target) =>
+        internal static ShieldDomeStyle ShieldDomeStyleFor(ShieldHexTarget target) =>
             target == ShieldHexTarget.Personal
                 ? personalShieldDomeStyle
                 : shieldDomeStyle;
 
         /// <summary>True when this family's chosen surface samples the hex atlas.</summary>
         internal static bool IsHexShieldDome(ShieldHexTarget target) =>
-            ShieldDomeStyleFor(target) == ShieldDomeStyleHex;
+            ShieldDomeStyleFor(target) == ShieldDomeStyle.Hex;
 
         /// <summary>
         /// True when this family's chosen surface is stock-like. A belt's stock
@@ -248,9 +276,9 @@ namespace VisualTweaks
         /// </summary>
         internal static bool IsStockLikeShieldDome(ShieldHexTarget target)
         {
-            int style = ShieldDomeStyleFor(target);
-            return style == ShieldDomeStyleVanilla
-                || (target == ShieldHexTarget.Large && style == ShieldDomeStyleBubble);
+            ShieldDomeStyle style = ShieldDomeStyleFor(target);
+            return style == ShieldDomeStyle.Vanilla
+                || (target == ShieldHexTarget.Large && style == ShieldDomeStyle.Bubble);
         }
 
         /// <summary>
@@ -260,10 +288,10 @@ namespace VisualTweaks
         /// still use different surfaces. Both stock-like surfaces share one choice:
         /// they differ in profile, not in how they fail.
         /// </summary>
-        internal static int CurrentShieldBreakStyleFor(ShieldHexTarget target)
+        internal static ShieldBreakStyle CurrentShieldBreakStyleFor(ShieldHexTarget target)
         {
-            int style = ShieldDomeStyleFor(target);
-            return style == ShieldDomeStyleHex ? hexShieldBreakStyle
+            ShieldDomeStyle style = ShieldDomeStyleFor(target);
+            return style == ShieldDomeStyle.Hex ? hexShieldBreakStyle
                 : IsStockLikeShieldDome(target) ? vanillaShieldBreakStyle
                 : crispShieldBreakStyle;
         }
@@ -275,17 +303,13 @@ namespace VisualTweaks
         // the surface and switching it back does not silently rewrite the animation.
         // The two stock-like profiles share one choice: they differ in profile, not
         // in where a hit lands.
-        public const int ShieldImpactFlare = 0;
-        public const int ShieldImpactBrighten = 1;
-        public const int ShieldImpactHexWave = 2;
-
-        public static int crispShieldImpactStyle = ShieldImpactFlare;
-        public static int vanillaShieldImpactStyle = ShieldImpactBrighten;
-        public static int hexShieldImpactStyle = ShieldImpactHexWave;
+        public static ShieldImpactStyle crispShieldImpactStyle = ShieldImpactStyle.Flare;
+        public static ShieldImpactStyle vanillaShieldImpactStyle = ShieldImpactStyle.Brighten;
+        public static ShieldImpactStyle hexShieldImpactStyle = ShieldImpactStyle.HexWave;
 
         /// <summary>The impact animation that belongs to the selected dome style.</summary>
-        public static int CurrentShieldImpactStyle =>
-            shieldDomeStyle == ShieldDomeStyleHex ? hexShieldImpactStyle
+        public static ShieldImpactStyle CurrentShieldImpactStyle =>
+            shieldDomeStyle == ShieldDomeStyle.Hex ? hexShieldImpactStyle
             : StockLikeShieldDome ? vanillaShieldImpactStyle
             : crispShieldImpactStyle;
 
@@ -304,7 +328,7 @@ namespace VisualTweaks
         // (personalShieldJitterTicks) because their hit effects are tuned separately.
         public const float MinShieldImpactTicks = 10f;
         public const float MaxShieldImpactTicks = 120f;
-        public static float shieldImpactTicks = 40f;
+        public static float shieldImpactTicks = 30f;
 
         // How a shield breaks. Independent of the surface, with per-style choices:
         // Vanilla leaves the one-frame disappearance alone, Dissolve is the
@@ -312,17 +336,13 @@ namespace VisualTweaks
         // surface family keeps its own choice for the same reason the hit animations
         // do; the two stock-like profiles share one. Vanilla's Shield_Break effecter
         // (flash + sound) always plays underneath either way.
-        public const int ShieldBreakVanilla = 0;
-        public const int ShieldBreakDissolve = 1;
-        public const int ShieldBreakHexDissipate = 2;
-
-        public static int crispShieldBreakStyle = ShieldBreakDissolve;
-        public static int vanillaShieldBreakStyle = ShieldBreakDissolve;
-        public static int hexShieldBreakStyle = ShieldBreakHexDissipate;
+        public static ShieldBreakStyle crispShieldBreakStyle = ShieldBreakStyle.Dissolve;
+        public static ShieldBreakStyle vanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
+        public static ShieldBreakStyle hexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
 
         /// <summary>The break animation that belongs to the selected dome style.</summary>
-        public static int CurrentShieldBreakStyle =>
-            shieldDomeStyle == ShieldDomeStyleHex ? hexShieldBreakStyle
+        public static ShieldBreakStyle CurrentShieldBreakStyle =>
+            shieldDomeStyle == ShieldDomeStyle.Hex ? hexShieldBreakStyle
             : StockLikeShieldDome ? vanillaShieldBreakStyle
             : crispShieldBreakStyle;
 
@@ -383,19 +403,16 @@ namespace VisualTweaks
         //               outward. It samples the belt's own baked lattice, so that
         //               atlas is baked even when the belt surface itself is not hex.
         //
-        // An int rather than three bools for the same reason the surface style is one:
+        // An enum rather than three bools for the same reason the surface style is one:
         // the effects are mutually exclusive. There is deliberately no "off" value:
         // the switch is about *which* answer a hit gets, and the dust toggle below
         // handles the only part of vanilla's feedback that is not wanted.
-        public const int PersonalShieldHitJitter = 1;
-        public const int PersonalShieldHitBrighten = 2;
-        public const int PersonalShieldHitHexWave = 3;
-
-        public static int personalShieldHitStyle = PersonalShieldHitJitter;
+        public static PersonalShieldHitStyle personalShieldHitStyle =
+            PersonalShieldHitStyle.Jitter;
 
         /// <summary>True when the belt's hit effect needs the baked lattice.</summary>
         internal static bool PersonalShieldHitUsesHexMap =>
-            personalShieldHitStyle == PersonalShieldHitHexWave;
+            personalShieldHitStyle == PersonalShieldHitStyle.HexWave;
 
         // Vanilla's absorbed-hit feedback includes a burst of DustPuff flecks on top
         // of the flash and the sound. They are unrelated to the surface and can bury
@@ -758,40 +775,40 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref shieldDomeStyle,
                 "shieldDomeStyle",
-                ShieldDomeStyleCrisp);
+                ShieldDomeStyle.Vanilla);
             Scribe_Values.Look(
                 ref personalShieldDomeStyle,
                 "personalShieldDomeStyle",
-                ShieldDomeStyleCrisp);
+                ShieldDomeStyle.Vanilla);
 
             // One choice per surface, defaulting to the reaction that style had.
             Scribe_Values.Look(
                 ref crispShieldImpactStyle,
                 "crispShieldImpactStyle",
-                ShieldImpactFlare);
+                ShieldImpactStyle.Flare);
             Scribe_Values.Look(
                 ref vanillaShieldImpactStyle,
                 "vanillaShieldImpactStyle",
-                ShieldImpactBrighten);
+                ShieldImpactStyle.Brighten);
             Scribe_Values.Look(
                 ref hexShieldImpactStyle,
                 "hexShieldImpactStyle",
-                ShieldImpactHexWave);
+                ShieldImpactStyle.HexWave);
             Scribe_Values.Look(ref shieldBrightenAngle, "shieldBrightenAngle", 30f);
-            Scribe_Values.Look(ref shieldImpactTicks, "shieldImpactTicks", 40f);
+            Scribe_Values.Look(ref shieldImpactTicks, "shieldImpactTicks", 30f);
 
             Scribe_Values.Look(
                 ref crispShieldBreakStyle,
                 "crispShieldBreakStyle",
-                ShieldBreakDissolve);
+                ShieldBreakStyle.Dissolve);
             Scribe_Values.Look(
                 ref vanillaShieldBreakStyle,
                 "vanillaShieldBreakStyle",
-                ShieldBreakDissolve);
+                ShieldBreakStyle.Dissolve);
             Scribe_Values.Look(
                 ref hexShieldBreakStyle,
                 "hexShieldBreakStyle",
-                ShieldBreakHexDissipate);
+                ShieldBreakStyle.HexDissipate);
 
             Scribe_Values.Look(
                 ref shieldHexFaceStrength,
@@ -831,11 +848,12 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref personalShieldHitStyle,
                 "personalShieldHitStyle",
-                PersonalShieldHitJitter);
-            if (personalShieldHitStyle < PersonalShieldHitJitter
-                || personalShieldHitStyle > PersonalShieldHitHexWave)
+                PersonalShieldHitStyle.Jitter);
+            if (!System.Enum.IsDefined(
+                    typeof(PersonalShieldHitStyle),
+                    personalShieldHitStyle))
             {
-                personalShieldHitStyle = PersonalShieldHitJitter;
+                personalShieldHitStyle = PersonalShieldHitStyle.Jitter;
             }
 
             // On by default: the dust is vanilla noise around a belt-sized bubble,
@@ -1018,10 +1036,11 @@ namespace VisualTweaks
                 personalShieldJitterTicks,
                 MinPersonalShieldJitterTicks,
                 MaxPersonalShieldJitterTicks);
-            if (personalShieldHitStyle < PersonalShieldHitJitter
-                || personalShieldHitStyle > PersonalShieldHitHexWave)
+            if (personalShieldHitStyle != PersonalShieldHitStyle.Jitter
+                && personalShieldHitStyle != PersonalShieldHitStyle.Brighten
+                && personalShieldHitStyle != PersonalShieldHitStyle.HexWave)
             {
-                personalShieldHitStyle = PersonalShieldHitJitter;
+                personalShieldHitStyle = PersonalShieldHitStyle.Jitter;
             }
 
             personalShieldBrightenStrength = Mathf.Clamp(
@@ -1052,22 +1071,22 @@ namespace VisualTweaks
             // The valid animation set is per surface, so a hand-edited or future
             // value falls back to that surface's default rather than to a reaction
             // it cannot draw.
-            if (crispShieldImpactStyle != ShieldImpactFlare
-                && crispShieldImpactStyle != ShieldImpactBrighten)
+            if (crispShieldImpactStyle != ShieldImpactStyle.Flare
+                && crispShieldImpactStyle != ShieldImpactStyle.Brighten)
             {
-                crispShieldImpactStyle = ShieldImpactFlare;
+                crispShieldImpactStyle = ShieldImpactStyle.Flare;
             }
 
-            if (vanillaShieldImpactStyle != ShieldImpactFlare
-                && vanillaShieldImpactStyle != ShieldImpactBrighten)
+            if (vanillaShieldImpactStyle != ShieldImpactStyle.Flare
+                && vanillaShieldImpactStyle != ShieldImpactStyle.Brighten)
             {
-                vanillaShieldImpactStyle = ShieldImpactBrighten;
+                vanillaShieldImpactStyle = ShieldImpactStyle.Brighten;
             }
 
-            if (hexShieldImpactStyle != ShieldImpactBrighten
-                && hexShieldImpactStyle != ShieldImpactHexWave)
+            if (hexShieldImpactStyle != ShieldImpactStyle.Brighten
+                && hexShieldImpactStyle != ShieldImpactStyle.HexWave)
             {
-                hexShieldImpactStyle = ShieldImpactHexWave;
+                hexShieldImpactStyle = ShieldImpactStyle.HexWave;
             }
 
             shieldBrightenAngle = Mathf.Round(Mathf.Clamp(
@@ -1082,23 +1101,23 @@ namespace VisualTweaks
             // Same rule for the break choices. The shell additionally allows its own
             // panel-loss animation; the other surfaces only know vanilla or the
             // continuous tear.
-            if (crispShieldBreakStyle != ShieldBreakVanilla
-                && crispShieldBreakStyle != ShieldBreakDissolve)
+            if (crispShieldBreakStyle != ShieldBreakStyle.Vanilla
+                && crispShieldBreakStyle != ShieldBreakStyle.Dissolve)
             {
-                crispShieldBreakStyle = ShieldBreakDissolve;
+                crispShieldBreakStyle = ShieldBreakStyle.Dissolve;
             }
 
-            if (vanillaShieldBreakStyle != ShieldBreakVanilla
-                && vanillaShieldBreakStyle != ShieldBreakDissolve)
+            if (vanillaShieldBreakStyle != ShieldBreakStyle.Vanilla
+                && vanillaShieldBreakStyle != ShieldBreakStyle.Dissolve)
             {
-                vanillaShieldBreakStyle = ShieldBreakDissolve;
+                vanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
             }
 
-            if (hexShieldBreakStyle != ShieldBreakVanilla
-                && hexShieldBreakStyle != ShieldBreakDissolve
-                && hexShieldBreakStyle != ShieldBreakHexDissipate)
+            if (hexShieldBreakStyle != ShieldBreakStyle.Vanilla
+                && hexShieldBreakStyle != ShieldBreakStyle.Dissolve
+                && hexShieldBreakStyle != ShieldBreakStyle.HexDissipate)
             {
-                hexShieldBreakStyle = ShieldBreakHexDissipate;
+                hexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
             }
 
             shieldDissolveTicks = Mathf.Clamp(
@@ -1245,16 +1264,16 @@ namespace VisualTweaks
             largeShieldsVanillaOnly = false;
             personalShieldsVanillaOnly = false;
             largeShieldDisableHitDust = true;
-            shieldDomeStyle = ShieldDomeStyleCrisp;
-            personalShieldDomeStyle = ShieldDomeStyleCrisp;
-            crispShieldImpactStyle = ShieldImpactFlare;
-            vanillaShieldImpactStyle = ShieldImpactBrighten;
-            hexShieldImpactStyle = ShieldImpactHexWave;
+            shieldDomeStyle = ShieldDomeStyle.Crisp;
+            personalShieldDomeStyle = ShieldDomeStyle.Crisp;
+            crispShieldImpactStyle = ShieldImpactStyle.Flare;
+            vanillaShieldImpactStyle = ShieldImpactStyle.Brighten;
+            hexShieldImpactStyle = ShieldImpactStyle.HexWave;
             shieldBrightenAngle = 30f;
             shieldImpactTicks = 40f;
-            crispShieldBreakStyle = ShieldBreakDissolve;
-            vanillaShieldBreakStyle = ShieldBreakDissolve;
-            hexShieldBreakStyle = ShieldBreakHexDissipate;
+            crispShieldBreakStyle = ShieldBreakStyle.Dissolve;
+            vanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
+            hexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
             shieldHexFaceStrength = 0.22f;
             shieldHexLineStrength = 0.75f;
             shieldHexDensity = 5f;
@@ -1262,7 +1281,7 @@ namespace VisualTweaks
             personalShieldHexDensity = 4f;
             personalShieldHexDensityApplied = 4;
             personalShieldOpacity = 0.4f;
-            personalShieldHitStyle = PersonalShieldHitJitter;
+            personalShieldHitStyle = PersonalShieldHitStyle.Jitter;
             personalShieldDisableHitDust = true;
             personalShieldJitterDistance = 0.05f;
             personalShieldJitterTicks = 8f;
