@@ -17,7 +17,7 @@ namespace VisualTweaks
     /// One entry per comp, matching vanilla: a burst collapses to the last hit
     /// processed, which is also what the stock jitter does. Keyed through a
     /// ConditionalWeakTable so a discarded belt takes it along, and not scribed:
-    /// the animation is eight ticks long and meaningless after a load.
+    /// the reaction is a few ticks long and meaningless after a load.
     /// </summary>
     internal static class PersonalShieldHitLog
     {

@@ -80,11 +80,11 @@ namespace VisualTweaks
 
         /// <summary>
         /// True when the panel style is what this target actually shows: the style is
-        /// selected and the target's own lattice texture exists. Both the style
-        /// uniform and the choice of hit reaction / break go through this, so they
-        /// can never disagree — answering a hit with tiles while the surface draws
-        /// crisp would flash panels that are not on screen.
-        /// </summary>
+        /// selected and the target's own lattice texture exists. The style uniform,
+        /// the panel-loss break and the dome's choice of hit reaction go through this,
+        /// so they cannot disagree. A belt's hit reaction is the one exception: Hex
+        /// spread may be chosen on a non-hex surface and checks the texture itself,
+        /// because the surface it lights is the animation's whole point.
         internal bool HexActive =>
             VisualTweaksSettings.IsHexShieldDome(target)
             && ShieldHexMap.Available(target);
@@ -163,12 +163,18 @@ namespace VisualTweaks
             // re-bakes when the baked density changes and only calls SetTexture for
             // a new material or a new texture.
             //
+            // A belt also binds it when its hit effect is the lattice wave, even if
+            // the surface it draws is crisp or stock-like: mode 3 reads per-cell ids
+            // from the map and would otherwise sample a black texture.
+            //
             // The APPLIED values, not the sliders: the sliders are drafts that only
             // reach the texture when the player presses the bake button, and the
             // shader's gradient constant has to describe the texture that actually
             // exists, not the one being previewed in a UI.
             int density = ShieldHexMap.AppliedSubdivisions(target);
-            bool wantHex = VisualTweaksSettings.IsHexShieldDome(target);
+            bool wantHex = VisualTweaksSettings.IsHexShieldDome(target)
+                || (target == ShieldHexTarget.Personal
+                    && VisualTweaksSettings.PersonalShieldHitUsesHexMap);
             if (wantHex)
             {
                 ShieldHexMap.Bind(mat, target, density);

@@ -12,14 +12,18 @@ namespace VisualTweaks
     /// Draws the custom dome for personal shield belts, replacing
     /// <c>CompShield.Draw()</c>.
     ///
-    /// What is ported from <see cref="ShieldDomeRenderer"/> is everything that is not
-    /// the hit reaction: the same three surface types, the same ridge and face/line
-    /// weights, a material built from the same code, and the same dissolve /
-    /// panel-loss break animations. The surface choice itself is independent — a belt
-    /// can draw crisp while the dome draws hex — and so are the lattice density and
-    /// opacity. Impacts are deliberately absent: a belt is one character wide, and a
-    /// flare, a sector brightening or a lattice wave at that size is a few pixels of
-    /// noise rather than a readable direction.
+    /// What is ported from <see cref="ShieldDomeRenderer"/> is the same three surface
+    /// types, the same ridge and face/line weights, a material built from the same
+    /// code, and the same dissolve / panel-loss break animations. The surface choice
+    /// itself is independent — a belt can draw crisp while the dome draws hex — and so
+    /// are the lattice density, opacity and hit reaction.
+    ///
+    /// The hit reaction is a belt-specific choice: vanilla's jitter, the surface
+    /// brightening in the struck sector, or the lattice wave. The flare is not offered
+    /// — a painted wedge needs a readable direction, and at one character wide it is a
+    /// few pixels pointed at nothing. Brightening and the wave reuse the dome shader's
+    /// modes 4 and 3 unchanged; only the slider values differ, because the same
+    /// numbers do not read the same way at this size.
     ///
     /// What has to differ is geometry and visibility, because a belt is not a
     /// projector:
@@ -40,15 +44,16 @@ namespace VisualTweaks
     ///
     /// Small size is not special-cased. Every shape constant in the shader is either
     /// radius-relative (glow, stock-like rim, dissolve noise) or expressed in pixels
-    /// (ridge, hex line width), so a 1.2-cell bubble gets the same drawn weight and
-    /// the same panel count as a 25-cell dome. The lattice lines fade on their own
-    /// when a cell drops below the shader's 5-pixel legibility floor.
+    /// (ridge, hex line width), so a 1.2-cell bubble gets the same drawn weight as a
+    /// 25-cell dome; only its lattice density is chosen separately. Those lines fade
+    /// on their own when a cell drops below the shader's 5-pixel legibility floor.
     ///
-    /// One material for belts, one draw per belt. The material is separate from the
-    /// dome's only because the hex atlas is a material texture and the two atlases
-    /// have different densities and resolutions; every look constant is still read
-    /// from the same global settings. Everything that differs per belt (centre,
-    /// radius, alpha, break progress) travels as a draw property.
+    /// One material for belts, one draw per belt plus at most one additive hit quad.
+    /// The material is separate from the dome's only because the hex atlas is a
+    /// material texture and the two atlases have different densities and resolutions;
+    /// every look constant is still read from the same global settings. Everything
+    /// that differs per belt (centre, radius, alpha, break progress, hit bearing)
+    /// travels as a draw property.
     /// </summary>
     internal static class PersonalShieldRenderer
     {
@@ -106,6 +111,7 @@ namespace VisualTweaks
 
             int breakStyle = VisualTweaksSettings.CurrentShieldBreakStyleFor(
                 ShieldHexTarget.Personal);
+            int hitStyle = VisualTweaksSettings.personalShieldHitStyle;
             bool customBreak = breakStyle
                 != VisualTweaksSettings.ShieldBreakVanilla;
             float dissolveMode = breakStyle
@@ -155,13 +161,14 @@ namespace VisualTweaks
                 }
             }
 
-            // Vanilla's absorption jitter, restored with its own settings. It is a
-            // push along the shot plus a matching size reduction, fading linearly
-            // over the configured number of ticks. The dissolve owns the frame when
-            // one is playing, so no jitter is layered on top of it.
+            // Only the jitter effect moves the bubble. Brighten and the lattice wave
+            // are additive quads drawn over the same centred surface, so they must not
+            // also displace it. The dissolve owns the frame when one is playing, so no
+            // hit reaction is layered on top of it either.
             Vector3 jitterOffset = Vector3.zero;
             float jitterShrink = 0f;
-            if (dissolve == null)
+            if (dissolve == null
+                && hitStyle == VisualTweaksSettings.PersonalShieldHitJitter)
             {
                 TryGetJitter(comp, out jitterOffset, out jitterShrink);
             }
@@ -231,6 +238,12 @@ namespace VisualTweaks
                 return true;
             }
 
+            // Additive light first, surface second — the same order the projector
+            // dome uses, so the rim is the last thing written. Jitter has already
+            // moved the surface itself and None records no hit, so both are no-ops
+            // here.
+            DrawImpact(comp, mat, matrix, tint, centerParam, radius, time, hitStyle);
+
             // The same role GetCurrentAlpha() plays for an interceptor dome. It is
             // independent of that dome's value on purpose: a belt is always shown at
             // one steady level, and the default sits in the middle of the range a
@@ -257,6 +270,124 @@ namespace VisualTweaks
         }
 
         /// <summary>
+        /// Draws the selected hit reaction as one additive quad, in mode 4 (the
+        /// surface brightens in the struck sector) or mode 3 (the lattice wave). Both
+        /// modes already exist in the dome shader unchanged; this only supplies the
+        /// hit's bearing, its progress through the configured duration, and the
+        /// belt's own strength values.
+        ///
+        /// Hex wave falls back to brightening when the belt's lattice could not be
+        /// baked: mode 3 would sample a black texture and draw nothing, which is
+        /// worse than a reaction that does not need an asset. The two effects share
+        /// one clock so the player tunes a single duration.
+        /// </summary>
+        private static bool DrawImpact(
+            CompShield comp,
+            Material material,
+            Matrix4x4 matrix,
+            NVector4 tint,
+            NVector4 centerParam,
+            float radius,
+            float time,
+            int hitStyle)
+        {
+            if (hitStyle == VisualTweaksSettings.PersonalShieldHitNone
+                || hitStyle == VisualTweaksSettings.PersonalShieldHitJitter)
+            {
+                return false;
+            }
+
+            TickManager? tickManager = Find.TickManager;
+            if (tickManager == null
+                || !PersonalShieldHitLog.TryGet(comp, out int hitTick, out float angle))
+            {
+                return false;
+            }
+
+            int duration = Mathf.Max(
+                1,
+                Mathf.RoundToInt(VisualTweaksSettings.personalShieldJitterTicks));
+            int age = tickManager.TicksGame - hitTick;
+            if (age < 0 || age >= duration)
+            {
+                return false;
+            }
+
+            float progress = (float)age / duration;
+            float life = 1f - progress;
+
+            // The stored bearing runs along the shot, matching vanilla's
+            // impactAngleVect. The light belongs on the side the round came from, so
+            // the shader's direction is its negation — the same convention the dome
+            // uses for its impacts.
+            Vector3 toward = Vector3Utility.FromAngleFlat(angle);
+            float dx = -toward.x;
+            float dz = -toward.z;
+
+            bool hexSpread = hitStyle == VisualTweaksSettings.PersonalShieldHitHexWave
+                && ShieldHexMap.Available(ShieldHexTarget.Personal);
+
+            if (hexSpread)
+            {
+                float strength = Mathf.Clamp(
+                    VisualTweaksSettings.personalShieldHexImpactStrength,
+                    VisualTweaksSettings.MinPersonalShieldHexImpactStrength,
+                    VisualTweaksSettings.MaxPersonalShieldHexImpactStrength);
+                if (strength < 0.004f)
+                {
+                    return false;
+                }
+
+                float share = Mathf.Clamp(
+                    VisualTweaksSettings.personalShieldHexImpactShare,
+                    VisualTweaksSettings.MinPersonalShieldHexImpactShare,
+                    VisualTweaksSettings.MaxPersonalShieldHexImpactShare);
+
+                properties[0] = DrawProperty.Vector(
+                    ParamsId, new NVector4(3f, strength, time, radius));
+                properties[1] = DrawProperty.Vector(
+                    Params3Id, new NVector4(dx, dz, progress, share));
+            }
+            else
+            {
+                float alpha = Mathf.Clamp(
+                    VisualTweaksSettings.personalShieldBrightenStrength,
+                    VisualTweaksSettings.MinPersonalShieldBrightenStrength,
+                    VisualTweaksSettings.MaxPersonalShieldBrightenStrength)
+                    * life * life;
+                if (alpha < 0.004f)
+                {
+                    return false;
+                }
+
+                float cosHalf = Mathf.Cos(
+                    0.5f * Mathf.Clamp(
+                        VisualTweaksSettings.personalShieldBrightenAngle,
+                        VisualTweaksSettings.MinPersonalShieldBrightenAngle,
+                        VisualTweaksSettings.MaxPersonalShieldBrightenAngle)
+                    * Mathf.Deg2Rad);
+
+                properties[0] = DrawProperty.Vector(
+                    ParamsId, new NVector4(4f, alpha, time, radius));
+                properties[1] = DrawProperty.Vector(
+                    Params3Id, new NVector4(dx, dz, cosHalf, 0f));
+            }
+
+            properties[2] = DrawProperty.Vector(Params4Id, centerParam);
+            properties[3] = DrawProperty.Color(ColorId, tint);
+
+            Graphics.DrawMesh(
+                MeshPool.plane10,
+                matrix,
+                material,
+                0,
+                null,
+                0,
+                new DrawPropertyBlock(properties));
+            return true;
+        }
+
+        /// <summary>
         /// The offset and size reduction for the current hit, or zero when no hit is
         /// live. Reproduces vanilla's formula — full strength on the hit tick, then a
         /// linear fade to zero — with the amplitude and duration made configurable.
@@ -273,7 +404,8 @@ namespace VisualTweaks
             offset = Vector3.zero;
             shrink = 0f;
 
-            if (!VisualTweaksSettings.personalShieldHitJitter)
+            if (VisualTweaksSettings.personalShieldHitStyle
+                != VisualTweaksSettings.PersonalShieldHitJitter)
             {
                 return false;
             }

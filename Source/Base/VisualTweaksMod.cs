@@ -458,6 +458,52 @@ namespace VisualTweaks
                 };
         }
 
+        // Display order of the belt's hit reactions. None is first so the old
+        // "jitter off" state has an explicit home; the three effects follow in the
+        // order the player asked for them.
+        private static readonly int[] PersonalHitOrder =
+        {
+            VisualTweaksSettings.PersonalShieldHitNone,
+            VisualTweaksSettings.PersonalShieldHitJitter,
+            VisualTweaksSettings.PersonalShieldHitBrighten,
+            VisualTweaksSettings.PersonalShieldHitHexWave
+        };
+
+        private static int PersonalHitIndexOf(int value)
+        {
+            for (int i = 0; i < PersonalHitOrder.Length; i++)
+            {
+                if (PersonalHitOrder[i] == value)
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+
+        private static string[] PersonalHitLabels()
+        {
+            return new string[]
+            {
+                "VisualTweaks_ShieldDome_PersonalHitNone".Translate(),
+                "VisualTweaks_ShieldDome_PersonalHitJitter".Translate(),
+                "VisualTweaks_ShieldDome_PersonalHitBrighten".Translate(),
+                "VisualTweaks_ShieldDome_PersonalHitHexWave".Translate()
+            };
+        }
+
+        private static string[] PersonalHitTips()
+        {
+            return new string[]
+            {
+                "VisualTweaks_ShieldDome_PersonalHitNoneTip".Translate(),
+                "VisualTweaks_ShieldDome_PersonalHitJitterTip".Translate(),
+                "VisualTweaks_ShieldDome_PersonalHitBrightenTip".Translate(),
+                "VisualTweaks_ShieldDome_PersonalHitHexWaveTip".Translate()
+            };
+        }
+
         // Break animation order. The shell gains its panel-loss option; Vanilla is
         // still listed first so the custom animation can be turned off.
         private static readonly int[] StandardBreakOrder =
@@ -918,12 +964,34 @@ namespace VisualTweaks
             SettingsLayout.SubHeader(
                 listing,
                 "VisualTweaks_ShieldDome_PersonalHitGroup".Translate());
-            listing.CheckboxLabeled(
-                "VisualTweaks_ShieldDome_PersonalJitter".Translate(),
-                ref VisualTweaksSettings.personalShieldHitJitter,
-                "VisualTweaks_ShieldDome_PersonalJitterTip".Translate());
+            int hitIndex = PersonalHitIndexOf(
+                VisualTweaksSettings.personalShieldHitStyle);
+            int pickedHit = SettingsLayout.RadioRow(
+                listing,
+                PersonalHitLabels(),
+                hitIndex,
+                PersonalHitTips());
+            if (pickedHit != hitIndex)
+            {
+                VisualTweaksSettings.personalShieldHitStyle =
+                    PersonalHitOrder[pickedHit];
 
-            if (VisualTweaksSettings.personalShieldHitJitter)
+                // Hex spread samples the belt's lattice even when the surface is
+                // not hexagonal, so this is one of the moments the atlas may need
+                // building. Apply is a no-op when it is already baked.
+                BakeHexIfNewlyDrawn();
+            }
+
+            // Independent of which effect is selected: vanilla spawns this dust in
+            // AbsorbedDamage whether the custom surface is drawn or not, so switching
+            // it off is useful even with the reaction set to None.
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_PersonalHitDust".Translate(),
+                ref VisualTweaksSettings.personalShieldHitDust,
+                "VisualTweaks_ShieldDome_PersonalHitDustTip".Translate());
+
+            int hitStyle = VisualTweaksSettings.personalShieldHitStyle;
+            if (hitStyle == VisualTweaksSettings.PersonalShieldHitJitter)
             {
                 VisualTweaksSettings.personalShieldJitterDistance =
                     SettingsLayout.Slider(
@@ -934,14 +1002,57 @@ namespace VisualTweaks
                         VisualTweaksSettings.MaxPersonalShieldJitterDistance,
                         "VisualTweaks_ShieldDome_PersonalJitterDistanceTip".Translate(),
                         step: 0.01f);
+            }
+            else if (hitStyle == VisualTweaksSettings.PersonalShieldHitBrighten)
+            {
+                VisualTweaksSettings.personalShieldBrightenStrength =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_PersonalBrighten".Translate(),
+                        VisualTweaksSettings.personalShieldBrightenStrength,
+                        VisualTweaksSettings.MinPersonalShieldBrightenStrength,
+                        VisualTweaksSettings.MaxPersonalShieldBrightenStrength,
+                        "VisualTweaks_ShieldDome_PersonalBrightenTip".Translate());
+                VisualTweaksSettings.personalShieldBrightenAngle =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_PersonalBrightenAngle".Translate(),
+                        VisualTweaksSettings.personalShieldBrightenAngle,
+                        VisualTweaksSettings.MinPersonalShieldBrightenAngle,
+                        VisualTweaksSettings.MaxPersonalShieldBrightenAngle,
+                        "VisualTweaks_ShieldDome_PersonalBrightenAngleTip".Translate(),
+                        step: 1f);
+            }
+            else if (hitStyle == VisualTweaksSettings.PersonalShieldHitHexWave)
+            {
+                VisualTweaksSettings.personalShieldHexImpactStrength =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_PersonalHexImpact".Translate(),
+                        VisualTweaksSettings.personalShieldHexImpactStrength,
+                        VisualTweaksSettings.MinPersonalShieldHexImpactStrength,
+                        VisualTweaksSettings.MaxPersonalShieldHexImpactStrength,
+                        "VisualTweaks_ShieldDome_PersonalHexImpactTip".Translate());
+                VisualTweaksSettings.personalShieldHexImpactShare =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_PersonalHexImpactReach".Translate(),
+                        VisualTweaksSettings.personalShieldHexImpactShare,
+                        VisualTweaksSettings.MinPersonalShieldHexImpactShare,
+                        VisualTweaksSettings.MaxPersonalShieldHexImpactShare,
+                        "VisualTweaks_ShieldDome_PersonalHexImpactReachTip".Translate());
+            }
+
+            if (hitStyle != VisualTweaksSettings.PersonalShieldHitNone)
+            {
                 VisualTweaksSettings.personalShieldJitterTicks =
                     SettingsLayout.Slider(
                         listing,
-                        "VisualTweaks_ShieldDome_PersonalJitterTicks".Translate(),
+                        "VisualTweaks_ShieldDome_PersonalHitDuration".Translate(),
                         VisualTweaksSettings.personalShieldJitterTicks,
                         VisualTweaksSettings.MinPersonalShieldJitterTicks,
                         VisualTweaksSettings.MaxPersonalShieldJitterTicks,
-                        "VisualTweaks_ShieldDome_PersonalJitterTicksTip".Translate(),
+                        "VisualTweaks_ShieldDome_PersonalHitDurationTip".Translate(),
                         step: 1f);
             }
         }
@@ -1472,11 +1583,13 @@ namespace VisualTweaks
         /// </summary>
         private static void BakeHexIfNewlyDrawn()
         {
-            if (VisualTweaksSettings.AnyHexShieldDome)
+            if (VisualTweaksSettings.AnyHexShieldDome
+                || VisualTweaksSettings.PersonalShieldHitUsesHexMap)
             {
                 // Apply records the density for both families and bakes only the one
-                // whose chosen surface uses the shell. Switching the other family to
-                // hex later calls this again, so its atlas is built at that moment.
+                // that would sample the lattice — its surface or, for a belt, its
+                // Hex spread hit effect. Switching either later calls this again, so
+                // the atlas is built at that moment.
                 ShieldHexMap.Apply(
                     ShieldHexTarget.Large,
                     VisualTweaksSettings.shieldHexDensityApplied);

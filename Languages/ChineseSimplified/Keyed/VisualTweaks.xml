@@ -184,13 +184,29 @@
   <VisualTweaks_ShieldDome_PersonalHexPending>当前 k={0}，草稿 k={1}。按上方按钮烘焙后生效。</VisualTweaks_ShieldDome_PersonalHexPending>
   <VisualTweaks_ShieldDome_PersonalOpacity>不透明度</VisualTweaks_ShieldDome_PersonalOpacity>
   <VisualTweaks_ShieldDome_PersonalOpacityTip>腰带没有原版的亮暗脉动，默认 0.4 以匹配周围的护盾。</VisualTweaks_ShieldDome_PersonalOpacityTip>
-  <VisualTweaks_ShieldDome_PersonalHitGroup>受击抖动</VisualTweaks_ShieldDome_PersonalHitGroup>
-  <VisualTweaks_ShieldDome_PersonalJitter>启用受击抖动</VisualTweaks_ShieldDome_PersonalJitter>
-  <VisualTweaks_ShieldDome_PersonalJitterTip>挡下攻击时气泡沿弹道方向轻推并收缩，随后衰减。关闭后完全静止。</VisualTweaks_ShieldDome_PersonalJitterTip>
+  <VisualTweaks_ShieldDome_PersonalHitGroup>受击效果</VisualTweaks_ShieldDome_PersonalHitGroup>
+  <VisualTweaks_ShieldDome_PersonalHitNone>无</VisualTweaks_ShieldDome_PersonalHitNone>
+  <VisualTweaks_ShieldDome_PersonalHitNoneTip>挡下攻击时不作任何反应。</VisualTweaks_ShieldDome_PersonalHitNoneTip>
+  <VisualTweaks_ShieldDome_PersonalHitDust>受击尘土</VisualTweaks_ShieldDome_PersonalHitDust>
+  <VisualTweaks_ShieldDome_PersonalHitDustTip>关闭后，本 mod 绘制的个人护盾吸收攻击时不再溅起原版的尘土；闪光、音效与破裂尘土保留。</VisualTweaks_ShieldDome_PersonalHitDustTip>
+  <VisualTweaks_ShieldDome_PersonalHitJitter>抖动</VisualTweaks_ShieldDome_PersonalHitJitter>
+  <VisualTweaks_ShieldDome_PersonalHitJitterTip>气泡沿弹道方向轻推并收缩，随后衰减，与原版一致。</VisualTweaks_ShieldDome_PersonalHitJitterTip>
+  <VisualTweaks_ShieldDome_PersonalHitBrighten>变亮</VisualTweaks_ShieldDome_PersonalHitBrighten>
+  <VisualTweaks_ShieldDome_PersonalHitBrightenTip>受击方向的角度扇区整体变亮，越靠近中心越弱。</VisualTweaks_ShieldDome_PersonalHitBrightenTip>
+  <VisualTweaks_ShieldDome_PersonalHitHexWave>六边扩散</VisualTweaks_ShieldDome_PersonalHitHexWave>
+  <VisualTweaks_ShieldDome_PersonalHitHexWaveTip>命中点附近的面板亮起，并沿六边网格向外逐圈扩散；即使表面不是六边形，也会使用独立的网格。</VisualTweaks_ShieldDome_PersonalHitHexWaveTip>
   <VisualTweaks_ShieldDome_PersonalJitterDistance>抖动幅度</VisualTweaks_ShieldDome_PersonalJitterDistance>
   <VisualTweaks_ShieldDome_PersonalJitterDistanceTip>最大位移（格），气泡同时收缩。原版为 0.05。</VisualTweaks_ShieldDome_PersonalJitterDistanceTip>
-  <VisualTweaks_ShieldDome_PersonalJitterTicks>抖动时长</VisualTweaks_ShieldDome_PersonalJitterTicks>
-  <VisualTweaks_ShieldDome_PersonalJitterTicksTip>衰减到零所需的 tick 数，60 tick = 1 秒。原版为 8。</VisualTweaks_ShieldDome_PersonalJitterTicksTip>
+  <VisualTweaks_ShieldDome_PersonalBrighten>增亮强度</VisualTweaks_ShieldDome_PersonalBrighten>
+  <VisualTweaks_ShieldDome_PersonalBrightenTip>受击扇区的峰值亮度。</VisualTweaks_ShieldDome_PersonalBrightenTip>
+  <VisualTweaks_ShieldDome_PersonalBrightenAngle>增亮角度 (°)</VisualTweaks_ShieldDome_PersonalBrightenAngle>
+  <VisualTweaks_ShieldDome_PersonalBrightenAngleTip>增亮扇区的总角度，原版为 30°。伤害不改变角度。</VisualTweaks_ShieldDome_PersonalBrightenAngleTip>
+  <VisualTweaks_ShieldDome_PersonalHexImpact>闪光强度</VisualTweaks_ShieldDome_PersonalHexImpact>
+  <VisualTweaks_ShieldDome_PersonalHexImpactTip>扩散时点亮面板的峰值亮度。</VisualTweaks_ShieldDome_PersonalHexImpactTip>
+  <VisualTweaks_ShieldDome_PersonalHexImpactReach>扩散范围</VisualTweaks_ShieldDome_PersonalHexImpactReach>
+  <VisualTweaks_ShieldDome_PersonalHexImpactReachTip>光从命中点向外传播的距离，按到对侧边缘的比例计算。</VisualTweaks_ShieldDome_PersonalHexImpactReachTip>
+  <VisualTweaks_ShieldDome_PersonalHitDuration>受击效果时长</VisualTweaks_ShieldDome_PersonalHitDuration>
+  <VisualTweaks_ShieldDome_PersonalHitDurationTip>任一受击效果持续的 tick 数，60 tick = 1 秒。原版抖动为 8。</VisualTweaks_ShieldDome_PersonalHitDurationTip>
 
   <VisualTweaks_ShieldRipple_Group>受击涟漪</VisualTweaks_ShieldRipple_Group>
   <VisualTweaks_ShieldRipple_Enable>挡下攻击时产生涟漪</VisualTweaks_ShieldRipple_Enable>

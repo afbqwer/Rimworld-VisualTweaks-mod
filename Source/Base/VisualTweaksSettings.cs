@@ -338,20 +338,76 @@ namespace VisualTweaks
         public const float MaxPersonalShieldOpacity = 1f;
         public static float personalShieldOpacity = 0.4f;
 
-        // Personal belt hit jitter. This is vanilla's own absorption reaction: the
-        // bubble is pushed along the shot and shrinks by the same amount for a few
-        // ticks. It is deliberately NOT one of the dome's impact animations — a belt
-        // is too small for a flare or a panel wave, and the two features should be
-        // tunable without moving each other. Defaults are vanilla's numbers.
-        public static bool personalShieldHitJitter = true;
+        // How a personal belt answers an absorbed hit. This is a separate choice from
+        // the dome's impact animations: a belt is one character wide, so the effects
+        // that read on a 25-cell projector do not automatically read here, and tuning
+        // one family must not move the other.
+        //
+        //   None      — no reaction, like switching the old jitter checkbox off.
+        //   Jitter    — vanilla's push-and-shrink, restored with tunable amplitude.
+        //   Brighten  — the dome's mode 4: the struck sector of the surface lights up.
+        //   HexSpread — the dome's mode 3: panels around the hit light and walk
+        //               outward. It samples the belt's own baked lattice, so that
+        //               atlas is baked even when the belt surface itself is not hex.
+        //
+        // An int rather than four bools for the same reason the surface style is one:
+        // the effects are mutually exclusive. The old personalShieldHitJitter boolean
+        // is still read during ExposeData migration.
+        public const int PersonalShieldHitNone = 0;
+        public const int PersonalShieldHitJitter = 1;
+        public const int PersonalShieldHitBrighten = 2;
+        public const int PersonalShieldHitHexWave = 3;
 
+        public static int personalShieldHitStyle = PersonalShieldHitJitter;
+
+        // Legacy save value; only read during ExposeData migration.
+        private static bool personalShieldHitJitter;
+
+        /// <summary>True when the belt's hit effect needs the baked lattice.</summary>
+        internal static bool PersonalShieldHitUsesHexMap =>
+            personalShieldHitStyle == PersonalShieldHitHexWave;
+
+        // Vanilla's absorbed-hit feedback includes a burst of DustPuff flecks on top
+        // of the flash and the sound. They are unrelated to the surface and can bury
+        // the small, deliberate hit animations this mod draws, so they get a switch.
+        // Only AbsorbedDamage's dust is affected: the break burst and every other
+        // dust puff in the game are untouched.
+        public static bool personalShieldHitDust = true;
+
+        // Amplitude of the vanilla-style push. Only the Jitter effect uses it.
         public const float MinPersonalShieldJitterDistance = 0f;
         public const float MaxPersonalShieldJitterDistance = 0.15f;
         public static float personalShieldJitterDistance = 0.05f;
 
+        // How long any of the three effects lasts. One value for all of them on
+        // purpose: the player is choosing what a hit looks like, not managing three
+        // independent clocks. The field keeps its old name so existing saves keep
+        // the duration they were tuned with; 60 ticks is one in-game second.
         public const float MinPersonalShieldJitterTicks = 2f;
         public const float MaxPersonalShieldJitterTicks = 30f;
         public static float personalShieldJitterTicks = 8f;
+
+        // Brighten: peak extra opacity of the struck sector, and the sector's full
+        // width. Independent of the dome's own sliders because a belt is small enough
+        // that the same numbers do not read the same way.
+        public const float MinPersonalShieldBrightenStrength = 0f;
+        public const float MaxPersonalShieldBrightenStrength = 1f;
+        public static float personalShieldBrightenStrength = 0.55f;
+
+        public const float MinPersonalShieldBrightenAngle = 5f;
+        public const float MaxPersonalShieldBrightenAngle = 90f;
+        public static float personalShieldBrightenAngle = 30f;
+
+        // HexSpread: peak brightness of the lit panels and how far the wave travels,
+        // as a share of the run to the far rim. The belt's lattice is sparser than
+        // the dome's, so both defaults sit above the dome's values.
+        public const float MinPersonalShieldHexImpactStrength = 0f;
+        public const float MaxPersonalShieldHexImpactStrength = 0.8f;
+        public static float personalShieldHexImpactStrength = 0.5f;
+
+        public const float MinPersonalShieldHexImpactShare = 0.12f;
+        public const float MaxPersonalShieldHexImpactShare = 0.6f;
+        public static float personalShieldHexImpactShare = 0.4f;
 
         // The panel style answers a hit differently from the smooth one - a flash that
         // spreads across the lattice instead of a wedge painted on the surface - so it
@@ -783,9 +839,25 @@ namespace VisualTweaks
                 ref personalShieldOpacity,
                 "personalShieldOpacity",
                 0.4f);
+            // -1 means the new key was absent, so the old boolean decides: on becomes
+            // Jitter, off becomes None. Otherwise the new choice wins even when a
+            // stale boolean disagrees.
+            Scribe_Values.Look(ref personalShieldHitStyle, "personalShieldHitStyle", -1);
             Scribe_Values.Look(
                 ref personalShieldHitJitter,
                 "personalShieldHitJitter",
+                true);
+            if (personalShieldHitStyle < PersonalShieldHitNone
+                || personalShieldHitStyle > PersonalShieldHitHexWave)
+            {
+                personalShieldHitStyle = personalShieldHitJitter
+                    ? PersonalShieldHitJitter
+                    : PersonalShieldHitNone;
+            }
+
+            Scribe_Values.Look(
+                ref personalShieldHitDust,
+                "personalShieldHitDust",
                 true);
             Scribe_Values.Look(
                 ref personalShieldJitterDistance,
@@ -795,6 +867,22 @@ namespace VisualTweaks
                 ref personalShieldJitterTicks,
                 "personalShieldJitterTicks",
                 8f);
+            Scribe_Values.Look(
+                ref personalShieldBrightenStrength,
+                "personalShieldBrightenStrength",
+                0.55f);
+            Scribe_Values.Look(
+                ref personalShieldBrightenAngle,
+                "personalShieldBrightenAngle",
+                30f);
+            Scribe_Values.Look(
+                ref personalShieldHexImpactStrength,
+                "personalShieldHexImpactStrength",
+                0.5f);
+            Scribe_Values.Look(
+                ref personalShieldHexImpactShare,
+                "personalShieldHexImpactShare",
+                0.4f);
             Scribe_Values.Look(ref shieldRidgeWidth, "shieldRidgeWidth", 3.6f);
             Scribe_Values.Look(ref shieldRidgeBrightness, "shieldRidgeBrightness", 0.52f);
             Scribe_Values.Look(ref shieldFlareAlpha, "shieldFlareAlpha", 0.30f);
@@ -945,6 +1033,28 @@ namespace VisualTweaks
                 personalShieldJitterTicks,
                 MinPersonalShieldJitterTicks,
                 MaxPersonalShieldJitterTicks);
+            if (personalShieldHitStyle < PersonalShieldHitNone
+                || personalShieldHitStyle > PersonalShieldHitHexWave)
+            {
+                personalShieldHitStyle = PersonalShieldHitJitter;
+            }
+
+            personalShieldBrightenStrength = Mathf.Clamp(
+                personalShieldBrightenStrength,
+                MinPersonalShieldBrightenStrength,
+                MaxPersonalShieldBrightenStrength);
+            personalShieldBrightenAngle = Mathf.Round(Mathf.Clamp(
+                personalShieldBrightenAngle,
+                MinPersonalShieldBrightenAngle,
+                MaxPersonalShieldBrightenAngle));
+            personalShieldHexImpactStrength = Mathf.Clamp(
+                personalShieldHexImpactStrength,
+                MinPersonalShieldHexImpactStrength,
+                MaxPersonalShieldHexImpactStrength);
+            personalShieldHexImpactShare = Mathf.Clamp(
+                personalShieldHexImpactShare,
+                MinPersonalShieldHexImpactShare,
+                MaxPersonalShieldHexImpactShare);
             shieldHexImpactStrength = Mathf.Clamp(
                 shieldHexImpactStrength,
                 MinShieldHexImpactStrength,
@@ -1163,9 +1273,15 @@ namespace VisualTweaks
             personalShieldHexDensity = 4f;
             personalShieldHexDensityApplied = 4;
             personalShieldOpacity = 0.4f;
+            personalShieldHitStyle = PersonalShieldHitJitter;
             personalShieldHitJitter = true;
+            personalShieldHitDust = true;
             personalShieldJitterDistance = 0.05f;
             personalShieldJitterTicks = 8f;
+            personalShieldBrightenStrength = 0.55f;
+            personalShieldBrightenAngle = 30f;
+            personalShieldHexImpactStrength = 0.5f;
+            personalShieldHexImpactShare = 0.4f;
             shieldHexImpactStrength = 0.28f;
             shieldHexImpactShare = 0.32f;
             shieldRidgeWidth = 3.6f;

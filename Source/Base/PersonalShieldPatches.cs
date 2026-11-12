@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using HarmonyLib;
 using RimWorld;
+using UnityEngine;
 using Verse;
 
 namespace VisualTweaks
@@ -30,9 +31,15 @@ namespace VisualTweaks
     /// private name.
     ///
     /// The same postfix records hits that were absorbed without breaking, so the
-    /// renderer can restore vanilla's short jitter. That reaction has its own
-    /// settings and does not share the dome's impact styles: a belt is too small for
-    /// a flare or a panel wave, and tuning one must not move the other.
+    /// renderer can answer them. Which answer that is — vanilla's jitter, a sector
+    /// brightening or a lattice wave — is a player setting with its own parameters;
+    /// the dome's own impact choice is independent.
+    ///
+    /// Vanilla's <c>AbsorbedDamage</c> also throws a handful of dust flecks on every
+    /// absorbed hit. They are not part of the surface and they are large relative to
+    /// a belt, so a switch can suppress just those. The suppression is scoped to the
+    /// inside of that one method: the flash, the sound, the break burst and every
+    /// other dust puff in the game are unaffected.
     /// </summary>
     internal static class PersonalShieldPatches
     {
@@ -62,6 +69,7 @@ namespace VisualTweaks
                 "built-in personal shield");
 
             PatchBreakSignal(harmony);
+            PatchHitDust(harmony);
         }
 
         /// <summary>
@@ -161,6 +169,124 @@ namespace VisualTweaks
         }
 
         /// <summary>
+        /// <c>AbsorbedDamage</c> is private, and it is where vanilla spawns the hit
+        /// dust. Patching it rather than the public entry point keeps the scope exact:
+        /// this method only runs for an absorbed, non-breaking hit, so the break burst
+        /// and every other dust puff in the game stay untouched.
+        ///
+        /// The dust itself comes from a public static helper used all over the game,
+        /// so that helper gets a prefix reading a flag which is set for the duration of
+        /// this one call. A finalizer clears the flag even if the original throws, so a
+        /// failed hit can never leave dust disabled for the rest of the session.
+        /// </summary>
+        private static void PatchHitDust(Harmony harmony)
+        {
+            MethodInfo? absorbed = AccessTools.Method(
+                typeof(CompShield),
+                "AbsorbedDamage");
+            MethodInfo? prefix = AccessTools.Method(
+                typeof(PersonalShieldPatches),
+                nameof(AbsorbedDamagePrefix));
+            MethodInfo? finalizer = AccessTools.Method(
+                typeof(PersonalShieldPatches),
+                nameof(AbsorbedDamageFinalizer));
+            MethodInfo? dustPrefix = AccessTools.Method(
+                typeof(PersonalShieldPatches),
+                nameof(ThrowDustPuffPrefix));
+
+            if (absorbed == null || prefix == null || finalizer == null)
+            {
+                Log.Warning("[Visual Tweaks] Cannot patch CompShield.AbsorbedDamage;"
+                    + " hit dust cannot be switched off.");
+                return;
+            }
+
+            try
+            {
+                harmony.Patch(
+                    absorbed,
+                    prefix: new HarmonyMethod(prefix),
+                    finalizer: new HarmonyMethod(finalizer));
+                VisualTweaksLog.Info("Patched CompShield.AbsorbedDamage"
+                    + " (hit dust switch).");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[Visual Tweaks] Failed to patch CompShield."
+                    + "AbsorbedDamage: " + ex);
+            }
+
+            // AbsorbedDamage uses the Vector3 overload. The IntVec3 one forwards to
+            // it, but patching both keeps the gate independent of which overload a
+            // future version calls.
+            PatchDustOverload(harmony, typeof(Vector3), dustPrefix);
+            PatchDustOverload(harmony, typeof(IntVec3), dustPrefix);
+        }
+
+        private static void PatchDustOverload(
+            Harmony harmony,
+            Type locType,
+            MethodInfo? prefix)
+        {
+            if (prefix == null)
+            {
+                Log.Warning("[Visual Tweaks] ThrowDustPuff prefix missing;"
+                    + " hit dust cannot be switched off.");
+                return;
+            }
+
+            MethodInfo? target = AccessTools.Method(
+                typeof(FleckMaker),
+                nameof(FleckMaker.ThrowDustPuff),
+                new[] { locType, typeof(Map), typeof(float) });
+
+            if (target == null)
+            {
+                Log.Warning("[Visual Tweaks] FleckMaker.ThrowDustPuff(" + locType.Name
+                    + ", Map, float) not found; that overload keeps its dust.");
+                return;
+            }
+
+            try
+            {
+                harmony.Patch(target, prefix: new HarmonyMethod(prefix));
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[Visual Tweaks] Failed to patch FleckMaker.ThrowDustPuff("
+                    + locType.Name + ", Map, float): " + ex);
+            }
+        }
+
+        /// <summary>
+        /// True only for the duration of vanilla's <c>AbsorbedDamage</c> when the
+        /// player turned hit dust off. Read by the <c>ThrowDustPuff</c> prefix; the
+        /// game runs this logic on the main thread, and the finalizer above clears it
+        /// even when the original throws.
+        /// </summary>
+        private static bool suppressAbsorbedDust;
+
+        private static void AbsorbedDamagePrefix(CompShield __instance)
+        {
+            // Only while this mod is the one drawing the belt: turning the
+            // replacement off hands the whole presentation, dust included, back to
+            // vanilla instead of leaving one hidden visual change behind.
+            suppressAbsorbedDust = !VisualTweaksSettings.personalShieldHitDust
+                && ShieldDomeBridge.ShouldReplace(__instance);
+        }
+
+        private static Exception? AbsorbedDamageFinalizer(Exception? __exception)
+        {
+            suppressAbsorbedDust = false;
+            return __exception;
+        }
+
+        private static bool ThrowDustPuffPrefix()
+        {
+            return !suppressAbsorbedDust;
+        }
+
+        /// <summary>
         /// Priority.First because Harmony stops at the first prefix that returns false.
         /// Another mod taking over the same draw method the same way would otherwise
         /// skip the original before this runs, and then neither drawing would appear.
@@ -238,8 +364,8 @@ namespace VisualTweaks
             /// <summary>
             /// True when the vanilla method would absorb this damage rather than let
             /// it through: ranged or explosive, and not flagged to ignore shields.
-            /// Melee and EMP therefore never reach the jitter path (EMP breaks and is
-            /// handled as a state change instead).
+            /// Melee and EMP therefore never reach the hit-effect path (EMP breaks and
+            /// is handled as a state change instead).
             /// </summary>
             public bool Absorbable;
 
@@ -284,11 +410,14 @@ namespace VisualTweaks
                 return;
             }
 
-            // Absorbed without breaking: the belt survives, so this is the jitter
+            // Absorbed without breaking: the belt survives, so this is the hit-effect
             // case. A shield that was Active and is still Active did not break, but
-            // only a genuinely absorbable hit should shake the bubble — melee and
-            // ignoreShields damage leave the state untouched too.
-            if (__state.Absorbable && VisualTweaksSettings.personalShieldHitJitter)
+            // only a genuinely absorbable hit should react — melee and ignoreShields
+            // damage leave the state untouched too. With the effect switched off
+            // there is nothing to record.
+            if (__state.Absorbable
+                && VisualTweaksSettings.personalShieldHitStyle
+                    != VisualTweaksSettings.PersonalShieldHitNone)
             {
                 PersonalShieldHitLog.Notify(__instance, __state.Angle);
             }

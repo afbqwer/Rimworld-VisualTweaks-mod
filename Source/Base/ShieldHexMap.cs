@@ -78,8 +78,9 @@ namespace VisualTweaks
     ///      normal case. Mod settings are read in the Mod constructor, which runs
     ///      before static constructors, so the selected style and the density are
     ///      both already known here and the whole cost lands on the loading screen.
-    ///   2. The settings checkbox, the moment it is switched on, so enabling the
-    ///      style mid-game does not bill the first shield that happens to be drawn.
+    ///   2. The settings radio (surface style, or a belt's Hex spread hit effect),
+    ///      the moment it is switched on, so enabling it mid-game does not bill the
+    ///      first shield that happens to be drawn.
     ///   3. The rebake button, when the density draft is committed.
     ///
     /// <see cref="Bind"/> keeps its own "texture missing" branch as a safety net for
@@ -93,7 +94,8 @@ namespace VisualTweaks
     /// SetPixels upload puts the in-game cost at a fraction of a second, once. VRAM
     /// is 32 MiB for the dome texture plus the belt's own (2 MiB at 512²), each
     /// shared by every shield of its target. No per-frame CPU work, no extra draw
-    /// calls, no extra geometry, and nothing is baked at all while the style is off.
+    /// calls, no extra geometry, and nothing is baked while neither the surface nor
+    /// a belt's hit effect would sample it.
     ///
     /// 2048 rather than 1024 because the ceiling moved: at k=12 a cell spans ~0.10 of
     /// the radius, so a 25-cell gravship dome magnified to 1500 px would put ~60 px
@@ -244,14 +246,17 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// True when this family would actually sample a texture: its chosen surface
-        /// is the hex shell, the custom drawing that samples it is on, and the shader
+        /// True when this family would actually sample a texture: either its chosen
+        /// surface is the hex shell, or a belt's chosen hit effect is the lattice
+        /// wave, and the custom drawing that samples it is on, and the shader
         /// compiled. Baking otherwise costs MiB and a fraction of a second for an
         /// image nothing reads. The two families are independent — a belt can use the
         /// shell while the dome stays crisp, and then only the belt's atlas is baked.
         /// </summary>
         private static bool CanBeDrawn(ShieldHexTarget target) =>
-            VisualTweaksSettings.IsHexShieldDome(target)
+            (VisualTweaksSettings.IsHexShieldDome(target)
+                || (target == ShieldHexTarget.Personal
+                    && VisualTweaksSettings.PersonalShieldHitUsesHexMap))
             && (target == ShieldHexTarget.Personal
                 ? VisualTweaksSettings.replacePersonalShields
                 : VisualTweaksSettings.replaceLargeShields)
@@ -313,8 +318,9 @@ namespace VisualTweaks
         /// <summary>
         /// Commits a target's draft density and bakes immediately, so the stall lands
         /// on the button press that asked for it instead of on the next shield that
-        /// happens to come into view. If the hex style is off nothing is baked: a
-        /// texture is only ever built for a style that will draw it, and the applied
+        /// happens to come into view. If nothing would sample the lattice — neither
+        /// the surface nor a belt's Hex spread hit effect — nothing is baked: a
+        /// texture is only ever built for an effect that will draw it, and the applied
         /// value is already recorded for when it is switched on.
         /// </summary>
         internal static void Apply(ShieldHexTarget target, int subdivisions)

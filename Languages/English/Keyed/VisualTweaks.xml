@@ -184,13 +184,29 @@
   <VisualTweaks_ShieldDome_PersonalHexPending>Showing k={0}; draft k={1}. Press the button above to bake.</VisualTweaks_ShieldDome_PersonalHexPending>
   <VisualTweaks_ShieldDome_PersonalOpacity>Opacity</VisualTweaks_ShieldDome_PersonalOpacity>
   <VisualTweaks_ShieldDome_PersonalOpacityTip>Belts lack vanilla's pulsing alpha; the default 0.4 matches nearby shields.</VisualTweaks_ShieldDome_PersonalOpacityTip>
-  <VisualTweaks_ShieldDome_PersonalHitGroup>Hit jitter</VisualTweaks_ShieldDome_PersonalHitGroup>
-  <VisualTweaks_ShieldDome_PersonalJitter>Enable hit jitter</VisualTweaks_ShieldDome_PersonalJitter>
-  <VisualTweaks_ShieldDome_PersonalJitterTip>A blocked hit pushes the bubble along the shot and shrinks it, then fades. Off leaves it completely still.</VisualTweaks_ShieldDome_PersonalJitterTip>
+  <VisualTweaks_ShieldDome_PersonalHitGroup>Hit effect</VisualTweaks_ShieldDome_PersonalHitGroup>
+  <VisualTweaks_ShieldDome_PersonalHitNone>None</VisualTweaks_ShieldDome_PersonalHitNone>
+  <VisualTweaks_ShieldDome_PersonalHitNoneTip>The bubble does not react when it absorbs a hit.</VisualTweaks_ShieldDome_PersonalHitNoneTip>
+  <VisualTweaks_ShieldDome_PersonalHitDust>Hit dust</VisualTweaks_ShieldDome_PersonalHitDust>
+  <VisualTweaks_ShieldDome_PersonalHitDustTip>Off removes vanilla's dust puffs when this mod's personal shield absorbs a hit; the flash, sound and break burst remain.</VisualTweaks_ShieldDome_PersonalHitDustTip>
+  <VisualTweaks_ShieldDome_PersonalHitJitter>Jitter</VisualTweaks_ShieldDome_PersonalHitJitter>
+  <VisualTweaks_ShieldDome_PersonalHitJitterTip>The bubble is pushed along the shot and shrinks, then fades — vanilla's own reaction.</VisualTweaks_ShieldDome_PersonalHitJitterTip>
+  <VisualTweaks_ShieldDome_PersonalHitBrighten>Brighten</VisualTweaks_ShieldDome_PersonalHitBrighten>
+  <VisualTweaks_ShieldDome_PersonalHitBrightenTip>The struck angular sector of the surface lights up, fading toward the centre.</VisualTweaks_ShieldDome_PersonalHitBrightenTip>
+  <VisualTweaks_ShieldDome_PersonalHitHexWave>Hex spread</VisualTweaks_ShieldDome_PersonalHitHexWave>
+  <VisualTweaks_ShieldDome_PersonalHitHexWaveTip>Panels near the impact light up and spread outward through the belt's hex lattice, even when the surface itself is not hexagonal.</VisualTweaks_ShieldDome_PersonalHitHexWaveTip>
   <VisualTweaks_ShieldDome_PersonalJitterDistance>Jitter strength</VisualTweaks_ShieldDome_PersonalJitterDistance>
   <VisualTweaks_ShieldDome_PersonalJitterDistanceTip>Maximum displacement in cells; the bubble shrinks by the same amount. Vanilla uses 0.05.</VisualTweaks_ShieldDome_PersonalJitterDistanceTip>
-  <VisualTweaks_ShieldDome_PersonalJitterTicks>Jitter duration</VisualTweaks_ShieldDome_PersonalJitterTicks>
-  <VisualTweaks_ShieldDome_PersonalJitterTicksTip>Ticks for the displacement to fade to zero; 60 ticks = 1 second. Vanilla uses 8.</VisualTweaks_ShieldDome_PersonalJitterTicksTip>
+  <VisualTweaks_ShieldDome_PersonalBrighten>Brighten strength</VisualTweaks_ShieldDome_PersonalBrighten>
+  <VisualTweaks_ShieldDome_PersonalBrightenTip>Peak brightness of the struck sector.</VisualTweaks_ShieldDome_PersonalBrightenTip>
+  <VisualTweaks_ShieldDome_PersonalBrightenAngle>Brighten angle (°)</VisualTweaks_ShieldDome_PersonalBrightenAngle>
+  <VisualTweaks_ShieldDome_PersonalBrightenAngleTip>Full width of the brightened sector; vanilla's cone is 30°. Damage does not change it.</VisualTweaks_ShieldDome_PersonalBrightenAngleTip>
+  <VisualTweaks_ShieldDome_PersonalHexImpact>Flash strength</VisualTweaks_ShieldDome_PersonalHexImpact>
+  <VisualTweaks_ShieldDome_PersonalHexImpactTip>Peak brightness of the panels lit by Hex spread.</VisualTweaks_ShieldDome_PersonalHexImpactTip>
+  <VisualTweaks_ShieldDome_PersonalHexImpactReach>Flash reach</VisualTweaks_ShieldDome_PersonalHexImpactReach>
+  <VisualTweaks_ShieldDome_PersonalHexImpactReachTip>How far the light travels from the impact, as a share of the distance to the far rim.</VisualTweaks_ShieldDome_PersonalHexImpactReachTip>
+  <VisualTweaks_ShieldDome_PersonalHitDuration>Hit effect duration</VisualTweaks_ShieldDome_PersonalHitDuration>
+  <VisualTweaks_ShieldDome_PersonalHitDurationTip>Ticks any hit effect lasts; 60 ticks = 1 second. Vanilla's jitter used 8.</VisualTweaks_ShieldDome_PersonalHitDurationTip>
 
   <VisualTweaks_ShieldRipple_Group>Hit ripple</VisualTweaks_ShieldRipple_Group>
   <VisualTweaks_ShieldRipple_Enable>Ripple when a hit is blocked</VisualTweaks_ShieldRipple_Enable>
