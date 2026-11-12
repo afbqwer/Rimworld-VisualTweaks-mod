@@ -39,6 +39,11 @@
 // ShieldImpactLog, one quad each, additive, so overlapping hits accumulate the way
 // several lights on one surface should.
 //
+// The panel style answers the same impact with mode 3 instead: the panels around the
+// hit light white and the light walks outward ring by ring. Same data, same one quad
+// per impact; only the shape of the answer differs, because a group of tiles cannot
+// plausibly be struck by a painted wedge.
+//
 // ---- the dissolve --------------------------------------------------------
 //
 // Mode 2 is what plays when the shield breaks. Vanilla's Shield_Break effecter
@@ -77,8 +82,17 @@
 //
 // Each cell is shaded flat from its own face normal, so the shell reads as panels
 // rather than as a smooth sphere with a net drawn over it. The silhouette ridge is
-// still the same DomeColor() term, so this style keeps the crisp edge, the exact
-// intercept radius and the dissolve for free.
+// still the same DomeColor() term, so this style keeps the crisp edge and the exact
+// intercept radius.
+//
+// A panel shell also has to *react* in panels, which is mode 3 and the hex branch of
+// mode 2 below. Both need one thing the smooth style does not have: a per-cell
+// identity. The baked map already carries it — RGB is the winning site's direction,
+// constant inside a cell — so "which panel is this" costs nothing. Angular distance
+// from the hit to that direction, divided by the cell centre spacing, counts hops
+// across the lattice, and that is the unit both effects travel in. Because the map is
+// the same texture the surface is drawn from, a wave can only ever light panels that
+// exist, and it stays correct when the density changes.
 
 layout(location = 0) in vec2 vWorld;
 
@@ -353,7 +367,7 @@ void main()
             mix(halo, coreTint, flare * 0.6),
             profile * flare * u._Params.y * edge);
     }
-    else
+    else if (mode < 2.5)
     {
         // ---- dissolve -----------------------------------------------------
         vec2 od = u._Params3.xy;
@@ -361,39 +375,116 @@ void main()
         float progress = clamp(u._Params3.z, 0.0, 1.0);
         float seed = u._Params3.w;
 
-        // Tear front: distance from the point that failed, perturbed by
-        // low-frequency noise so it splits into fingers instead of sweeping
-        // across as a clean circle.
-        float noise = Fbm(p * 3.5 + vec2(seed, seed * 1.37));
-        float spread = length(p - originDir) * 0.5;
-        float field = clamp(spread + (noise - 0.5) * 0.42, 0.0, 1.0);
-
-        float threshold = progress * 1.15 - 0.15;
-
-        // One pixel of tear edge at any zoom.
-        float fw = max(fwidth(field), 0.006);
-        float remaining = smoothstep(threshold - fw, threshold + fw, field);
-
-        // White-hot line riding the tear. Only on the surviving side — the dead
-        // side must stay empty or the dissolve reads as a bright overlay rather
-        // than as material being removed.
-        float front = exp(-pow((field - threshold) / (fw * 3.0 + 0.022), 2.0))
-            * remaining;
-
-        // Cracks: ridges of a finer noise over the strip of surface that is about
-        // to go. Zero at progress 0 so the shield does not come pre-cracked.
-        //
-        // This is the original look, restored. The nested square rings in the
-        // first in-game screenshot were NOT this pattern: they were a float32
-        // hash collapse in Hash21 feeding the same lattice index to many cells.
-        // A float64 web preview could not show it.
-        float crackNoise = ValueNoise(p * 19.0 + vec2(seed * 2.1, seed * 0.7));
-        float crackRidge = 1.0 - smoothstep(0.0, 0.10, abs(crackNoise - 0.5));
-        float nearFront =
-            (1.0 - smoothstep(0.0, 0.26, field - threshold)) * remaining;
-        float crack = crackRidge * nearFront * smoothstep(0.0, 0.06, progress);
-
         vec4 dome = DomeColor(r, p, aa, ang, t);
+
+        // The two styles fail in different ways on purpose. A smooth dome is one
+        // continuous surface, so it tears along a noise-driven front. A panel shell
+        // is a set of discrete objects, so it *loses panels*: each one is entirely
+        // there or entirely gone, and the wave walks outward through the lattice.
+        // Running the noise front over the panels instead would cut a soft hole
+        // through them, which reads as a rendering mistake rather than as structural
+        // failure.
+        float remaining;
+        float front;
+        float crack;
+
+        if (u._Params6.x > 0.5)
+        {
+            vec4 baked = texture(_HexMap, p * 0.5 + 0.5);
+            vec3 face = baked.rgb * 2.0 - 1.0;
+            float e = baked.a;
+
+            // Distance in panels. The baked lattice is uniform in solid angle, so
+            // angular distance divided by the centre spacing counts hops; that is
+            // what makes the wave cross the same number of panels per second on a
+            // 3-cell bubble and on a 25-cell gravship dome.
+            float cellStep = 2.0 / max(u._Params6.w, 1e-4);
+            vec3 originOnSphere = vec3(
+                originDir,
+                sqrt(max(1.0 - dot(originDir, originDir), 0.0)));
+            float hops = acos(clamp(dot(face, originOnSphere), -1.0, 1.0)) / cellStep;
+
+            // Per-panel stagger so the front is a ragged collection of tiles instead
+            // of a perfect ring. Hash21 of the face is the same per-cell id the
+            // shading jitter uses, so a panel keeps one identity while it dies.
+            float order = hops + Hash21(face.xy * 53.0) * 0.45;
+
+            // Enough hops to cross the hemisphere at this density, plus a margin so
+            // progress 1 really does leave nothing. Scales with k: a denser lattice
+            // has more panels between the break point and the far rim.
+            float maxHops = 3.14159265 * u._Params6.w * 0.5;
+            float span = maxHops + 1.5;
+
+            // When this panel lets go, as a fraction of the whole animation. 0.90 is
+            // not arbitrary: the fade below lasts 0.09, so the last panel finishes just
+            // as the clock runs out instead of being cut off mid-transition.
+            float start = (order + 0.6) / (span + 1.2) * 0.90;
+
+            // dt is the panel's own clock: negative while intact, 0 at the moment it
+            // starts to give way, 1 once it is gone.
+            //
+            // The fade is 9% of the animation, and that length is the whole argument.
+            // A band in *order* - the first version - is a band in space, which is
+            // exactly the hard line that swept across the dome; too short and the
+            // boundary reads as an edge again, too long and a third of the shield is
+            // half-transparent at once, which is mush rather than a break. Measured at
+            // 9%: about two panels in transition along the front at any moment.
+            float dt = (progress - start) * (1.0 / 0.09);
+            remaining = 1.0 - smoothstep(0.0, 1.0, dt);
+
+            // Panels do brighten as they fail, but only a little and only briefly: a
+            // strong surge turns the transition band into a white stripe travelling
+            // across the shield, and a wide one brightens a whole region at once. 6.0
+            // keeps the glow inside roughly two panels around the trigger, and 0.3
+            // keeps it as a glow rather than a beam.
+            float dying = exp(-dt * dt * 6.0) * remaining * 0.3;
+            front = dying;
+
+            // No cracks: a crack belongs to a continuous surface. Here the panel
+            // seams already are the cracks.
+            crack = 0.0;
+
+        }
+        else
+        {
+            // Tear front: distance from the point that failed, perturbed by
+            // low-frequency noise so it splits into fingers instead of sweeping
+            // across as a clean circle.
+            float noise = Fbm(p * 3.5 + vec2(seed, seed * 1.37));
+            float spread = length(p - originDir) * 0.5;
+            float field = clamp(spread + (noise - 0.5) * 0.42, 0.0, 1.0);
+
+            float threshold = progress * 1.15 - 0.15;
+
+            // One pixel of tear edge at any zoom.
+            float fw = max(fwidth(field), 0.006);
+            remaining = smoothstep(threshold - fw, threshold + fw, field);
+
+            // White-hot line riding the tear. Only on the surviving side — the dead
+            // side must stay empty or the dissolve reads as a bright overlay rather
+            // than as material being removed.
+            front = exp(-pow((field - threshold) / (fw * 3.0 + 0.022), 2.0))
+                * remaining;
+
+            // Cracks: ridges of a finer noise over the strip of surface that is
+            // about to go. Zero at progress 0 so the shield does not come pre-cracked.
+            //
+            // This is the original look, restored. The nested square rings in the
+            // first in-game screenshot were NOT this pattern: they were a float32
+            // hash collapse in Hash21 feeding the same lattice index to many cells.
+            // A float64 web preview could not show it.
+            float crackNoise = ValueNoise(p * 19.0 + vec2(seed * 2.1, seed * 0.7));
+            float crackRidge = 1.0 - smoothstep(0.0, 0.10, abs(crackNoise - 0.5));
+            float nearFront =
+                (1.0 - smoothstep(0.0, 0.26, field - threshold)) * remaining;
+            crack = crackRidge * nearFront * smoothstep(0.0, 0.06, progress);
+        }
+
+        // Only `remaining` scales the surface. An earlier version also hollowed each
+        // panel toward its seams (0.55 at the walls), which dimmed the whole shield
+        // that was still standing - the surviving half looked like it had lost power
+        // rather than like the other half was coming apart. The seams are already
+        // readable from the dome's own line term.
         float baseA = dome.a * remaining;
         float frontA = front * 0.75;
         float crackA = crack * 0.30;
@@ -414,5 +505,71 @@ void main()
             / max(total, 1e-4);
 
         outColor = vec4(tint, total * u._Params.y * edge * surge * endFade);
+    }
+    else
+    {
+        // ---- hexagonal impact flash ---------------------------------------
+        //
+        // Mode 3, the panel style's answer to a hit. The smooth style paints a wedge
+        // on the surface because a surface is what it is; a set of tiles is struck at
+        // the tiles, so the ones around the impact light up white and the light then
+        // walks outward ring by ring, fading as it goes.
+        //
+        // The quantisation is free: the hex map already carries a per-cell id, so the
+        // flash is automatically made of panels without any mask, and it can only
+        // light panels that exist. One quad per impact, same count as the flare it
+        // replaces.
+        vec2 od = u._Params3.xy;
+        vec2 originDir = od / max(length(od), 1e-4);
+        float progress = clamp(u._Params3.z, 0.0, 1.0);
+        float reach = max(u._Params3.w, 0.5);
+
+        vec4 baked = texture(_HexMap, p * 0.5 + 0.5);
+        vec3 face = baked.rgb * 2.0 - 1.0;
+        float e = baked.a;
+
+        float cellStep = 2.0 / max(u._Params6.w, 1e-4);
+        vec3 hitDir = vec3(
+            originDir,
+            sqrt(max(1.0 - dot(originDir, originDir), 0.0)));
+        float hops = acos(clamp(dot(face, hitDir), -1.0, 1.0)) / cellStep;
+
+        float order = max(hops + (Hash21(face.xy * 37.0) - 0.5) * 0.3, 0.0);
+
+        // The front is a position in hops, so it covers the same number of panels per
+        // second on every shield.
+        //
+        // The 0.8 offset is what makes the hit visible on the first frame. Measured:
+        // the panel nearest the impact sits up to ~0.5 hops away from it (half a cell
+        // spacing) plus up to 0.15 of stagger, so any offset below that left progress 0
+        // completely dark and the flash faded in instead of striking.
+        float front = 0.8 + progress * reach;
+        float since = front - order;
+
+        // Brightness falls with hops BEHIND the front, which is the same thing as
+        // falling with the time since that panel lit. That equivalence is the whole
+        // effect: it makes a travelling wave with a fading tail.
+        //
+        // Without the distance term (a plain exp on time, 0.4, was tried) every panel
+        // in range sat at full brightness as the front passed, so the result was a
+        // bright disc that kept growing instead of a ring that faded: the outer edge
+        // never looked dimmer than the middle because it was not dimmer.
+        //
+        // 0.8 per hop: 1.00 at the struck panel, 0.45 one panel out, 0.20 two, 0.09
+        // three. 0.5 was still too shallow - the lit band came out ~2.4 hops deep,
+        // and on a side hit (the common case, impact on the rim) that is a crescent
+        // covering a third of the dome instead of a ring.
+        float lit = smoothstep(0.0, 0.10, since) * exp(-max(since, 0.0) * 0.8);
+
+        // The last ring would otherwise still be at full strength on the final frame
+        // and vanish with the draw. Fade the whole effect out instead.
+        lit *= 1.0 - smoothstep(0.70, 1.0, progress);
+
+        // Panels, not pixels: the interior lights and the seams stay dim, so the
+        // flash is visibly made of tiles.
+        float panel = 0.6 + 0.4 * smoothstep(0.0, 0.25, e);
+
+        vec3 hot = mix(u._Color.rgb, vec3(1.0), 0.9);
+        outColor = vec4(hot, lit * panel * u._Params.y * edge);
     }
 }

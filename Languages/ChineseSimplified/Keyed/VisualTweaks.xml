@@ -131,13 +131,13 @@
   <VisualTweaks_ShieldDome_RidgeBrightness>轮廓亮度</VisualTweaks_ShieldDome_RidgeBrightness>
   <VisualTweaks_ShieldDome_RidgeBrightnessTip>外轮廓那条带的亮度。调到 0 只剩一条细热芯和内辉，轮廓会重新显得薄——要更厚请调上面的粗细。</VisualTweaks_ShieldDome_RidgeBrightnessTip>
   <VisualTweaks_ShieldDome_FlareAlpha>受击火舌不透明度</VisualTweaks_ShieldDome_FlareAlpha>
-  <VisualTweaks_ShieldDome_FlareAlphaTip>一次拦截产生的方向火舌的峰值不透明度。原版锥形最高 0.82，看起来像一块实心扇形压在护盾上；这里默认只有它的三分之一。多发射击会各自画一条并叠加变亮。</VisualTweaks_ShieldDome_FlareAlphaTip>
+  <VisualTweaks_ShieldDome_FlareAlphaTip>一次拦截产生的受击效果的峰值不透明度。原版锥形最高 0.82，看起来像一块实心扇形压在护盾上；这里默认只有它的三分之一。多发射击会各自画一份并叠加变亮。六边形样式下这一项控制面板闪光的强度（内部已按 1.6 倍放大，因为一块面板的面积远小于扇形）。</VisualTweaks_ShieldDome_FlareAlphaTip>
   <VisualTweaks_ShieldDome_FlareSize>火舌大小</VisualTweaks_ShieldDome_FlareSize>
   <VisualTweaks_ShieldDome_FlareSizeTip>火舌宽度的整体倍率。宽度本身跟随弹道伤害，但受「不超过护盾半径 45%」的上限约束：小护盾上很快就到顶（否则扇形会盖住整个穹顶），大护盾上重武器才会明显更宽。护盾涟漪是另一个功能，它的设置不会影响火舌。</VisualTweaks_ShieldDome_FlareSizeTip>
   <VisualTweaks_ShieldDome_FlareDamage>火舌伤害影响</VisualTweaks_ShieldDome_FlareDamage>
   <VisualTweaks_ShieldDome_FlareDamageTip>火舌亮度跟随击中伤害的程度。0 时各种武器一样亮；越大重武器越醒目。结果始终限制在 0.55–1.8 倍之间，所以电荷长枪不会糊满整个穹顶，小口径子弹也不会看不见。</VisualTweaks_ShieldDome_FlareDamageTip>
   <VisualTweaks_ShieldDome_Hex>六边形穹顶（替代样式）</VisualTweaks_ShieldDome_Hex>
-  <VisualTweaks_ShieldDome_HexTip>把护盾面换成球面的六边形/五边形面板：格子越靠边缘越被压扁，每一格有独立的明暗，看起来像半个球壳而不是平贴的蜂窝。球面上纯六边形铺不满，所以必然有十二个五边形——它们只是球面铺不满时的几何妥协，因此不额外着色、不强调。轮廓、判定半径、受击与破裂效果沿用同一套绘制，不额外增加绘制次数。需要先开启上面的「清晰边缘护盾」。</VisualTweaks_ShieldDome_HexTip>
+  <VisualTweaks_ShieldDome_HexTip>把护盾面换成球面的六边形/五边形面板：格子越靠边缘越被压扁，每一格有独立的明暗，看起来像半个球壳而不是平贴的蜂窝。球面上纯六边形铺不满，所以必然有十二个五边形——它们只是球面铺不满时的几何妥协，因此不额外着色、不强调。受击与破裂也按面板进行：命中时受击点附近的面板闪白光并向四周传导，破裂时面板按从受击点向外的顺序逐块熄灭。绘制次数不变。需要先开启上面的「清晰边缘护盾」。</VisualTweaks_ShieldDome_HexTip>
   <VisualTweaks_ShieldDome_HexFace>格面亮度</VisualTweaks_ShieldDome_HexFace>
   <VisualTweaks_ShieldDome_HexFaceTip>每一格面板的填充亮度。按格子的朝向固定明暗（平面着色），这是「球壳」而不是「光滑球上贴网格」的关键。调太高会盖住轮廓。</VisualTweaks_ShieldDome_HexFaceTip>
   <VisualTweaks_ShieldDome_HexLine>格线亮度</VisualTweaks_ShieldDome_HexLine>

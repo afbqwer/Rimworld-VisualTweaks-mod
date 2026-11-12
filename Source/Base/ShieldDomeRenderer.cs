@@ -108,6 +108,31 @@ namespace VisualTweaks
 
         private const float FlareMaxDamageFactor = 1.8f;
 
+        // ------------------------------------------------------------------
+        // Panel-style hit reaction.
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// How many panels the hit flash crosses in one lifetime, for the hexagonal
+        /// style. Counted in panels rather than in cells or degrees on purpose: the
+        /// reaction has to be "a handful of tiles around the impact", and that is the
+        /// same picture on a 3-cell bubble and on a 25-cell dome.
+        ///
+        /// Four, not more. Panels are big; a wave that crosses six of them covers a
+        /// third of the dome, which reads as the shield lighting up rather than as a
+        /// hit. The 40-tick lifetime puts that at roughly six panels per second.
+        /// </summary>
+        private const float HexImpactReachHops = 4f;
+
+        /// <summary>
+        /// The panel flash reuses the flare's opacity setting. It used to be scaled by
+        /// 1.6 because one tile covers less area than a wedge, but that is what made it
+        /// read as a blown-out white blob rather than as light on a surface: a ripple
+        /// is a gradient, and pinning the brightest panel at the slider value leaves
+        /// the ones behind it room to fall off.
+        /// </summary>
+        private const float HexImpactGain = 0.9f;
+
         /// <summary>Vanilla's own colour for an inactive shield that is selected.</summary>
         private static readonly Color InactiveColor = new Color(0.2f, 0.2f, 0.2f);
 
@@ -138,6 +163,16 @@ namespace VisualTweaks
         private static float appliedHexFace = float.NaN;
         private static float appliedHexLine = float.NaN;
         private static int appliedHexDensity = -1;
+
+        /// <summary>
+        /// True when the panel style is what the player actually sees: the box is
+        /// ticked and the lattice texture exists. Both the style uniform and the choice
+        /// of hit reaction go through this, so the two can never disagree — answering a
+        /// hit with tiles while the dome draws the smooth style would flash panels that
+        /// are not on screen.
+        /// </summary>
+        private static bool HexActive =>
+            VisualTweaksSettings.hexShieldDome && ShieldHexMap.Available;
 
         /// <summary>
         /// Returns false when nothing was drawn, so the caller can hand the frame back
@@ -237,11 +272,17 @@ namespace VisualTweaks
 
             try
             {
-                // Flares first: they are additive, so order does not change the
-                // picture, but submitting them under the dome keeps the rim the
+                // Hit reactions first: they are additive, so order does not change
+                // the picture, but submitting them under the dome keeps the rim the
                 // last thing written to the surface. A burst that was still fading
                 // when the shield broke should keep fading, not vanish with it.
-                drew |= DrawFlares(comp, mat, matrix, tint, centerParam, radius, time);
+                //
+                // Which one is not a matter of taste: a painted wedge describes a
+                // continuous surface, and a shell of tiles is the one thing it is not.
+                // Same data, same draw count, different answer.
+                drew |= HexActive
+                    ? DrawHexImpacts(comp, mat, matrix, tint, centerParam, radius, time)
+                    : DrawFlares(comp, mat, matrix, tint, centerParam, radius, time);
 
                 if (dissolve != null)
                 {
@@ -298,6 +339,84 @@ namespace VisualTweaks
                 // by the patch before it decides to skip the original.
                 ShieldDomeBridge.DisableRuntime(ex.ToString());
                 return false;
+            }
+
+            return drew;
+        }
+
+        /// <summary>
+        /// Mode 3: the panel style's hit reaction. One quad per impact, exactly like the
+        /// flare it replaces — the shader turns each into a wave across the lattice using
+        /// the per-cell identity already baked into the hex map.
+        ///
+        /// Everything the shader needs is already a uniform: the direction arrives the
+        /// same way as for a flare, and the age is normalised to 0..1 here so the
+        /// lifetime can be tuned on the CPU without touching the shader.
+        /// </summary>
+        private static bool DrawHexImpacts(
+            CompProjectileInterceptor comp,
+            Material material,
+            Matrix4x4 matrix,
+            NVector4 tint,
+            NVector4 centerParam,
+            float radius,
+            float time)
+        {
+            List<ShieldImpactLog.Impact>? impacts = ShieldImpactLog.Peek(comp);
+            TickManager? tickManager = Find.TickManager;
+            if (impacts == null || impacts.Count == 0 || tickManager == null)
+            {
+                return false;
+            }
+
+            int now = tickManager.TicksGame;
+            bool drew = false;
+
+            for (int i = impacts.Count - 1; i >= 0; i--)
+            {
+                int age = now - impacts[i].Tick;
+                if (age < 0 || age >= ShieldImpactLog.LifetimeTicks)
+                {
+                    continue;
+                }
+
+                float strength = Mathf.Clamp01(
+                    VisualTweaksSettings.shieldFlareAlpha
+                    * DamageFactor(impacts[i].Damage)
+                    * HexImpactGain);
+                if (strength < 0.004f)
+                {
+                    continue;
+                }
+
+                float progress = (float)age / ShieldImpactLog.LifetimeTicks;
+
+                // Same convention as the flare: the stored angle points from the
+                // projectile towards the shield, so the reaction has to look the other
+                // way to sit where the round actually hit.
+                Vector3 toward = Vector3Utility.FromAngleFlat(impacts[i].Angle);
+                NVector4 direction = new NVector4(
+                    -toward.x,
+                    -toward.z,
+                    progress,
+                    HexImpactReachHops);
+
+                properties[0] = DrawProperty.Vector(
+                    ParamsId, new NVector4(3f, strength, time, radius));
+                properties[1] = DrawProperty.Vector(Params3Id, direction);
+                properties[2] = DrawProperty.Vector(Params4Id, centerParam);
+                properties[3] = DrawProperty.Color(ColorId, tint);
+
+                Graphics.DrawMesh(
+                    MeshPool.plane10,
+                    matrix,
+                    material,
+                    0,
+                    null,
+                    0,
+                    new DrawPropertyBlock(properties));
+
+                drew = true;
             }
 
             return drew;
@@ -446,7 +565,7 @@ namespace VisualTweaks
             // A failed bake must not produce a black disc. Falling back to the
             // smooth dome keeps the shield readable and matches the shader bridge's
             // "lose the effect, never the feature" rule.
-            float style = wantHex && ShieldHexMap.Available ? 1f : 0f;
+            float style = HexActive ? 1f : 0f;
 
             if (width == appliedRidgeWidth
                 && brightness == appliedRidgeBrightness
