@@ -682,8 +682,8 @@ namespace VisualTweaks
             GasFieldDiagnostics.Put("gate.active", GasFieldBridge.Active);
             GasFieldDiagnostics.Put("gate.useGasField", VisualTweaksSettings.useGasField);
             GasFieldDiagnostics.Put("gate.shaderReady", GasFieldBridge.ShaderReady);
-            GasFieldDiagnostics.Put("gate.screenshot",
-                Find.ScreenshotModeHandler != null && Find.ScreenshotModeHandler.Active);
+            GasFieldDiagnostics.Put("gate.stockVisuals",
+                ScreenshotModeGate.Active);
             GasFieldDiagnostics.Put("gate.gasClean", gasClean);
             GasFieldDiagnostics.Put("gate.mistClean", mistClean);
             GasFieldDiagnostics.Put("gate.drawGas", DebugViewSettings.drawGas);

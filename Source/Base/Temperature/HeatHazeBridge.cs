@@ -25,25 +25,15 @@ namespace VisualTweaks
         public static bool ShaderReady => shaderReady;
 
         /// <summary>
-        /// True when the heat haze should draw. Screenshot mode is excluded for the
-        /// same reason as the gas field and the shockwave: screenshots should show
-        /// the stock visuals.
+        /// True when the heat haze should draw. Only a dev-mode reference screenshot
+        /// hands the frame back to the stock visuals; a normal F11 keeps the effect.
         /// </summary>
         public static bool Active =>
             initialized
             && shaderReady
             && !runtimeDisabled
             && VisualTweaksSettings.heatHazeEnabled
-            && !ScreenshotModeActive;
-
-        private static bool ScreenshotModeActive
-        {
-            get
-            {
-                ScreenshotModeHandler handler = Find.ScreenshotModeHandler;
-                return handler != null && handler.Active;
-            }
-        }
+            && !ScreenshotModeGate.Active;
 
         internal static void Initialize()
         {

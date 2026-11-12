@@ -42,14 +42,14 @@ namespace VisualTweaks
 
         /// <summary>
         /// True when the replacement gas/mist field should draw instead of the original
-        /// sprite layers. Screenshot mode keeps world visuals intact, so the original
-        /// renderers take over for that frame set.
+        /// sprite layers. Only a dev-mode reference screenshot hands the frame back to
+        /// the stock renderers; a normal F11 keeps the effect.
         /// </summary>
         public static bool Active =>
             initialized
             && shaderReady
             && !runtimeDisabled
-            && !ScreenshotModeActive
+            && !ScreenshotModeGate.Active
             && VisualTweaksSettings.useGasField;
 
         internal static bool SupportsLocalWind =>
@@ -81,15 +81,6 @@ namespace VisualTweaks
         /// </summary>
         internal static int SimulationIntervalTicks =>
             extension != null ? extension.SimulationIntervalTicks : 6;
-
-        private static bool ScreenshotModeActive
-        {
-            get
-            {
-                ScreenshotModeHandler handler = Find.ScreenshotModeHandler;
-                return handler != null && handler.Active;
-            }
-        }
 
         /// <summary>
         /// Resolves the shader def. Called once from the base bootstrap after defs are

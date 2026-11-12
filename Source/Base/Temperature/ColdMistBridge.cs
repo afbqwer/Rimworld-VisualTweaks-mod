@@ -25,25 +25,15 @@ namespace VisualTweaks
         public static bool ShaderReady => shaderReady;
 
         /// <summary>
-        /// True when the mist should draw. Screenshot mode is excluded for the same
-        /// reason as every other effect here: screenshots should show the stock
-        /// visuals.
+        /// True when the mist should draw. Only a dev-mode reference screenshot hands
+        /// the frame back to the stock visuals; a normal F11 keeps the effect.
         /// </summary>
         public static bool Active =>
             initialized
             && shaderReady
             && !runtimeDisabled
             && VisualTweaksSettings.coldMistEnabled
-            && !ScreenshotModeActive;
-
-        private static bool ScreenshotModeActive
-        {
-            get
-            {
-                ScreenshotModeHandler handler = Find.ScreenshotModeHandler;
-                return handler != null && handler.Active;
-            }
-        }
+            && !ScreenshotModeGate.Active;
 
         internal static void Initialize()
         {

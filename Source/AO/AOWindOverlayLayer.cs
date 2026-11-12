@@ -49,7 +49,7 @@ namespace VisualTweaks
 
         public void Draw(Map map, in OverlayFrame frame)
         {
-            if (Find.ScreenshotModeHandler != null && Find.ScreenshotModeHandler.Active)
+            if (ScreenshotModeGate.Active)
             {
                 return;
             }

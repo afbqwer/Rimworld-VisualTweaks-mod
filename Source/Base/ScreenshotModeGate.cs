@@ -3,20 +3,28 @@ using Verse;
 namespace VisualTweaks
 {
     /// <summary>
-    /// One place to ask "is a screenshot being taken". Every visual feature has to sit
-    /// this out for the same reason: a screenshot should show the stock game, not this
-    /// mod's additions.
+    /// Development aid: "should this feature hand the frame back to the stock visuals?"
     ///
-    /// Extracted after the third copy: the explosion shockwave and the shield ripple
-    /// each carried their own identical five-line property, and the shield visibility
-    /// patch would have made it three.
+    /// Enabled only when Dev Mode is on *and* screenshot mode (F11) is active. In normal
+    /// play F11 hides the GUI but keeps this mod's effects; during development the same
+    /// key gives a clean stock reference to compare against. A player who never opens
+    /// Dev Mode therefore never loses the effects to a screenshot.
+    ///
+    /// Every visual feature reads this same gate, so the two states cannot drift apart.
+    /// Extracted after duplicated copies appeared in the explosion shockwave, the shield
+    /// ripple, the shield visibility patch and the bridge classes.
     /// </summary>
-    internal static class ScreenshotModeGate
+    public static class ScreenshotModeGate
     {
-        internal static bool Active
+        public static bool Active
         {
             get
             {
+                if (!Prefs.DevMode)
+                {
+                    return false;
+                }
+
                 ScreenshotModeHandler? handler = Find.ScreenshotModeHandler;
                 return handler != null && handler.Active;
             }

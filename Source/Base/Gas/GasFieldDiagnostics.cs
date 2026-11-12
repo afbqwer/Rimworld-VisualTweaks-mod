@@ -49,7 +49,7 @@ namespace VisualTweaks
         // Any change in one of these keys between two frames can move the whole layer.
         private static readonly string[] WatchKeys =
         {
-            "gate.active", "gate.screenshot", "gate.useGasField", "gate.shaderReady",
+            "gate.active", "gate.stockVisuals", "gate.useGasField", "gate.shaderReady",
             "gate.gasClean", "gate.mistClean", "gate.drawGas",
             "window.rectMinX", "window.rectMinZ", "window.winW", "window.winH",
             "window.width", "window.height", "window.quadMinX", "window.quadMinZ",
