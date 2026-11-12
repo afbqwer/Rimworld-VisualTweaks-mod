@@ -179,9 +179,10 @@ namespace VisualTweaks
         public static bool personalShieldsVanillaOnly = false;
 
         // Which surface the replacement dome draws. Crisp is the original analytic
-        // ring; Hex is the spherical panel shell; Vanilla is a soft, wide-gradient
-        // reproduction of the stock ForceField read (rebuilt in the shader, never
-        // extracted from the game). Belts have their own choice just below.
+        // ring; Hex is the spherical panel shell; Vanilla reproduces the stock
+        // texture read — the narrow ForceField ring on a dome, the broader
+        // gradient-filled ShieldBubble on a belt — rebuilt in the shader and never
+        // extracted from the game. Belts have their own choice just below.
         //
         // An int rather than three bools: the three styles are mutually exclusive,
         // and with checkboxes two of them could be on at once. The old

@@ -1,7 +1,9 @@
 #version 450
 
 // Projectile-interceptor shield, in three styles: crisp ring, hexagonal panel
-// shell, and a stock-like soft dome.
+// shell, and a stock-like soft dome. The stock-like style has two profiles,
+// because vanilla's projector dome and personal belt use different textures;
+// see the two stock-like surfaces section below.
 //
 // This replaces CompProjectileInterceptor.PostDraw, which paints Other/ForceField
 // through ShaderDatabase.MoteGlow: a soft radial gradient texture, so the rim is a
@@ -105,21 +107,23 @@
 //
 // ---- the stock-like style (third style) ----------------------------------
 //
-// Vanilla paints Other/ForceField with MoteGlow: one wide radial blur, no core line
-// and no lattice, and a rim soft enough that its glow continues past the radius the
-// game blocks at (which is why vanilla scales the quad by 1.1601562). This style
-// reproduces that read analytically rather than by sampling the game's texture:
-// nothing is extracted from RimWorld, the look is rebuilt from the same ingredients
-// the shader already has.
+// Vanilla paints a projector dome with Other/ForceField and a personal belt with
+// Other/ShieldBubble: two different textures. The dome is one wide radial blur
+// with a rim soft enough that its glow continues past the radius the game blocks
+// at (which is why vanilla scales that quad by 1.1601562). The belt is a broader
+// gradient that fills most of the disc before a bright edge appears, and then
+// stops just outside it. Both are reproduced analytically below—VanillaDomeColor
+// for the dome, PersonalVanillaDomeColor for the belt—never by sampling the
+// game's textures.
 //
-// It is not a variation of the crisp ridge. The crisp style asks "how thick is the
-// edge"; this one asks "how soft is the falloff". The profile is a narrow gaussian
-// highlight sitting on a broad interior gradient, and its tail is allowed to fade
-// past r == 1 — the only style that does, and the reason the renderer enlarges its
-// quad. The interior leaves the middle nearly clear, with a small base fill so a
-// selected shield is not a hollow ring. No screen-space derivative is used for its
-// width: like the stock texture, every dimension is a fraction of the radius, so
-// the same shield looks the same at any zoom.
+// Neither is a variation of the crisp ridge. The crisp style asks "how thick is
+// the edge"; these ask "how soft is the falloff". The dome keeps its middle
+// nearly clear, with a small base fill so a selected shield is not a hollow ring;
+// the belt keeps a visible haze so it reads as a filled sphere. Both express
+// every dimension as a fraction of the radius rather than a screen-space
+// derivative, so the same shield looks the same at any zoom. The stock surfaces
+// are the only ones allowed past r == 1, and the renderer enlarges the quad for
+// that.
 //
 // The break reuses the smooth style's noise-driven tear deliberately: there is no
 // per-panel identity here, because there are no panels.
@@ -145,7 +149,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
                    //                                          // hex hit: dir x/z, progress, reach share
     vec4 _Params4; // @default = vec4(0.0, 0.0, 0.0, 0.0)      // centre x/z in world cells, unused
     vec4 _Params5; // @default = vec4(2.8, 1.2, 5.0, 0.3)      // ridge half px, core sigma px, glow exponent, drift
-    vec4 _Params6; // @default = vec4(0.0, 0.22, 0.75, 9.0)    // dome style (0 crisp, 1 hex, 2 stock-like), hex face, hex line, SDF gradient floor (1.8*k)
+    vec4 _Params6; // @default = vec4(0.0, 0.22, 0.75, 9.0)    // style (0 crisp, 1 hex, 2 stock dome, 3 stock belt), hex face, hex line, SDF gradient floor (1.8*k)
     vec4 _Color;   // @color @default = vec4(1.0, 1.0, 1.0, 1.0)
 } u;
 
@@ -293,6 +297,55 @@ vec2 HexSurface(vec2 p, float aa, float t)
     return vec2(clamp(shade, 0.0, 1.5), line);
 }
 
+// ---- the two stock-like surfaces -----------------------------------------
+//
+// "Stock-like" is not one profile. Vanilla uses different textures for a
+// projector dome (Other/ForceField) and a personal belt (Other/ShieldBubble),
+// and the difference is visible: the dome is a narrow ring on a broad but faint
+// haze, while the belt is a much wider gradient that only becomes a bright edge
+// near the silhouette, so its interior reads as a filled sphere rather than a
+// clear disc. Both are rebuilt analytically here; nothing is sampled from the
+// game.
+//
+// _Params6.x selects the profile: 2 is the dome, 3 is the belt.
+
+// The personal belt's stock-like bubble.
+//
+// The reference is not a thin ring with haze behind it: its brightness climbs
+// steadily from the centre, and the last tenth of the radius adds a bright edge
+// on top of that climb. So the profile has two terms — a broad r^3.5 body that
+// fills the sphere, and a gaussian rim on top — unlike the dome's rim plus r^3.5
+// haze, where the body term is the faint one. The rim's inner shoulder is also
+// twice the dome's (sigma 0.090R vs 0.045R), and the whole profile stops just
+// past r == 1 instead of trailing through the quad margin.
+vec4 PersonalVanillaDomeColor(float r)
+{
+    float rr = clamp(r, 0.0, 1.2);
+    float d = rr - 1.0;
+
+    // Short outer tail on purpose: the reference has no wide bloom outside its
+    // bright edge. The inner sigma is where the body and rim blend together.
+    float sigma = d < 0.0 ? 0.090 : 0.030;
+    float rim = 0.55 * exp(-(d * d) / (2.0 * sigma * sigma));
+
+    // The filled-sphere term. r^3.5 keeps the middle translucent while rising
+    // steadily toward the edge; a pure gaussian rim left the 0.7..0.9R band too
+    // dark and then jumped, which read as a ring rather than a bubble.
+    float body = 0.35 * pow(clamp(r, 0.0, 1.0), 3.5);
+
+    // A low gray floor. A belt bubble is translucent but never clear.
+    float haze = 0.030 + 0.030 * pow(clamp(r, 0.0, 1.0), 1.5);
+
+    // The stock bubble stops just past its bright edge. Unlike the dome's
+    // ForceField there is no long outer bloom to fade through the quad margin:
+    // 1.045 is where the reference has fallen to a few percent of the peak.
+    float outer = 1.0 - smoothstep(1.0, 1.045, r);
+
+    // The stock texture is white and takes the def colour directly, exactly like
+    // the dome's: no white-hot core, and no separate tint for the edge.
+    return vec4(u._Color.rgb, (rim + body + haze) * outer);
+}
+
 // The stock-like dome, as (tint.rgb, unmultiplied alpha).
 //
 // A narrow feathered highlight sits on the rim, with a long gaussian tail on both
@@ -307,6 +360,13 @@ vec2 HexSurface(vec2 p, float aa, float t)
 // material. The only motion it gets is the alpha pulse supplied by the caller.
 vec4 VanillaDomeColor(float r)
 {
+    // A belt's stock bubble is a different texture and a different shape; see
+    // PersonalVanillaDomeColor above.
+    if (u._Params6.x > 2.5)
+    {
+        return PersonalVanillaDomeColor(r);
+    }
+
     // Slightly past the rim: the outer tail is meant to fade through r == 1.
     float rr = clamp(r, 0.0, 1.2);
 

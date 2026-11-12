@@ -184,8 +184,12 @@ namespace VisualTweaks
             // smooth dome keeps the shield readable and matches the shader bridge's
             // "lose the effect, never the feature" rule. The stock-like style has no
             // asset to fail, so it is passed through unconditionally.
+            //
+            // Stock-like is 2 for the projector dome and 3 for a belt. Vanilla uses
+            // separate textures for the two, and the shader has a separate profile
+            // for each; the target is the only thing that decides which one.
             float style = VisualTweaksSettings.IsVanillaShieldDome(target)
-                ? 2f
+                ? (target == ShieldHexTarget.Personal ? 3f : 2f)
                 : HexActive ? 1f : 0f;
 
             if (width == appliedRidgeWidth

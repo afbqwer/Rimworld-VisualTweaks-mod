@@ -131,7 +131,7 @@
   <VisualTweaks_ShieldDome_Hex>Hexagonal</VisualTweaks_ShieldDome_Hex>
   <VisualTweaks_ShieldDome_HexTip>Spherical hex/pentagon panels with flat per-cell shading, so it reads as half a sphere. The defaults are Hex wave for hits and Hex dissipate for breaks; both can be changed below.</VisualTweaks_ShieldDome_HexTip>
   <VisualTweaks_ShieldDome_StyleVanilla>Stock-like</VisualTweaks_ShieldDome_StyleVanilla>
-  <VisualTweaks_ShieldDome_StyleVanillaTip>Imitates the stock soft glow: a wide blurred rim, an almost clear interior, and glow spilling slightly past the intercept radius.</VisualTweaks_ShieldDome_StyleVanillaTip>
+  <VisualTweaks_ShieldDome_StyleVanillaTip>Imitates the matching stock texture: a narrow rim with a wide glow for domes, and a gradient-filled soft bubble for belts; glow spills slightly past the intercept radius.</VisualTweaks_ShieldDome_StyleVanillaTip>
   <VisualTweaks_ShieldDome_VanillaNote>The stock-like style uses fixed rim and haze proportions, so it has no outline sliders.</VisualTweaks_ShieldDome_VanillaNote>
   <VisualTweaks_ShieldDome_HexFace>Panel brightness</VisualTweaks_ShieldDome_HexFace>
   <VisualTweaks_ShieldDome_HexFaceTip>Fill brightness of each panel; too high drowns the cell lines.</VisualTweaks_ShieldDome_HexFaceTip>

@@ -131,7 +131,7 @@
   <VisualTweaks_ShieldDome_Hex>六边形</VisualTweaks_ShieldDome_Hex>
   <VisualTweaks_ShieldDome_HexTip>球面的六边/五边形面板，逐格明暗，看起来像半个球壳。受击默认「六边扩散」，破裂默认「六边消散」，可在下方更改。</VisualTweaks_ShieldDome_HexTip>
   <VisualTweaks_ShieldDome_StyleVanilla>类原版</VisualTweaks_ShieldDome_StyleVanilla>
-  <VisualTweaks_ShieldDome_StyleVanillaTip>模仿原版的柔和光晕：宽而模糊的边缘、近乎透明的内部，辉光略微溢出拦截半径。</VisualTweaks_ShieldDome_StyleVanillaTip>
+  <VisualTweaks_ShieldDome_StyleVanillaTip>模仿原版对应贴图：穹顶是窄边宽晕，腰带是内部渐变的柔和气泡；辉光略微溢出拦截半径。</VisualTweaks_ShieldDome_StyleVanillaTip>
   <VisualTweaks_ShieldDome_VanillaNote>类原版样式使用固定的边缘与雾气比例，没有轮廓滑条。</VisualTweaks_ShieldDome_VanillaNote>
   <VisualTweaks_ShieldDome_HexFace>格面亮度</VisualTweaks_ShieldDome_HexFace>
   <VisualTweaks_ShieldDome_HexFaceTip>每格面板的填充亮度；调太高会盖住格线。</VisualTweaks_ShieldDome_HexFaceTip>

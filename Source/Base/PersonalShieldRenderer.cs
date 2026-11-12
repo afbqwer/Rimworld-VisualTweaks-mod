@@ -14,7 +14,9 @@ namespace VisualTweaks
     ///
     /// What is ported from <see cref="ShieldDomeRenderer"/> is the same three surface
     /// types, the same ridge and face/line weights, a material built from the same
-    /// code, and the same dissolve / panel-loss break animations. The surface choice
+    /// code, and the same dissolve / panel-loss break animations. The stock-like type
+    /// resolves to the belt's own bubble profile rather than the dome's ForceField
+    /// ring, because vanilla uses different textures for the two. The surface choice
     /// itself is independent — a belt can draw crisp while the dome draws hex — and so
     /// are the lattice density, opacity and hit reaction.
     ///
