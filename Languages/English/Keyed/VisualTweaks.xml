@@ -143,7 +143,9 @@
   <VisualTweaks_ShieldDome_HexLine>Cell line brightness</VisualTweaks_ShieldDome_HexLine>
   <VisualTweaks_ShieldDome_HexLineTip>Strength of the bright line between panels. The default is deliberately high so the line clearly outshines the shading step between two adjacent faces, instead of reading as two parallel edges. Its width is measured in screen pixels, so it stays the same at every zoom and on every shield size.</VisualTweaks_ShieldDome_HexLineTip>
   <VisualTweaks_ShieldDome_HexDensity>Cell density</VisualTweaks_ShieldDome_HexDensity>
-  <VisualTweaks_ShieldDome_HexDensityTip>Panels over the whole sphere = 10k^2+2: 2 = 42 (looks like a football), 5 = 252, 8 = 642 (a fine energy mesh). Exactly twelve are always pentagons, but they are not marked in any way. Changing it re-bakes one shared texture (a few hundred milliseconds, once); the per-frame cost is unchanged. Large-radius shields suit a higher value.</VisualTweaks_ShieldDome_HexDensityTip>
+  <VisualTweaks_ShieldDome_HexDensityTip>Panels over the whole sphere = 10k^2+2: 2 = 42 (looks like a football), 5 = 252, 8 = 642, 12 = 1442 (a fine energy mesh). Exactly twelve are always pentagons, but they are not marked in any way. This is a draft value only — dragging it does not rebuild the texture; the button below bakes and applies it.</VisualTweaks_ShieldDome_HexDensityTip>
+  <VisualTweaks_ShieldDome_HexBake>Apply density and rebake</VisualTweaks_ShieldDome_HexBake>
+  <VisualTweaks_ShieldDome_HexPending>Showing k={0}; the slider is now at k={1}. Press the button above to apply it (rebuilds the 2048^2 texture — a few hundred ms of hitching, once).</VisualTweaks_ShieldDome_HexPending>
   <VisualTweaks_ShieldDome_Dissolve>Break dissolve</VisualTweaks_ShieldDome_Dissolve>
   <VisualTweaks_ShieldDome_DissolveTip>When a shield is shot down, EMP-disabled, lost with its mech lord, or switched off, the dome cracks from the point of failure and erodes away instead of vanishing in a single frame. Vanilla's break flash and sound still play underneath.</VisualTweaks_ShieldDome_DissolveTip>
   <VisualTweaks_ShieldDome_DissolveTime>Break duration</VisualTweaks_ShieldDome_DissolveTime>

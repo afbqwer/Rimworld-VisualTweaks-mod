@@ -181,12 +181,19 @@ namespace VisualTweaks
         public static float shieldHexLineStrength = 0.75f;
 
         // Icosahedron subdivision k: 10k^2+2 cells over the whole sphere (12 of
-        // them pentagons, always). k=2 reads like a football, k=8 like an energy
-        // mesh. Quantised to an integer by the renderer; changing it re-bakes one
-        // shared texture once, it costs nothing per frame.
+        // them pentagons, always). k=2 reads like a football, k=12 like a fine
+        // energy mesh (1442 cells).
+        //
+        // The slider is a DRAFT value, and shieldHexDensityApplied is the one that
+        // is actually baked. They are separate because a rebake is not free: at
+        // 2048^2 the bake is a few hundred ms of main-thread work, and a slider that
+        // rebuilt on every integer step would stall the game repeatedly while dragged.
+        // The settings page therefore exposes a button that copies draft -> applied
+        // and rebakes once, and the renderer reads only `applied`.
         public const float MinShieldHexDensity = 2f;
-        public const float MaxShieldHexDensity = 8f;
+        public const float MaxShieldHexDensity = 12f;
         public static float shieldHexDensity = 5f;
+        public static int shieldHexDensityApplied = 5;
 
         // The four dome/flare dials that are worth a slider. Everything else about the
         // shield is derived rather than chosen: line weights scale with zoom through a
@@ -480,6 +487,10 @@ namespace VisualTweaks
                 "shieldHexLineStrength",
                 0.75f);
             Scribe_Values.Look(ref shieldHexDensity, "shieldHexDensity", 5f);
+            Scribe_Values.Look(
+                ref shieldHexDensityApplied,
+                "shieldHexDensityApplied",
+                5);
             Scribe_Values.Look(ref shieldRidgeWidth, "shieldRidgeWidth", 3.6f);
             Scribe_Values.Look(ref shieldRidgeBrightness, "shieldRidgeBrightness", 0.52f);
             Scribe_Values.Look(ref shieldFlareAlpha, "shieldFlareAlpha", 0.30f);
@@ -610,6 +621,10 @@ namespace VisualTweaks
                 shieldHexDensity,
                 MinShieldHexDensity,
                 MaxShieldHexDensity);
+            shieldHexDensityApplied = Mathf.Clamp(
+                shieldHexDensityApplied,
+                (int)MinShieldHexDensity,
+                (int)MaxShieldHexDensity);
             shieldDissolveTicks = Mathf.Clamp(
                 shieldDissolveTicks,
                 MinShieldDissolveTicks,
@@ -754,6 +769,7 @@ namespace VisualTweaks
             shieldHexFaceStrength = 0.22f;
             shieldHexLineStrength = 0.75f;
             shieldHexDensity = 5f;
+            shieldHexDensityApplied = 5;
             shieldRidgeWidth = 3.6f;
             shieldRidgeBrightness = 0.52f;
             shieldFlareAlpha = 0.30f;

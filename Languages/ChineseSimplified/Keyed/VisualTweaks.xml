@@ -143,7 +143,9 @@
   <VisualTweaks_ShieldDome_HexLine>格线亮度</VisualTweaks_ShieldDome_HexLine>
   <VisualTweaks_ShieldDome_HexLineTip>面板之间那条亮线的强度，默认偏亮是为了让线明确压过两侧格面的明暗差，避免看成两条并排的边。线宽按屏幕像素计算，任何缩放和任何护盾尺寸下都一样粗。</VisualTweaks_ShieldDome_HexLineTip>
   <VisualTweaks_ShieldDome_HexDensity>格子密度</VisualTweaks_ShieldDome_HexDensity>
-  <VisualTweaks_ShieldDome_HexDensityTip>整球面板数 = 10k²+2：2 = 42 格（像足球），5 = 252 格，8 = 642 格（细密能量网）。其中始终恰好 12 个是五边形，但不作任何特殊标记。改动时重新烘焙一张共用贴图（一次性几百毫秒），不影响每帧开销。大半径护盾适合调高。</VisualTweaks_ShieldDome_HexDensityTip>
+  <VisualTweaks_ShieldDome_HexDensityTip>整球面板数 = 10k²+2：2 = 42 格（像足球），5 = 252 格，8 = 642 格，12 = 1442 格（细密能量网）。其中始终恰好 12 个是五边形，但不作任何特殊标记。这里只是草稿值，拖动不会重建贴图——按下面的按钮才会烘焙并生效。</VisualTweaks_ShieldDome_HexDensityTip>
+  <VisualTweaks_ShieldDome_HexBake>应用密度并重新烘焙</VisualTweaks_ShieldDome_HexBake>
+  <VisualTweaks_ShieldDome_HexPending>当前显示的是 k={0}；滑条已改为 k={1}，按上面的按钮应用（重建 2048² 贴图，会有几百毫秒的卡顿，只发生一次）。</VisualTweaks_ShieldDome_HexPending>
   <VisualTweaks_ShieldDome_Dissolve>护盾破裂溶解</VisualTweaks_ShieldDome_Dissolve>
   <VisualTweaks_ShieldDome_DissolveTip>护盾被打爆、被 EMP 击毁、随机械族首领失效或手动关闭时，穹顶会从受击点开始裂开、逐块消散，而不是一帧内凭空消失。原版的破裂闪光与音效仍然保留。</VisualTweaks_ShieldDome_DissolveTip>
   <VisualTweaks_ShieldDome_DissolveTime>破裂动画时长</VisualTweaks_ShieldDome_DissolveTime>

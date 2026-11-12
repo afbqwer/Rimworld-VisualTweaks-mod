@@ -428,10 +428,15 @@ namespace VisualTweaks
             float face = VisualTweaksSettings.shieldHexFaceStrength;
             float line = VisualTweaksSettings.shieldHexLineStrength;
 
-            // The spherical lattice is baked once, lazily, and shared by every
-            // shield. Bind is cheap to call every frame: it only re-bakes when the
-            // cell density changes and only calls SetTexture for a new material.
-            int density = Mathf.RoundToInt(VisualTweaksSettings.shieldHexDensity);
+            // The spherical lattice is baked once and shared by every shield. Bind is
+            // cheap to call every frame: it only re-bakes when the baked density
+            // changes and only calls SetTexture for a new material.
+            //
+            // The APPLIED density, not the slider: the slider is a draft that only
+            // reaches the texture when the player presses the rebake button, and the
+            // shader's gradient constant has to describe the texture that actually
+            // exists, not the one being previewed in a UI.
+            int density = VisualTweaksSettings.shieldHexDensityApplied;
             bool wantHex = VisualTweaksSettings.hexShieldDome;
             if (wantHex)
             {

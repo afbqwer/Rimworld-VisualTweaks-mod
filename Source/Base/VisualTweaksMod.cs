@@ -641,6 +641,30 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldDome_HexDensityTip".Translate(),
                 step: 1f);
 
+            // The slider above edits a DRAFT. A rebake at 2048^2 is a few hundred ms of
+            // main-thread work, and rebuilding on every integer step would stall the game over
+            // and over while the handle is dragged. So the only thing that commits the
+            // draft is this button, and the note under it says so whenever the two
+            // disagree.
+            int draftDensity = Mathf.RoundToInt(VisualTweaksSettings.shieldHexDensity);
+            int bakedDensity = VisualTweaksSettings.shieldHexDensityApplied;
+            if (SettingsLayout.ButtonRow(
+                    listing,
+                    new[] { "VisualTweaks_ShieldDome_HexBake".Translate().ToString() }) == 0)
+            {
+                ShieldHexMap.ApplyDensity(draftDensity);
+                bakedDensity = VisualTweaksSettings.shieldHexDensityApplied;
+            }
+
+            if (draftDensity != bakedDensity)
+            {
+                SettingsLayout.Note(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexPending".Translate(
+                        bakedDensity,
+                        draftDensity));
+            }
+
             // These read every frame, so a slider drag is visible while the game is
             // paused on a selected shield — the same reason the toggle above is live.
             VisualTweaksSettings.shieldRidgeWidth = SettingsLayout.Slider(

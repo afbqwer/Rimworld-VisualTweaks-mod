@@ -22,10 +22,10 @@ namespace VisualTweaks
     ///
     /// The tiling used here is the Voronoi diagram of a subdivided icosahedron's
     /// vertices (a Goldberg polyhedron's dual). Subdividing each of the 20 faces k
-    /// times gives V = 10k^2+2 sites; k=2 gives 42 cells, k=8 gives 642. Low k reads
-    /// like a football, high k reads like an energy mesh — hence the wider range.
+    /// times gives V = 10k^2+2 sites; k=2 gives 42 cells, k=12 gives 1442. Low k reads
+    /// like a football, high k reads like an energy mesh — hence the wide range.
     ///
-    /// Doing that per fragment means 42..642 dot products per pixel, over a quad that
+    /// Doing that per fragment means 42..1442 dot products per pixel, over a quad that
     /// can cover most of the screen on a 25-cell gravship dome. Baking it once costs
     /// one texture sample per pixel instead — cheaper than the four-octave Fbm the
     /// dissolve already runs — and cell count becomes a design choice, not a cost.
@@ -49,26 +49,33 @@ namespace VisualTweaks
     ///
     /// RGBAHalf rather than RGBA32 on purpose. An 8-bit edge-distance channel has
     /// only ~2 usable quantisation levels in the one-pixel band where the cell line
-    /// lives, which makes fwidth() step and the outline shimmer. This mod already
-    /// learned that lesson once with the dissolve's lattice hash: a float64 preview
-    /// hides what float32 on the GPU does. Half floats give ~0.0005 of edge
+    /// lives, which makes the derivative step and the outline shimmer. This mod
+    /// already learned that lesson once with the dissolve's lattice hash: a float64
+    /// preview hides what float32 on the GPU does. Half floats give ~0.0005 of edge
     /// precision, and unlike full RGBAFloat, linear filtering is universally
     /// supported on desktop Vulkan — which matters because the lines are
     /// reconstructed by bilinear sampling.
     ///
     /// ---- cost -------------------------------------------------------------
     ///
-    /// Built lazily, only when the hexagonal style is actually enabled. 1024^2
-    /// texels x ~16 candidate dots (see the bin acceleration below) is a couple of
-    /// hundred milliseconds, once per density choice, and 8 MiB of VRAM for one
+    /// Built lazily, only when the hexagonal style is actually enabled AND the player
+    /// presses the rebake button — the density slider is a draft value precisely so
+    /// that dragging it does not stall the game on every step. 2048^2 texels at
+    /// 25 dots each (bin guess + hill climb + wall set) measured 0.2 s in a Release
+    /// .NET build of the same loop, so the Mono JIT plus the SetPixels upload puts
+    /// the in-game cost at a fraction of a second, once. VRAM is 32 MiB for one
     /// texture shared by every shield. No per-frame CPU work, no extra draw calls,
-    /// no extra geometry. The resolution is what lets k=8 still draw a clean line
-    /// after the texture is magnified onto a large dome.
+    /// no extra geometry.
+    ///
+    /// 2048 rather than 1024 because the ceiling moved: at k=12 a cell spans ~0.10 of
+    /// the radius, so a 25-cell gravship dome magnified to 1500 px would put ~60 px
+    /// of screen on 100 texels. At 1024 that left ~50 texels per cell and the line
+    /// reconstruction started to stair-step on the largest shields.
     /// </summary>
     internal static class ShieldHexMap
     {
         internal const int MinSubdivisions = 2;
-        internal const int MaxSubdivisions = 8;
+        internal const int MaxSubdivisions = 12;
 
         /// <summary>
         /// eRef = ERefPerSubdivision / k is the angular distance that maps to
@@ -78,7 +85,15 @@ namespace VisualTweaks
         /// </summary>
         internal const float ERefPerSubdivision = 0.62f;
 
-        private const int Size = 1024;
+        private const int Size = 2048;
+
+        /// <summary>
+        /// Rows handed to one SetPixels call. A full Color[Size * Size] staging array
+        /// would be 64 MiB at this resolution; filling the texture in strips keeps the
+        /// transient allocation near 2 MiB and stays cache-friendly.
+        /// </summary>
+        private const int RowsPerBlock = 128;
+
         private const int BinCount = 24;
         private const int Candidates = 16;
 
@@ -119,7 +134,7 @@ namespace VisualTweaks
         /// <summary>
         /// Ensures the material carries a hex map for this density. Cheap after the
         /// first call: the texture is cached and only rebuilt when the cell count
-        /// actually changes (the density slider is quantised to integer k).
+        /// actually changes.
         /// </summary>
         internal static void Bind(Material material, int subdivisions)
         {
@@ -136,11 +151,11 @@ namespace VisualTweaks
             if (texture == null || builtFor != k)
             {
                 Build(k);
-                boundTo = null;
             }
 
             // SetTexture is not free, so only touch the material when the texture
-            // itself changed or when this material has not been bound yet.
+            // itself changed or when this material has not been bound yet. Build
+            // clears boundTo, so a fresh texture always republishes.
             if (texture != null && (boundTo != material || boundFor != k))
             {
                 material.SetTexture(MapId, texture);
@@ -149,147 +164,183 @@ namespace VisualTweaks
             }
         }
 
+        /// <summary>
+        /// Rebakes for a new cell density immediately, so the stall lands on the
+        /// button press that asked for it instead of on the next shield that happens
+        /// to come into view. If the hex style is off nothing is baked: the texture is
+        /// only ever built for a style that will draw it, and ApplyDensity has already
+        /// recorded the value for when it is switched on.
+        /// </summary>
+        internal static void ApplyDensity(int subdivisions)
+        {
+            int k = Mathf.Clamp(subdivisions, MinSubdivisions, MaxSubdivisions);
+            VisualTweaksSettings.shieldHexDensityApplied = k;
+
+            if (!VisualTweaksSettings.hexShieldDome || failedFor == k)
+            {
+                return;
+            }
+
+            if (texture != null && builtFor == k)
+            {
+                return;
+            }
+
+            Build(k);
+        }
+
         private static void Build(int k)
         {
+            Texture2D? created = null;
+
             try
             {
                 List<Vector3> sites = BuildSites(k);
                 int n = sites.Count;
 
-                // Chord distance between every pair of sites. The Voronoi boundary
-                // between sites i and j is the plane n.(si-sj) = 0; dividing the dot
-                // difference by |si-sj| turns it into a distance in the same units as
-                // the disc, so every cell line keeps the same thickness.
+                // The eight closest sites to each. Their Voronoi walls are the only
+                // ones a cell can have, so this list is both the hill-climb graph and
+                // the wall set. Storing the pair distances alongside it keeps the
+                // inner loop contiguous instead of chasing an n x n matrix that would
+                // be 8 MB at k=12 for eight values actually used.
+                int[][] neighbours = BuildNeighbours(sites);
                 float[][] separation = new float[n][];
                 for (int i = 0; i < n; i++)
                 {
-                    separation[i] = new float[n];
-                    for (int j = 0; j < n; j++)
+                    int[] near = neighbours[i];
+                    float[] seps = new float[near.Length];
+                    for (int q = 0; q < near.Length; q++)
                     {
-                        separation[i][j] = Mathf.Max(
-                            (sites[i] - sites[j]).magnitude,
-                            1e-4f);
+                        seps[q] = Mathf.Max((sites[i] - sites[near[q]]).magnitude, 1e-4f);
                     }
+
+                    separation[i] = seps;
                 }
 
                 int[][] bins = BuildBins(sites);
-                int[][] neighbours = BuildNeighbours(sites);
 
                 // At a cell centre the SDF is roughly sin(theta/2) for the site
-                // spacing theta, and theta scales as 1/k. The exact scale is not
-                // important to the shader (line width is measured with fwidth), but
-                // keeping most cells near 1 avoids clipping them flat.
+                // spacing theta, and theta scales as 1/k. Keeping most cells near 1
+                // avoids clipping them flat; the shader reads this same number back
+                // (as 1/eRef) to rebuild the exact field gradient.
                 float eRef = ERefPerSubdivision / k;
 
-                Color[] pixels = new Color[Size * Size];
-
-                for (int y = 0; y < Size; y++)
-                {
-                    float py = -1f + 2f * (y + 0.5f) / Size;
-                    int binRow = Mathf.Clamp(
-                        (int)((py * 0.5f + 0.5f) * BinCount),
-                        0,
-                        BinCount - 1);
-
-                    for (int x = 0; x < Size; x++)
-                    {
-                        float px = -1f + 2f * (x + 0.5f) / Size;
-                        int index = y * Size + x;
-
-                        float r2 = px * px + py * py;
-                        if (r2 >= 1f)
-                        {
-                            // Outside the disc the shader's silhouette clip is already
-                            // zero, so any value is fine. Face normal straight up.
-                            pixels[index] = new Color(0.5f, 0.5f, 1f, 0f);
-                            continue;
-                        }
-
-                        Vector3 dir = new Vector3(px, py, Mathf.Sqrt(1f - r2));
-                        int binCol = Mathf.Clamp(
-                            (int)((px * 0.5f + 0.5f) * BinCount),
-                            0,
-                            BinCount - 1);
-                        int[] candidates = bins[binRow * BinCount + binCol];
-
-                        // The coarse bin supplies a STARTING GUESS, not the answer.
-                        // Near the silhouette, n.z = sqrt(1-|p|^2) changes so fast
-                        // across one bin that its pre-ranked sites can miss the true
-                        // winner (measured: ~1% of pixels wrong at k=8). Walk up the
-                        // precomputed neighbour graph until no neighbour is closer;
-                        // on a triangular lattice this converges in a step or two.
-                        float d1 = -2f;
-                        int i1 = candidates[0];
-                        for (int c = 0; c < candidates.Length; c++)
-                        {
-                            float d = Vector3.Dot(dir, sites[candidates[c]]);
-                            if (d > d1)
-                            {
-                                d1 = d;
-                                i1 = candidates[c];
-                            }
-                        }
-
-                        for (int step = 0; step < 8; step++)
-                        {
-                            int next = -1;
-                            float nd = d1;
-                            int[] near = neighbours[i1];
-                            for (int q = 0; q < near.Length; q++)
-                            {
-                                float d = Vector3.Dot(dir, sites[near[q]]);
-                                if (d > nd)
-                                {
-                                    nd = d;
-                                    next = near[q];
-                                }
-                            }
-
-                            if (next < 0)
-                            {
-                                break;
-                            }
-
-                            i1 = next;
-                            d1 = nd;
-                        }
-
-                        // True Voronoi SDF: the walls of a cell are formed only by
-                        // its Delaunay neighbours, all of which are in this list.
-                        // Taking the minimum of continuous functions keeps the field
-                        // smooth where the nearest competitor changes.
-                        float best = 1e9f;
-                        int[] walls = neighbours[i1];
-                        for (int q = 0; q < walls.Length; q++)
-                        {
-                            int j = walls[q];
-                            float wall = (d1 - Vector3.Dot(dir, sites[j]))
-                                / separation[i1][j];
-                            if (wall < best)
-                            {
-                                best = wall;
-                            }
-                        }
-
-                        float e = Mathf.Clamp01(best / eRef);
-                        Vector3 face = sites[i1];
-
-                        pixels[index] = new Color(
-                            face.x * 0.5f + 0.5f,
-                            face.y * 0.5f + 0.5f,
-                            face.z * 0.5f + 0.5f,
-                            e);
-                    }
-                }
-
-                Texture2D created = new Texture2D(Size, Size, TextureFormat.RGBAHalf, false)
+                created = new Texture2D(Size, Size, TextureFormat.RGBAHalf, false)
                 {
                     name = "VisualTweaksShieldHexMap",
                     filterMode = FilterMode.Bilinear,
                     wrapMode = TextureWrapMode.Clamp,
                     hideFlags = HideFlags.HideAndDontSave,
                 };
-                created.SetPixels(pixels);
+
+                Color[] strip = new Color[Size * RowsPerBlock];
+
+                for (int y0 = 0; y0 < Size; y0 += RowsPerBlock)
+                {
+                    int rows = Mathf.Min(RowsPerBlock, Size - y0);
+                    int w = 0;
+
+                    for (int y = y0; y < y0 + rows; y++)
+                    {
+                        float py = -1f + 2f * (y + 0.5f) / Size;
+                        int binRow = Mathf.Clamp(
+                            (int)((py * 0.5f + 0.5f) * BinCount),
+                            0,
+                            BinCount - 1);
+
+                        for (int x = 0; x < Size; x++)
+                        {
+                            float px = -1f + 2f * (x + 0.5f) / Size;
+
+                            float r2 = px * px + py * py;
+                            if (r2 >= 1f)
+                            {
+                                // Outside the disc the shader's silhouette clip is
+                                // already zero, so any value is fine. Face normal up.
+                                strip[w++] = new Color(0.5f, 0.5f, 1f, 0f);
+                                continue;
+                            }
+
+                            Vector3 dir = new Vector3(px, py, Mathf.Sqrt(1f - r2));
+                            int binCol = Mathf.Clamp(
+                                (int)((px * 0.5f + 0.5f) * BinCount),
+                                0,
+                                BinCount - 1);
+                            int[] candidates = bins[binRow * BinCount + binCol];
+
+                            // The coarse bin supplies a STARTING GUESS, not the answer.
+                            // Near the silhouette, n.z = sqrt(1-|p|^2) changes so fast
+                            // across one bin that its pre-ranked sites can miss the
+                            // true winner (measured: ~1% of pixels wrong at k=8). Walk
+                            // up the neighbour graph until no neighbour is closer; on a
+                            // triangular lattice this converges in a step or two.
+                            float d1 = -2f;
+                            int i1 = candidates[0];
+                            for (int c = 0; c < candidates.Length; c++)
+                            {
+                                float d = Vector3.Dot(dir, sites[candidates[c]]);
+                                if (d > d1)
+                                {
+                                    d1 = d;
+                                    i1 = candidates[c];
+                                }
+                            }
+
+                            for (int step = 0; step < 8; step++)
+                            {
+                                int next = -1;
+                                float nd = d1;
+                                int[] near = neighbours[i1];
+                                for (int q = 0; q < near.Length; q++)
+                                {
+                                    float d = Vector3.Dot(dir, sites[near[q]]);
+                                    if (d > nd)
+                                    {
+                                        nd = d;
+                                        next = near[q];
+                                    }
+                                }
+
+                                if (next < 0)
+                                {
+                                    break;
+                                }
+
+                                i1 = next;
+                                d1 = nd;
+                            }
+
+                            // True Voronoi SDF: the walls of a cell are formed only by
+                            // its Delaunay neighbours, all of which are in this list.
+                            // Taking the minimum of continuous functions keeps the
+                            // field smooth where the nearest competitor changes.
+                            float best = 1e9f;
+                            int[] walls = neighbours[i1];
+                            float[] seps = separation[i1];
+                            for (int q = 0; q < walls.Length; q++)
+                            {
+                                float wall = (d1 - Vector3.Dot(dir, sites[walls[q]]))
+                                    / seps[q];
+                                if (wall < best)
+                                {
+                                    best = wall;
+                                }
+                            }
+
+                            float e = Mathf.Clamp01(best / eRef);
+                            Vector3 face = sites[i1];
+
+                            strip[w++] = new Color(
+                                face.x * 0.5f + 0.5f,
+                                face.y * 0.5f + 0.5f,
+                                face.z * 0.5f + 0.5f,
+                                e);
+                        }
+                    }
+
+                    created.SetPixels(0, y0, Size, rows, strip, 0);
+                }
+
                 created.Apply(false, true);
 
                 if (texture != null)
@@ -301,9 +352,21 @@ namespace VisualTweaks
                 builtFor = k;
                 failedFor = -1;
                 available = true;
+
+                // The previous texture object was destroyed above. Any material still
+                // holding it has to be re-bound, and Build is exactly the event that
+                // makes that true — including when a pre-bake means Bind itself will
+                // skip its own "density changed" branch.
+                boundTo = null;
+                boundFor = -1;
             }
             catch (Exception ex)
             {
+                if (created != null)
+                {
+                    UnityEngine.Object.Destroy(created);
+                }
+
                 available = false;
                 texture = null;
                 builtFor = -1;
@@ -387,6 +450,9 @@ namespace VisualTweaks
                         Vector3 p = ((A * m) + (B * i) + (C * j)) / k;
                         p = p.normalized;
 
+                        // "F5" rounding keeps shared edge and corner points from
+                        // being added twice by the twenty faces. At k=12 the sites are
+                        // far apart relative to 1e-5, so nothing distinct is merged.
                         string key = p.x.ToString("F5") + "," + p.y.ToString("F5")
                             + "," + p.z.ToString("F5");
                         if (lookup.Add(key))
