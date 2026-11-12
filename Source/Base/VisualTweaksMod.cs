@@ -813,7 +813,7 @@ namespace VisualTweaks
                         listing,
                         new[] { "VisualTweaks_ShieldDome_HexBake".Translate().ToString() }) == 0)
                 {
-                    ShieldHexMap.ApplyDensity(draftDensity);
+                    ShieldHexMap.Apply(ShieldHexTarget.Large, draftDensity);
                     bakedDensity = VisualTweaksSettings.shieldHexDensityApplied;
                 }
 
@@ -824,6 +824,53 @@ namespace VisualTweaks
                         "VisualTweaks_ShieldDome_HexPending".Translate(
                             bakedDensity,
                             draftDensity));
+                }
+
+                // The belt is a different optical problem: a quarter of the
+                // diameter and a twentieth of the screen area. Its lattice is
+                // therefore baked separately, with its own cell count and a fixed
+                // 512² texture; the dome's 5 and 2048 are not defaults it inherits.
+                listing.Gap(6f);
+                SettingsLayout.SubHeader(
+                    listing,
+                    "VisualTweaks_ShieldDome_PersonalHexGroup".Translate());
+
+                VisualTweaksSettings.personalShieldHexDensity = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_PersonalHexDensity".Translate(),
+                    VisualTweaksSettings.personalShieldHexDensity,
+                    VisualTweaksSettings.MinShieldHexDensity,
+                    VisualTweaksSettings.MaxShieldHexDensity,
+                    "VisualTweaks_ShieldDome_PersonalHexDensityTip".Translate(),
+                    step: 1f);
+
+                int personalDraftDensity = Mathf.RoundToInt(
+                    VisualTweaksSettings.personalShieldHexDensity);
+                int personalBakedDensity =
+                    VisualTweaksSettings.personalShieldHexDensityApplied;
+
+                if (SettingsLayout.ButtonRow(
+                        listing,
+                        new[]
+                        {
+                            "VisualTweaks_ShieldDome_PersonalHexBake".Translate()
+                                .ToString()
+                        }) == 0)
+                {
+                    ShieldHexMap.Apply(
+                        ShieldHexTarget.Personal,
+                        personalDraftDensity);
+                    personalBakedDensity =
+                        VisualTweaksSettings.personalShieldHexDensityApplied;
+                }
+
+                if (personalDraftDensity != personalBakedDensity)
+                {
+                    SettingsLayout.Note(
+                        listing,
+                        "VisualTweaks_ShieldDome_PersonalHexPending".Translate(
+                            personalBakedDensity,
+                            personalDraftDensity));
                 }
             }
 
@@ -1299,7 +1346,12 @@ namespace VisualTweaks
         {
             if (VisualTweaksSettings.HexShieldDome)
             {
-                ShieldHexMap.ApplyDensity(VisualTweaksSettings.shieldHexDensityApplied);
+                ShieldHexMap.Apply(
+                    ShieldHexTarget.Large,
+                    VisualTweaksSettings.shieldHexDensityApplied);
+                ShieldHexMap.Apply(
+                    ShieldHexTarget.Personal,
+                    VisualTweaksSettings.personalShieldHexDensityApplied);
             }
         }
     }

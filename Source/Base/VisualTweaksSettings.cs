@@ -260,6 +260,19 @@ namespace VisualTweaks
         public static float shieldHexDensity = 5f;
         public static int shieldHexDensityApplied = 5;
 
+        // Personal belts get their own lattice bake. The cell count is a property of
+        // the dome, not of the world: a k that reads as a fine energy mesh on a
+        // 25-cell gravship shield puts the same number of cells on a 1.2-cell belt,
+        // where each one is only a few screen pixels and the line term fades into
+        // noise. Lower default, same range, and the player can tune it independently.
+        //
+        // The texel resolution is fixed per target in ShieldHexMap (512² for belts,
+        // 2048² for domes). A belt covers a few thousand screen pixels, so 512² is
+        // already oversampled and costs 2 MiB instead of 32; exposing it as a slider
+        // bought nothing but another thing to keep in sync.
+        public static float personalShieldHexDensity = 4f;
+        public static int personalShieldHexDensityApplied = 4;
+
         // The panel style answers a hit differently from the smooth one - a flash that
         // spreads across the lattice instead of a wedge painted on the surface - so it
         // gets its own strength and reach. Sharing the flare's slider was wrong twice
@@ -645,6 +658,14 @@ namespace VisualTweaks
                 ref shieldHexDensityApplied,
                 "shieldHexDensityApplied",
                 5);
+            Scribe_Values.Look(
+                ref personalShieldHexDensity,
+                "personalShieldHexDensity",
+                4f);
+            Scribe_Values.Look(
+                ref personalShieldHexDensityApplied,
+                "personalShieldHexDensityApplied",
+                4);
             Scribe_Values.Look(ref shieldRidgeWidth, "shieldRidgeWidth", 3.6f);
             Scribe_Values.Look(ref shieldRidgeBrightness, "shieldRidgeBrightness", 0.52f);
             Scribe_Values.Look(ref shieldFlareAlpha, "shieldFlareAlpha", 0.30f);
@@ -773,6 +794,14 @@ namespace VisualTweaks
                 MaxShieldHexDensity);
             shieldHexDensityApplied = Mathf.Clamp(
                 shieldHexDensityApplied,
+                (int)MinShieldHexDensity,
+                (int)MaxShieldHexDensity);
+            personalShieldHexDensity = Mathf.Clamp(
+                personalShieldHexDensity,
+                MinShieldHexDensity,
+                MaxShieldHexDensity);
+            personalShieldHexDensityApplied = Mathf.Clamp(
+                personalShieldHexDensityApplied,
                 (int)MinShieldHexDensity,
                 (int)MaxShieldHexDensity);
             shieldHexImpactStrength = Mathf.Clamp(
@@ -985,6 +1014,8 @@ namespace VisualTweaks
             shieldHexLineStrength = 0.75f;
             shieldHexDensity = 5f;
             shieldHexDensityApplied = 5;
+            personalShieldHexDensity = 4f;
+            personalShieldHexDensityApplied = 4;
             shieldHexImpactStrength = 0.28f;
             shieldHexImpactShare = 0.32f;
             shieldRidgeWidth = 3.6f;

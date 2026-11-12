@@ -6,8 +6,22 @@ using Verse;
 namespace VisualTweaks
 {
     /// <summary>
-    /// Bakes a spherical hex/pentagon lattice into one small texture, shared by every
-    /// hexagonal shield on the map.
+    /// Which shield family a baked lattice serves. The two have separate textures
+    /// because their sizes differ by more than an order of magnitude: a projector
+    /// dome can be 25 cells across, a belt is 1.2–1.55. The cell count and the
+    /// texel budget that suit one are wrong for the other — a dense lattice on a
+    /// 60-pixel belt collapses into moiré, and a 2048² texture for it is 32 MiB
+    /// spent on a disc that covers a few thousand pixels.
+    /// </summary>
+    internal enum ShieldHexTarget
+    {
+        Large,
+        Personal
+    }
+
+    /// <summary>
+    /// Bakes a spherical hex/pentagon lattice into one small texture per target,
+    /// shared by every hexagonal shield of that target on the map.
     ///
     /// ---- why a texture at all --------------------------------------------
     ///
@@ -77,9 +91,9 @@ namespace VisualTweaks
     /// 2048^2 texels at 25 dots each (bin guess + hill climb + wall set) measured
     /// 0.2 s in a Release .NET build of the same loop, so the Mono JIT plus the
     /// SetPixels upload puts the in-game cost at a fraction of a second, once. VRAM
-    /// is 32 MiB for one texture shared by every shield. No per-frame CPU work, no
-    /// extra draw calls, no extra geometry, and nothing is baked at all while the
-    /// style is off.
+    /// is 32 MiB for the dome texture plus the belt's own (2 MiB at 512²), each
+    /// shared by every shield of its target. No per-frame CPU work, no extra draw
+    /// calls, no extra geometry, and nothing is baked at all while the style is off.
     ///
     /// 2048 rather than 1024 because the ceiling moved: at k=12 a cell spans ~0.10 of
     /// the radius, so a 25-cell gravship dome magnified to 1500 px would put ~60 px
@@ -99,12 +113,20 @@ namespace VisualTweaks
         /// </summary>
         internal const float ERefPerSubdivision = 0.62f;
 
-        private const int Size = 2048;
+        /// <summary>
+        /// Fixed texel edges per target. The dome needs 2048 because a 25-cell shield
+        /// magnified across the screen puts ~60 px of screen on 100 texels; the belt
+        /// covers a few thousand pixels in total, so 512 is already oversampled. A
+        /// belt resolution slider was tried and removed: every value above 512 looked
+        /// identical while costing up to 32 MiB.
+        /// </summary>
+        internal const int LargeSize = 2048;
+        internal const int PersonalSize = 512;
 
         /// <summary>
-        /// Rows handed to one SetPixels call. A full Color[Size * Size] staging array
-        /// would be 64 MiB at this resolution; filling the texture in strips keeps the
-        /// transient allocation near 2 MiB and stays cache-friendly.
+        /// Rows handed to one SetPixels call. A full Color[size * size] staging array
+        /// would be 64 MiB at the largest resolution; filling the texture in strips
+        /// keeps the transient allocation near 1–2 MiB and stays cache-friendly.
         /// </summary>
         private const int RowsPerBlock = 128;
 
@@ -113,16 +135,53 @@ namespace VisualTweaks
 
         private static readonly int MapId = Shader.PropertyToID("_HexMap");
 
-        private static Texture2D? texture;
-        private static int builtFor = -1;
-        private static bool available;
-        private static Material? boundTo;
-        private static int boundFor = -1;
-        private static int failedFor = -1;
+        /// <summary>
+        /// Everything one baked texture owns. Kept per target rather than as a set of
+        /// parallel statics so a belt bake can never clear or rebind the dome's map.
+        /// </summary>
+        private sealed class SurfaceState
+        {
+            internal readonly ShieldHexTarget Target;
+            internal Texture2D? Texture;
+            internal int BuiltFor = -1;
+            internal bool Available;
+            internal Material? BoundTo;
+            internal int BoundFor = -1;
+            internal int FailedFor = -1;
+
+            internal SurfaceState(ShieldHexTarget target)
+            {
+                Target = target;
+            }
+        }
+
+        private static readonly SurfaceState LargeSurface =
+            new SurfaceState(ShieldHexTarget.Large);
+
+        private static readonly SurfaceState PersonalSurface =
+            new SurfaceState(ShieldHexTarget.Personal);
+
+        private static SurfaceState SurfaceOf(ShieldHexTarget target) =>
+            target == ShieldHexTarget.Personal ? PersonalSurface : LargeSurface;
 
         /// <summary>False if the texture could not be built; the renderer falls back to
         /// the smooth dome rather than drawing a black disc.</summary>
-        internal static bool Available => available;
+        internal static bool Available(ShieldHexTarget target) =>
+            SurfaceOf(target).Available;
+
+        /// <summary>
+        /// The baked density for a target. The "applied" value, not the slider draft:
+        /// the shader's gradient constant has to describe the texture that actually
+        /// exists, not the one being previewed in the UI.
+        /// </summary>
+        internal static int AppliedSubdivisions(ShieldHexTarget target) =>
+            target == ShieldHexTarget.Personal
+                ? VisualTweaksSettings.personalShieldHexDensityApplied
+                : VisualTweaksSettings.shieldHexDensityApplied;
+
+        /// <summary>The fixed texel size for a target.</summary>
+        internal static int FixedSize(ShieldHexTarget target) =>
+            target == ShieldHexTarget.Personal ? PersonalSize : LargeSize;
 
         private static readonly float Phi = (1f + Mathf.Sqrt(5f)) * 0.5f;
 
@@ -146,42 +205,48 @@ namespace VisualTweaks
         };
 
         /// <summary>
-        /// Ensures the material carries a hex map for this density. Cheap after the
-        /// first call: the texture is cached and only rebuilt when the cell count
-        /// actually changes.
+        /// Ensures the material carries the target's hex map at its baked density.
+        /// Cheap after the first call: each target's texture is cached and only
+        /// rebuilt when its cell count actually changes.
         /// </summary>
-        internal static void Bind(Material material, int subdivisions)
+        internal static void Bind(
+            Material material,
+            ShieldHexTarget target,
+            int subdivisions)
         {
+            SurfaceState surface = SurfaceOf(target);
             int k = Mathf.Clamp(subdivisions, MinSubdivisions, MaxSubdivisions);
+            int size = FixedSize(target);
 
             // ApplyLook runs on every visible shield every frame. A failed bake must
             // not be retried (and re-logged) sixty times a second; remember which
             // density failed and keep the smooth dome until it changes.
-            if (failedFor == k)
+            if (surface.FailedFor == k)
             {
                 return;
             }
 
-            if (texture == null || builtFor != k)
+            if (surface.Texture == null || surface.BuiltFor != k)
             {
-                Build(k);
+                Build(surface, k, size);
             }
 
             // SetTexture is not free, so only touch the material when the texture
             // itself changed or when this material has not been bound yet. Build
-            // clears boundTo, so a fresh texture always republishes.
-            if (texture != null && (boundTo != material || boundFor != k))
+            // clears BoundTo, so a fresh texture always republishes.
+            if (surface.Texture != null
+                && (surface.BoundTo != material || surface.BoundFor != k))
             {
-                material.SetTexture(MapId, texture);
-                boundTo = material;
-                boundFor = k;
+                material.SetTexture(MapId, surface.Texture);
+                surface.BoundTo = material;
+                surface.BoundFor = k;
             }
         }
 
         /// <summary>
-        /// True when something would actually sample the texture: the hex style is
+        /// True when something would actually sample a texture: the hex style is
         /// picked, the custom dome that draws it is on, and its shader compiled.
-        /// Baking otherwise costs 32 MiB and a fraction of a second for an image
+        /// Baking otherwise costs tens of MiB and a fraction of a second for images
         /// nothing reads.
         /// </summary>
         private static bool CanBeDrawn =>
@@ -202,54 +267,83 @@ namespace VisualTweaks
                 return;
             }
 
-            int k = Mathf.Clamp(
+            int largeK = Mathf.Clamp(
                 VisualTweaksSettings.shieldHexDensityApplied,
                 MinSubdivisions,
                 MaxSubdivisions);
-
-            if (texture != null && builtFor == k)
-            {
-                return;
-            }
+            int personalK = Mathf.Clamp(
+                VisualTweaksSettings.personalShieldHexDensityApplied,
+                MinSubdivisions,
+                MaxSubdivisions);
 
             System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
-            Build(k);
+            EnsureBuilt(LargeSurface, largeK);
+            EnsureBuilt(PersonalSurface, personalK);
             watch.Stop();
 
-            if (available)
+            if (LargeSurface.Available || PersonalSurface.Available)
             {
-                VisualTweaksLog.Info("hex shield map baked at startup (k=" + k
-                    + ", " + Size + "x" + Size + ", " + watch.ElapsedMilliseconds
-                    + " ms).");
+                VisualTweaksLog.Info("hex shield maps baked at startup (dome k="
+                    + largeK + " at " + LargeSize + "^2"
+                    + (LargeSurface.Available ? "" : " failed")
+                    + "; belt k=" + personalK + " at " + PersonalSize + "^2"
+                    + (PersonalSurface.Available ? "" : " failed")
+                    + "; " + watch.ElapsedMilliseconds + " ms).");
             }
         }
 
         /// <summary>
-        /// Rebakes for a new cell density immediately, so the stall lands on the
-        /// button press that asked for it instead of on the next shield that happens
-        /// to come into view. If the hex style is off nothing is baked: the texture is
-        /// only ever built for a style that will draw it, and ApplyDensity has already
-        /// recorded the value for when it is switched on.
+        /// Commits a target's draft density and bakes immediately, so the stall lands
+        /// on the button press that asked for it instead of on the next shield that
+        /// happens to come into view. If the hex style is off nothing is baked: a
+        /// texture is only ever built for a style that will draw it, and the applied
+        /// value is already recorded for when it is switched on.
         /// </summary>
-        internal static void ApplyDensity(int subdivisions)
+        internal static void Apply(ShieldHexTarget target, int subdivisions)
         {
             int k = Mathf.Clamp(subdivisions, MinSubdivisions, MaxSubdivisions);
-            VisualTweaksSettings.shieldHexDensityApplied = k;
 
-            if (!CanBeDrawn || failedFor == k)
+            if (target == ShieldHexTarget.Personal)
+            {
+                VisualTweaksSettings.personalShieldHexDensityApplied = k;
+            }
+            else
+            {
+                VisualTweaksSettings.shieldHexDensityApplied = k;
+            }
+
+            if (!CanBeDrawn)
             {
                 return;
             }
 
-            if (texture != null && builtFor == k)
-            {
-                return;
-            }
-
-            Build(k);
+            EnsureBuilt(SurfaceOf(target), k);
         }
 
-        private static void Build(int k)
+        /// <summary>
+        /// Builds only when the requested density differs from the baked one, and
+        /// never retries a density that already failed. The texel size is fixed per
+        /// target, so density is the only thing that can make a bake stale.
+        /// </summary>
+        private static void EnsureBuilt(SurfaceState surface, int subdivisions)
+        {
+            int k = Mathf.Clamp(subdivisions, MinSubdivisions, MaxSubdivisions);
+            int size = FixedSize(surface.Target);
+
+            if (surface.FailedFor == k)
+            {
+                return;
+            }
+
+            if (surface.Texture != null && surface.BuiltFor == k)
+            {
+                return;
+            }
+
+            Build(surface, k, size);
+        }
+
+        private static void Build(SurfaceState surface, int k, int size)
         {
             Texture2D? created = null;
 
@@ -285,32 +379,32 @@ namespace VisualTweaks
                 // (as 1/eRef) to rebuild the exact field gradient.
                 float eRef = ERefPerSubdivision / k;
 
-                created = new Texture2D(Size, Size, TextureFormat.RGBAHalf, false)
+                created = new Texture2D(size, size, TextureFormat.RGBAHalf, false)
                 {
-                    name = "VisualTweaksShieldHexMap",
+                    name = "VisualTweaksShieldHexMap_" + surface.Target + "_" + size,
                     filterMode = FilterMode.Bilinear,
                     wrapMode = TextureWrapMode.Clamp,
                     hideFlags = HideFlags.HideAndDontSave,
                 };
 
-                Color[] strip = new Color[Size * RowsPerBlock];
+                Color[] strip = new Color[size * RowsPerBlock];
 
-                for (int y0 = 0; y0 < Size; y0 += RowsPerBlock)
+                for (int y0 = 0; y0 < size; y0 += RowsPerBlock)
                 {
-                    int rows = Mathf.Min(RowsPerBlock, Size - y0);
+                    int rows = Mathf.Min(RowsPerBlock, size - y0);
                     int w = 0;
 
                     for (int y = y0; y < y0 + rows; y++)
                     {
-                        float py = -1f + 2f * (y + 0.5f) / Size;
+                        float py = -1f + 2f * (y + 0.5f) / size;
                         int binRow = Mathf.Clamp(
                             (int)((py * 0.5f + 0.5f) * BinCount),
                             0,
                             BinCount - 1);
 
-                        for (int x = 0; x < Size; x++)
+                        for (int x = 0; x < size; x++)
                         {
-                            float px = -1f + 2f * (x + 0.5f) / Size;
+                            float px = -1f + 2f * (x + 0.5f) / size;
 
                             float r2 = px * px + py * py;
                             if (r2 >= 1f)
@@ -398,27 +492,27 @@ namespace VisualTweaks
                         }
                     }
 
-                    created.SetPixels(0, y0, Size, rows, strip, 0);
+                    created.SetPixels(0, y0, size, rows, strip, 0);
                 }
 
                 created.Apply(false, true);
 
-                if (texture != null)
+                if (surface.Texture != null)
                 {
-                    UnityEngine.Object.Destroy(texture);
+                    UnityEngine.Object.Destroy(surface.Texture);
                 }
 
-                texture = created;
-                builtFor = k;
-                failedFor = -1;
-                available = true;
+                surface.Texture = created;
+                surface.BuiltFor = k;
+                surface.FailedFor = -1;
+                surface.Available = true;
 
                 // The previous texture object was destroyed above. Any material still
                 // holding it has to be re-bound, and Build is exactly the event that
                 // makes that true — including when a pre-bake means Bind itself will
                 // skip its own "density changed" branch.
-                boundTo = null;
-                boundFor = -1;
+                surface.BoundTo = null;
+                surface.BoundFor = -1;
             }
             catch (Exception ex)
             {
@@ -427,11 +521,12 @@ namespace VisualTweaks
                     UnityEngine.Object.Destroy(created);
                 }
 
-                available = false;
-                texture = null;
-                builtFor = -1;
-                failedFor = k;
-                Log.Error("[Visual Tweaks] Hex shield map could not be baked;"
+                surface.Available = false;
+                surface.Texture = null;
+                surface.BuiltFor = -1;
+                surface.FailedFor = k;
+                Log.Error("[Visual Tweaks] Hex shield map (" + surface.Target
+                    + ", k=" + k + ", " + size + "^2) could not be baked;"
                     + " falling back to the smooth dome: " + ex);
             }
         }

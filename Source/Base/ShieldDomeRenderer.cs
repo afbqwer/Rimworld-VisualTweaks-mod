@@ -32,41 +32,6 @@ namespace VisualTweaks
     /// </summary>
     internal static class ShieldDomeRenderer
     {
-        /// <summary>
-        /// Copied from the ShaderDef so the material does not depend on it sticking.
-        /// 3151 is vanilla's MoteGlow queue; the shield must not draw over fog of war.
-        /// </summary>
-        private const int RenderQueue = 3151;
-
-        // ------------------------------------------------------------------
-        // Dome look.
-        //
-        // Four weights and four shape numbers. The split is deliberate: the weights
-        // say *how much* each term contributes, the shape numbers say *what shape* it
-        // has. Tuning one should not silently move the other.
-        //
-        // Two of them are player settings (ridge weight and ridge half-width) and are
-        // applied in ApplyLook; the rest are constants, because a slider for "fresnel
-        // exponent" is a slider nobody can reason about. Everything exposed is read
-        // every frame, so dragging a slider on a paused, selected shield shows the
-        // change immediately.
-        // ------------------------------------------------------------------
-        private const float CoreWeight = 0.30f;
-        private const float GlowWeight = 0.30f;
-        private const float BodyWeight = 0.05f;
-
-        /// <summary>Gaussian sigma of the hot core, in screen pixels.</summary>
-        private const float CoreSigmaPixels = 1.2f;
-
-        /// <summary>
-        /// Fresnel exponent. 3 reads like a flat pane of light, 10 like a tight
-        /// bubble; 5 keeps a broad glow without eating the interior.
-        /// </summary>
-        private const float GlowExponent = 5f;
-
-        /// <summary>Angular brightness drift on the rim. 0 freezes it.</summary>
-        private const float DriftWeight = 0.30f;
-
         // ------------------------------------------------------------------
         // Flare look.
         // ------------------------------------------------------------------
@@ -138,11 +103,8 @@ namespace VisualTweaks
             Altitudes.AltitudeFor(AltitudeLayer.MoteOverhead);
 
         private static readonly int ParamsId = Shader.PropertyToID("_Params");
-        private static readonly int Params2Id = Shader.PropertyToID("_Params2");
         private static readonly int Params3Id = Shader.PropertyToID("_Params3");
         private static readonly int Params4Id = Shader.PropertyToID("_Params4");
-        private static readonly int Params5Id = Shader.PropertyToID("_Params5");
-        private static readonly int Params6Id = Shader.PropertyToID("_Params6");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         // Reused every frame; DrawPropertyBlock wraps these arrays without allocating,
@@ -150,27 +112,19 @@ namespace VisualTweaks
         // one array can back every draw in the loop.
         private static readonly DrawProperty[] properties = new DrawProperty[4];
 
-        private static Material? material;
-        private static bool materialFailed;
-
-        // What the material currently carries, so a slider drag uploads a few
-        // vectors instead of a few vectors per shield per frame.
-        private static float appliedRidgeWidth = float.NaN;
-        private static float appliedRidgeBrightness = float.NaN;
-        private static float appliedDomeStyle = float.NaN;
-        private static float appliedHexFace = float.NaN;
-        private static float appliedHexLine = float.NaN;
-        private static int appliedHexDensity = -1;
+        // The dome's own material. The belt has a second instance in
+        // PersonalShieldRenderer so each can bind its own hex atlas.
+        private static readonly ShieldDomeMaterial Surface =
+            new ShieldDomeMaterial(ShieldHexTarget.Large);
 
         /// <summary>
         /// True when the panel style is what the player actually sees: the style is
-        /// selected and the lattice texture exists. Both the style uniform and the
-        /// choice of hit reaction go through this, so the two can never disagree —
-        /// answering a hit with tiles while the dome draws the crisp style would flash
-        /// panels that are not on screen.
+        /// selected and this target's lattice texture exists. Both the style uniform
+        /// and the choice of hit reaction go through this, so the two can never
+        /// disagree — answering a hit with tiles while the dome draws the crisp style
+        /// would flash panels that are not on screen.
         /// </summary>
-        internal static bool HexActive =>
-            VisualTweaksSettings.HexShieldDome && ShieldHexMap.Available;
+        internal static bool HexActive => Surface.HexActive;
 
         /// <summary>
         /// True when the stock-like style is chosen. Unlike <see cref="HexActive"/>
@@ -186,7 +140,7 @@ namespace VisualTweaks
         /// </summary>
         internal static bool Draw(CompProjectileInterceptor comp, float alpha)
         {
-            if (!ShieldDomeBridge.ShaderReady || materialFailed)
+            if (!ShieldDomeBridge.ShaderReady)
             {
                 return false;
             }
@@ -203,13 +157,13 @@ namespace VisualTweaks
                 return false;
             }
 
-            Material? mat = EnsureMaterial();
+            Material? mat = Surface.Ensure();
             if (mat == null)
             {
                 return false;
             }
 
-            ApplyLook(mat);
+            Surface.ApplyLook();
 
             Vector3 center = parent.DrawPos;
 
@@ -605,135 +559,5 @@ namespace VisualTweaks
                 FlareMaxDamageFactor);
         }
 
-        /// <summary>
-        /// Uploads the two vectors the player can move. Called every frame, but only
-        /// writes when a value actually changed: the settings are read live, and the
-        /// alternative — a per-draw property for each look constant — would put two
-        /// extra vectors on every shield every frame for numbers that change once a
-        /// session.
-        /// </summary>
-        internal static void ApplyLook(Material mat)
-        {
-            float width = VisualTweaksSettings.shieldRidgeWidth;
-            float brightness = VisualTweaksSettings.shieldRidgeBrightness;
-            float face = VisualTweaksSettings.shieldHexFaceStrength;
-            float line = VisualTweaksSettings.shieldHexLineStrength;
-
-            // The spherical lattice is baked once and shared by every shield. Bind is
-            // cheap to call every frame: it only re-bakes when the baked density
-            // changes and only calls SetTexture for a new material.
-            //
-            // The APPLIED density, not the slider: the slider is a draft that only
-            // reaches the texture when the player presses the rebake button, and the
-            // shader's gradient constant has to describe the texture that actually
-            // exists, not the one being previewed in a UI.
-            int density = VisualTweaksSettings.shieldHexDensityApplied;
-            bool wantHex = VisualTweaksSettings.HexShieldDome;
-            if (wantHex)
-            {
-                ShieldHexMap.Bind(mat, density);
-            }
-
-            // A failed bake must not produce a black disc. Falling back to the
-            // smooth dome keeps the shield readable and matches the shader bridge's
-            // "lose the effect, never the feature" rule. The stock-like style has no
-            // asset to fail, so it is passed through unconditionally.
-            float style = VisualTweaksSettings.VanillaShieldDome
-                ? 2f
-                : HexActive ? 1f : 0f;
-
-            if (width == appliedRidgeWidth
-                && brightness == appliedRidgeBrightness
-                && style == appliedDomeStyle
-                && face == appliedHexFace
-                && line == appliedHexLine
-                && density == appliedHexDensity)
-            {
-                return;
-            }
-
-            appliedRidgeWidth = width;
-            appliedRidgeBrightness = brightness;
-            appliedDomeStyle = style;
-            appliedHexFace = face;
-            appliedHexLine = line;
-            appliedHexDensity = density;
-
-            // _Params2 = (ridge, core, glow, body) weights.
-            mat.SetVector(
-                Params2Id,
-                new Vector4(brightness, CoreWeight, GlowWeight, BodyWeight));
-
-            // _Params5 = (ridge half px, core sigma px, glow exponent, drift).
-            mat.SetVector(
-                Params5Id,
-                new Vector4(width, CoreSigmaPixels, GlowExponent, DriftWeight));
-
-            // _Params6.w is 1/eRef, the reciprocal of the angular distance that
-            // maps to edgeDistance 1.0. The shader multiplies it by 1/z (the
-            // orthographic Jacobian) to get the exact field gradient, so line
-            // width is 2.2 px at every zoom and every shield size.
-            mat.SetVector(
-                Params6Id,
-                new Vector4(
-                    style,
-                    face,
-                    line,
-                    density / ShieldHexMap.ERefPerSubdivision));
-        }
-
-        /// <summary>
-        /// The one material both shield renderers draw with. Its look constants come
-        /// from the global shield settings, so a personal belt and a projector dome
-        /// can never disagree about style, ridge width or lattice density.
-        /// </summary>
-        internal static Material? EnsureMaterial()
-        {
-            if (material != null || materialFailed)
-            {
-                return material;
-            }
-
-            ShaderDef? def = ShieldDomeBridge.DomeShaderDef;
-            if (def == null)
-            {
-                materialFailed = true;
-                return null;
-            }
-
-            try
-            {
-                Material created = new Material((Shader)def)
-                {
-                    name = "VisualTweaksShieldDomeMat",
-                    renderQueue = RenderQueue,
-                };
-
-                material = created;
-
-                // Force the first upload even if the settings happen to equal the
-                // defaults these fields were initialised with.
-                appliedRidgeWidth = float.NaN;
-                appliedRidgeBrightness = float.NaN;
-                appliedDomeStyle = float.NaN;
-                appliedHexFace = float.NaN;
-                appliedHexLine = float.NaN;
-                appliedHexDensity = -1;
-                ApplyLook(created);
-            }
-            catch (Exception ex)
-            {
-                materialFailed = true;
-
-                // Drop the half-built material: the caller treats null as "do not
-                // draw" and hands the frame back to vanilla, which is the right answer
-                // for a material whose look constants were never uploaded.
-                material = null;
-                Log.Error("[Visual Tweaks] Shield dome material could not be created;"
-                    + " stock drawing kept: " + ex);
-            }
-
-            return material;
-        }
     }
 }

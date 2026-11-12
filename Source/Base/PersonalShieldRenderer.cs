@@ -14,10 +14,10 @@ namespace VisualTweaks
     ///
     /// What is ported from <see cref="ShieldDomeRenderer"/> is everything that is not
     /// the hit reaction: the same three surfaces (crisp, hexagonal, stock-like), the
-    /// same ridge and lattice settings, the same material, and the same dissolve /
-    /// panel-loss break animations. Impacts are deliberately absent: a belt is one
-    /// character wide, and a flare, a sector brightening or a lattice wave at that
-    /// size is a few pixels of noise rather than a readable direction.
+    /// same ridge and lattice settings, a material built from the same code, and the
+    /// same dissolve / panel-loss break animations. Impacts are deliberately absent:
+    /// a belt is one character wide, and a flare, a sector brightening or a lattice
+    /// wave at that size is a few pixels of noise rather than a readable direction.
     ///
     /// What has to differ is geometry and visibility, because a belt is not a
     /// projector:
@@ -40,9 +40,11 @@ namespace VisualTweaks
     /// the same panel count as a 25-cell dome. The lattice lines fade on their own
     /// when a cell drops below the shader's 5-pixel legibility floor.
     ///
-    /// One shared material, one draw per belt. The look constants live on the
-    /// material because they are global settings; everything that differs per belt
-    /// (centre, radius, alpha, break progress) travels as a draw property.
+    /// One material for belts, one draw per belt. The material is separate from the
+    /// dome's only because the hex atlas is a material texture and the two atlases
+    /// have different densities and resolutions; every look constant is still read
+    /// from the same global settings. Everything that differs per belt (centre,
+    /// radius, alpha, break progress) travels as a draw property.
     /// </summary>
     internal static class PersonalShieldRenderer
     {
@@ -64,6 +66,12 @@ namespace VisualTweaks
         // Reused every frame. DrawPropertyBlock wraps the span without allocating,
         // and the engine copies it into its arena during the DrawMesh call.
         private static readonly DrawProperty[] properties = new DrawProperty[4];
+
+        // A second material, not the dome's: the baked hex atlas is a material
+        // texture, and a belt's lattice has its own density and resolution. All other
+        // look constants still come from the same settings.
+        private static readonly ShieldDomeMaterial Surface =
+            new ShieldDomeMaterial(ShieldHexTarget.Personal);
 
         /// <summary>
         /// Returns true when a dome was submitted, so the patch can skip vanilla's
@@ -89,21 +97,21 @@ namespace VisualTweaks
                 return false;
             }
 
-            Material? mat = ShieldDomeRenderer.EnsureMaterial();
+            Material? mat = Surface.Ensure();
             if (mat == null)
             {
                 return false;
             }
 
-            // Same material, same global style and lattice upload as the big dome.
-            ShieldDomeRenderer.ApplyLook(mat);
+            // Same style and ridge settings as the big dome; only the atlas differs.
+            Surface.ApplyLook();
 
             int breakStyle = VisualTweaksSettings.CurrentShieldBreakStyle;
             bool customBreak = breakStyle
                 != VisualTweaksSettings.ShieldBreakVanilla;
             float dissolveMode = breakStyle
                 == VisualTweaksSettings.ShieldBreakHexDissipate
-                && ShieldDomeRenderer.HexActive
+                && Surface.HexActive
                 ? 5f
                 : 2f;
 

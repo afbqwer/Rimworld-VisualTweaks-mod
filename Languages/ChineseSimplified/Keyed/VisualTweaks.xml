@@ -163,10 +163,15 @@
   <VisualTweaks_ShieldDome_HexFaceTip>每一格面板的填充亮度。按格子的朝向固定明暗（平面着色），这是「球壳」而不是「光滑球上贴网格」的关键。调太高会盖住轮廓。</VisualTweaks_ShieldDome_HexFaceTip>
   <VisualTweaks_ShieldDome_HexLine>格线亮度</VisualTweaks_ShieldDome_HexLine>
   <VisualTweaks_ShieldDome_HexLineTip>面板之间那条亮线的强度，默认偏亮是为了让线明确压过两侧格面的明暗差，避免看成两条并排的边。线宽按屏幕像素计算，任何缩放和任何护盾尺寸下都一样粗。</VisualTweaks_ShieldDome_HexLineTip>
-  <VisualTweaks_ShieldDome_HexDensity>格子密度</VisualTweaks_ShieldDome_HexDensity>
-  <VisualTweaks_ShieldDome_HexDensityTip>整球面板数 = 10k²+2：2 = 42 格（像足球），5 = 252 格，8 = 642 格，12 = 1442 格（细密能量网）。其中始终恰好 12 个是五边形，但不作任何特殊标记。这里只是草稿值，拖动不会重建贴图——按下面的按钮才会烘焙并生效。</VisualTweaks_ShieldDome_HexDensityTip>
+  <VisualTweaks_ShieldDome_HexDensity>格子密度（大型护盾）</VisualTweaks_ShieldDome_HexDensity>
+  <VisualTweaks_ShieldDome_HexDensityTip>大型投射器穹顶的整球面板数 = 10k²+2：2 = 42 格（像足球），5 = 252 格，8 = 642 格，12 = 1442 格（细密能量网）。其中始终恰好 12 个是五边形，但不作任何特殊标记。这里只是草稿值，拖动不会重建贴图——按下面的按钮才会烘焙并生效。个人护盾腰带使用下面独立的一组密度与分辨率。</VisualTweaks_ShieldDome_HexDensityTip>
   <VisualTweaks_ShieldDome_HexBake>应用密度并重新烘焙</VisualTweaks_ShieldDome_HexBake>
   <VisualTweaks_ShieldDome_HexPending>当前显示的是 k={0}；滑条已改为 k={1}，按上面的按钮应用（重建 2048² 贴图，会有几百毫秒的卡顿，只发生一次）。</VisualTweaks_ShieldDome_HexPending>
+  <VisualTweaks_ShieldDome_PersonalHexGroup>个人护盾六边形</VisualTweaks_ShieldDome_PersonalHexGroup>
+  <VisualTweaks_ShieldDome_PersonalHexDensity>格子密度（个人护盾）</VisualTweaks_ShieldDome_PersonalHexDensity>
+  <VisualTweaks_ShieldDome_PersonalHexDensityTip>个人护盾腰带只有 1.2~1.55 格宽，屏幕像素远少于大型穹顶，所以使用独立烘焙的贴图，而不是继承大型的密度。默认 k=4（162 格）比大型的 k=5 略疏；调低能让低缩放下的格线更清楚，调高则更细密，但每格低于约 5 像素时格线会按设计自动淡出。只影响腰带，大型穹顶仍用上面自己的密度；格面亮度与格线亮度仍由两种护盾共用。腰带贴图固定为 512²（约 2 MiB），不再单独提供分辨率选项。</VisualTweaks_ShieldDome_PersonalHexDensityTip>
+  <VisualTweaks_ShieldDome_PersonalHexBake>应用个人护盾设置</VisualTweaks_ShieldDome_PersonalHexBake>
+  <VisualTweaks_ShieldDome_PersonalHexPending>当前生效：k={0}；草稿：k={1}，按上面的按钮重新烘焙后生效（512² 贴图，烘焙很快）。</VisualTweaks_ShieldDome_PersonalHexPending>
   <VisualTweaks_ShieldDome_HexImpact>受击闪光强度</VisualTweaks_ShieldDome_HexImpact>
   <VisualTweaks_ShieldDome_HexImpactTip>六边形样式选择「六边扩散」时，一次拦截点亮面板的峰值亮度。与上面的「受击效果强度」是两回事：这里直接就是最终亮度，没有额外的内部倍数。</VisualTweaks_ShieldDome_HexImpactTip>
   <VisualTweaks_ShieldDome_HexImpactReach>受击扩散范围</VisualTweaks_ShieldDome_HexImpactReach>
