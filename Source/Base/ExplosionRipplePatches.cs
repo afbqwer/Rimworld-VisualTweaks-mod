@@ -8,7 +8,9 @@ namespace VisualTweaks
     /// <summary>
     /// Hooks the final explosion spawn. StartExplosion already carries the final radius,
     /// affected angle and doVisualEffects flag, and every vanilla (and most modded)
-    /// explosion ends up here through GenExplosion.DoExplosion.
+    /// explosion ends up here through GenExplosion.DoExplosion. Combat Extended bypasses
+    /// it with its own ExplosionCE.StartExplosionCE, which is hooked separately by
+    /// <see cref="CombatExtendedExplosionCompat"/>.
     /// </summary>
     internal static class ExplosionRipplePatches
     {
@@ -62,21 +64,34 @@ namespace VisualTweaks
 
         private static void StartExplosionPostfix(Explosion __instance, bool __state)
         {
-            if (!ExplosionRippleBridge.Active || __instance == null || __instance.Map == null)
+            if (!__state || __instance == null)
+            {
+                return;
+            }
+
+            TrySpawn(__instance);
+        }
+
+        /// <summary>
+        /// Shared spawn path, also called by the CE bridge once its own gating passed.
+        /// </summary>
+        internal static void TrySpawn(Explosion explosion)
+        {
+            if (!ExplosionRippleBridge.Active || explosion == null || explosion.Map == null)
             {
                 return;
             }
 
             // No damage-type filter: the user asked for every visual explosion. The
             // radius guard only avoids a degenerate zero-size quad.
-            if (!__state || !(__instance.radius > 0.01f))
+            if (!(explosion.radius > 0.01f))
             {
                 return;
             }
 
             OverlayMapComponent component =
-                __instance.Map.GetComponent<OverlayMapComponent>();
-            component?.NotifyExplosion(__instance);
+                explosion.Map.GetComponent<OverlayMapComponent>();
+            component?.NotifyExplosion(explosion);
         }
     }
 }
