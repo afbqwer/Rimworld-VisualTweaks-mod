@@ -278,15 +278,26 @@ namespace VisualTweaks
                 // last thing written to the surface. A burst that was still fading
                 // when the shield broke should keep fading, not vanish with it.
                 //
-                // Which one is not a matter of taste. A painted wedge describes the
-                // crisp dome; a shell of tiles is the one thing it is not, so the
-                // panel style answers in panels. The stock-like style matches what
-                // vanilla actually draws: an additive sector of the same soft dome,
-                // so the shield brightens in that sector without gaining a second,
-                // detached silhouette. Same data, same draw count, different answer.
-                drew |= HexActive
-                    ? DrawHexImpacts(comp, mat, matrix, tint, centerParam, radius, time)
-                    : DrawFlares(
+                // Which reaction is a player choice now, but not every surface can
+                // draw every one: the lattice wave needs the baked hex map, while the
+                // flare and the sector brightening are analytic. Each dome style keeps
+                // its own choice in the settings. A hex wave selected while the map is
+                // unavailable falls back to the flare, matching the dome's own fallback
+                // to the crisp surface in that case.
+                int impactStyle = VisualTweaksSettings.CurrentShieldImpactStyle;
+                if (impactStyle == VisualTweaksSettings.ShieldImpactHexWave && !HexActive)
+                {
+                    impactStyle = VisualTweaksSettings.ShieldImpactFlare;
+                }
+
+                if (impactStyle == VisualTweaksSettings.ShieldImpactHexWave)
+                {
+                    drew |= DrawHexImpacts(
+                        comp, mat, matrix, tint, centerParam, radius, time);
+                }
+                else
+                {
+                    drew |= DrawFlares(
                         comp,
                         mat,
                         matrix,
@@ -294,7 +305,8 @@ namespace VisualTweaks
                         centerParam,
                         radius,
                         time,
-                        VanillaActive);
+                        impactStyle == VisualTweaksSettings.ShieldImpactBrighten);
+                }
 
                 if (dissolve != null)
                 {
@@ -437,11 +449,12 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Draws one quad per live impact. Mode 1 is the crisp style's painted flare;
-        /// mode 4 is the stock-like style's sector brightening. The geometry, the
-        /// per-impact alpha and the angular width are identical, so the two styles
-        /// answer the same hit with the same amount of light — only the shader's
-        /// interpretation of that light differs.
+        /// Draws one quad per live impact. Mode 1 is the painted flare; mode 4 brightens
+        /// the dome itself in the impact's angular sector. The geometry, the per-impact
+        /// alpha and the angular width are identical, so the two reactions spend the
+        /// same amount of light — only the shader's interpretation differs. Both are
+        /// available to the crisp and stock-like surfaces; the panel shell uses this
+        /// path only when the player selects Brighten there.
         /// </summary>
         private static bool DrawFlares(
             CompProjectileInterceptor comp,
@@ -451,7 +464,7 @@ namespace VisualTweaks
             NVector4 centerParam,
             float radius,
             float time,
-            bool stockSector)
+            bool brighten)
         {
             List<ShieldImpactLog.Impact>? impacts = ShieldImpactLog.Peek(comp);
             TickManager? tickManager = Find.TickManager;
@@ -511,7 +524,7 @@ namespace VisualTweaks
                 properties[0] = DrawProperty.Vector(
                     ParamsId,
                     new NVector4(
-                        stockSector ? 4f : 1f,
+                        brighten ? 4f : 1f,
                         flareAlpha,
                         time,
                         radius));

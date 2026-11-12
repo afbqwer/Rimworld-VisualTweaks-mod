@@ -38,12 +38,14 @@
 // directions collapses into whichever bullet resolved last — the older directions
 // are simply lost. The flare is therefore driven by a list of impacts supplied by
 // ShieldImpactLog, one quad each, additive, so overlapping hits accumulate the way
-// several lights on one surface should.
+// several lights on one surface should. The flare always ends inside the visual rim,
+// even on the soft stock-like dome, so it cannot continue into the texture margin.
 //
-// The panel style answers the same impact with mode 3 instead: the panels around the
-// hit light white and the light walks outward ring by ring. Same data, same one quad
-// per impact; only the shape of the answer differs, because a group of tiles cannot
-// plausibly be struck by a painted wedge.
+// The panel style can answer the same impact with mode 3 instead: the panels around
+// the hit light white and the light walks outward ring by ring. Same data, same one
+// quad per impact; only the shape of the answer differs, because a group of tiles
+// cannot plausibly be struck by a painted wedge. Mode 4 is the third answer, a
+// sector of the surface itself brightening, and it is available to every style.
 //
 // ---- the dissolve --------------------------------------------------------
 //
@@ -115,11 +117,14 @@
 // the same shield looks the same at any zoom.
 //
 // The break reuses the smooth style's noise-driven tear deliberately: there is no
-// per-panel identity here, because there are no panels. The hit reaction does not
-// reuse the painted flare, though. Vanilla's cone is an additive *sector of the same
-// dome*, so a struck stock-like shield brightens in a sector instead of growing a
-// wedge on top of itself. That is mode 4, and it is clipped to r == 1 so its edge
-// can never disagree with the soft rim the way a free-floating flare would.
+// per-panel identity here, because there are no panels.
+//
+// Hit reactions are chosen independently of the surface (see the renderer): the
+// painted flare (mode 1), the sector brightening (mode 4), or the panel wave (mode 3,
+// which only means anything on the shell). Vanilla's cone is an additive *sector of
+// the same dome*, so the stock-like style defaults to mode 4; the flare stays
+// available for every surface and ends inside the visual rim so it cannot float
+// outside a soft edge.
 
 layout(location = 0) in vec2 vWorld;
 
@@ -475,12 +480,33 @@ void main()
         float radial = smoothstep(u._Params3.w, 1.0, r);
         float flare = radial * (0.55 + 0.45 * radial);
 
+        // Clip the flare to the visual rim, not to the dome's own edge. The
+        // stock-like surface deliberately lets `edge` continue past r == 1, but a
+        // wedge whose radial ramp is already saturated there would keep its full
+        // strength through that margin — the detached band this style used to show.
+        //
+        // The stock-like rim is a soft band whose visible edge reaches a few percent
+        // past the peak, so its flare fades through that band instead of being cut
+        // exactly at 1.0 (which would slice a chord across the bright ring). 1.05R
+        // is the outer half of the rim in the reference profile. The crisp and panel
+        // surfaces still end at r == 1 with one pixel of AA, because that is their
+        // silhouette contract.
+        float flareEdge;
+        if (u._Params6.x > 1.5)
+        {
+            flareEdge = 1.0 - smoothstep(1.0, 1.05, r);
+        }
+        else
+        {
+            flareEdge = 1.0 - smoothstep(1.0 - aa, 1.0, r);
+        }
+
         vec3 halo = u._Color.rgb;
         vec3 coreTint = mix(halo, vec3(1.0), 0.65);
 
         outColor = vec4(
             mix(halo, coreTint, flare * 0.6),
-            profile * flare * u._Params.y * edge);
+            profile * flare * u._Params.y * flareEdge);
     }
     else if (mode < 2.5)
     {
@@ -706,12 +732,14 @@ void main()
     }
     else
     {
-        // ---- stock-like impact: brighten the dome in a sector -------------
+        // ---- brighten impact: the dome itself lights up in a sector -------
         //
-        // Mode 4. Vanilla's ForceFieldCone is not a separate wedge laid over the
-        // shield: it is an additive sector of the same soft surface. What the eye
-        // sees is the shield inside that sector becoming more opaque, with the
-        // sector's outer edge following the rim instead of crossing it.
+        // Mode 4, selectable for every surface. Vanilla's ForceFieldCone is not a
+        // separate wedge laid over the shield: it is an additive sector of the same
+        // soft surface. What the eye sees is the shield inside that sector becoming
+        // more opaque, with the sector's outer edge following the chosen surface's
+        // silhouette instead of crossing it. The stock-like style defaults to this;
+        // the crisp and panel surfaces can select it as well.
         //
         // So the extra light here is the dome's own shade and silhouette, masked to
         // the impact's angular sector. Rim and haze brighten together because they

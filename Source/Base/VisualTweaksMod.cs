@@ -401,6 +401,63 @@ namespace VisualTweaks
             };
         }
 
+        // Display order of the hit animations. The panel surface has a third option;
+        // the other two surfaces share the flare/brighten pair.
+        private static readonly int[] StandardImpactOrder =
+        {
+            VisualTweaksSettings.ShieldImpactFlare,
+            VisualTweaksSettings.ShieldImpactBrighten
+        };
+
+        private static readonly int[] HexImpactOrder =
+        {
+            VisualTweaksSettings.ShieldImpactBrighten,
+            VisualTweaksSettings.ShieldImpactHexWave
+        };
+
+        private static int ImpactIndexOf(int[] order, int value)
+        {
+            for (int i = 0; i < order.Length; i++)
+            {
+                if (order[i] == value)
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+
+        private static string[] ImpactLabels(bool hexSurface)
+        {
+            return hexSurface
+                ? new string[]
+                {
+                    "VisualTweaks_ShieldDome_ImpactBrighten".Translate(),
+                    "VisualTweaks_ShieldDome_ImpactHexWave".Translate()
+                }
+                : new string[]
+                {
+                    "VisualTweaks_ShieldDome_ImpactFlare".Translate(),
+                    "VisualTweaks_ShieldDome_ImpactBrighten".Translate()
+                };
+        }
+
+        private static string[] ImpactTips(bool hexSurface)
+        {
+            return hexSurface
+                ? new string[]
+                {
+                    "VisualTweaks_ShieldDome_ImpactBrightenTip".Translate(),
+                    "VisualTweaks_ShieldDome_ImpactHexWaveTip".Translate()
+                }
+                : new string[]
+                {
+                    "VisualTweaks_ShieldDome_ImpactFlareTip".Translate(),
+                    "VisualTweaks_ShieldDome_ImpactBrightenTip".Translate()
+                };
+        }
+
         private static void DoGasTab(Listing_Standard listing)
         {
             SettingsLayout.Header(listing, "VisualTweaks_Gas_GroupSwitch".Translate());
@@ -721,24 +778,6 @@ namespace VisualTweaks
                             bakedDensity,
                             draftDensity));
                 }
-
-                // The panel style's hit reaction has nothing in common with the
-                // flare's numbers, so it gets its own two controls rather than
-                // borrowing the flare's opacity and a hidden fudge factor.
-                VisualTweaksSettings.shieldHexImpactStrength = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_HexImpact".Translate(),
-                    VisualTweaksSettings.shieldHexImpactStrength,
-                    VisualTweaksSettings.MinShieldHexImpactStrength,
-                    VisualTweaksSettings.MaxShieldHexImpactStrength,
-                    "VisualTweaks_ShieldDome_HexImpactTip".Translate());
-                VisualTweaksSettings.shieldHexImpactShare = SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_HexImpactReach".Translate(),
-                    VisualTweaksSettings.shieldHexImpactShare,
-                    VisualTweaksSettings.MinShieldHexImpactShare,
-                    VisualTweaksSettings.MaxShieldHexImpactShare,
-                    "VisualTweaks_ShieldDome_HexImpactReachTip".Translate());
             }
 
             // The stock-like style has no ridge line, a core or a fresnel exponent to
@@ -771,10 +810,82 @@ namespace VisualTweaks
                     "VisualTweaks_ShieldDome_RidgeBrightnessTip".Translate());
             }
 
-            // The panel style replaces the painted flare with a wave through the
-            // lattice, so the flare's three dials have nothing to drive there.
-            if (!VisualTweaksSettings.HexShieldDome)
+            // The hit animation is a separate choice from the surface. Each surface
+            // keeps its own selection, because the valid sets differ: the panel shell
+            // can use its lattice wave, while the crisp and stock-like surfaces choose
+            // between a painted flare and a brightened sector.
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldDome_ImpactGroup".Translate());
+
+            bool hexSurface = VisualTweaksSettings.HexShieldDome;
+            int[] impactOrder;
+            int currentImpact;
+            if (hexSurface)
             {
+                impactOrder = HexImpactOrder;
+                currentImpact = VisualTweaksSettings.hexShieldImpactStyle;
+            }
+            else if (VisualTweaksSettings.VanillaShieldDome)
+            {
+                impactOrder = StandardImpactOrder;
+                currentImpact = VisualTweaksSettings.vanillaShieldImpactStyle;
+            }
+            else
+            {
+                impactOrder = StandardImpactOrder;
+                currentImpact = VisualTweaksSettings.crispShieldImpactStyle;
+            }
+
+            int impactIndex = ImpactIndexOf(impactOrder, currentImpact);
+            int pickedImpact = SettingsLayout.RadioRow(
+                listing,
+                ImpactLabels(hexSurface),
+                impactIndex,
+                ImpactTips(hexSurface));
+            if (pickedImpact != impactIndex)
+            {
+                int pickedValue = impactOrder[pickedImpact];
+                if (hexSurface)
+                {
+                    VisualTweaksSettings.hexShieldImpactStyle = pickedValue;
+                }
+                else if (VisualTweaksSettings.VanillaShieldDome)
+                {
+                    VisualTweaksSettings.vanillaShieldImpactStyle = pickedValue;
+                }
+                else
+                {
+                    VisualTweaksSettings.crispShieldImpactStyle = pickedValue;
+                }
+            }
+
+            if (VisualTweaksSettings.CurrentShieldImpactStyle
+                == VisualTweaksSettings.ShieldImpactHexWave)
+            {
+                // The wave's numbers have nothing in common with the flare's, so it
+                // keeps its own two controls rather than borrowing the flare's
+                // opacity and a hidden fudge factor.
+                VisualTweaksSettings.shieldHexImpactStrength = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexImpact".Translate(),
+                    VisualTweaksSettings.shieldHexImpactStrength,
+                    VisualTweaksSettings.MinShieldHexImpactStrength,
+                    VisualTweaksSettings.MaxShieldHexImpactStrength,
+                    "VisualTweaks_ShieldDome_HexImpactTip".Translate());
+                VisualTweaksSettings.shieldHexImpactShare = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexImpactReach".Translate(),
+                    VisualTweaksSettings.shieldHexImpactShare,
+                    VisualTweaksSettings.MinShieldHexImpactShare,
+                    VisualTweaksSettings.MaxShieldHexImpactShare,
+                    "VisualTweaks_ShieldDome_HexImpactReachTip".Translate());
+            }
+            else
+            {
+                // The flare and the brightened sector share one light budget: both
+                // use the same angular width and the same damage response, so these
+                // three dials apply whichever of the two is selected.
                 VisualTweaksSettings.shieldFlareAlpha = SettingsLayout.Slider(
                     listing,
                     "VisualTweaks_ShieldDome_FlareAlpha".Translate(),

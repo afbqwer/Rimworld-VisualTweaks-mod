@@ -190,6 +190,25 @@ namespace VisualTweaks
         /// <summary>True when the stock-like soft dome is the chosen style.</summary>
         public static bool VanillaShieldDome => shieldDomeStyle == ShieldDomeStyleVanilla;
 
+        // How a hit is answered. This is independent of the dome surface, but the
+        // valid choices differ: the panel shell has its own lattice wave, while the
+        // crisp and stock-like surfaces can either paint a flare or brighten in a
+        // sector. Each dome style therefore keeps its own choice, so switching the
+        // surface and switching it back does not silently rewrite the animation.
+        public const int ShieldImpactFlare = 0;
+        public const int ShieldImpactBrighten = 1;
+        public const int ShieldImpactHexWave = 2;
+
+        public static int crispShieldImpactStyle = ShieldImpactFlare;
+        public static int vanillaShieldImpactStyle = ShieldImpactBrighten;
+        public static int hexShieldImpactStyle = ShieldImpactHexWave;
+
+        /// <summary>The impact animation that belongs to the selected dome style.</summary>
+        public static int CurrentShieldImpactStyle =>
+            shieldDomeStyle == ShieldDomeStyleHex ? hexShieldImpactStyle
+            : shieldDomeStyle == ShieldDomeStyleVanilla ? vanillaShieldImpactStyle
+            : crispShieldImpactStyle;
+
         public const float MinShieldHexFace = 0f;
         public const float MaxShieldHexFace = 0.6f;
         public static float shieldHexFaceStrength = 0.22f;
@@ -525,6 +544,23 @@ namespace VisualTweaks
                     ? ShieldDomeStyleHex
                     : ShieldDomeStyleCrisp;
             }
+
+            // One choice per surface. Saves written before this setting existed take
+            // the defaults, which are exactly the reactions those styles had:
+            // crisp = flare, stock-like = sector brightening, hex = lattice wave.
+            Scribe_Values.Look(
+                ref crispShieldImpactStyle,
+                "crispShieldImpactStyle",
+                ShieldImpactFlare);
+            Scribe_Values.Look(
+                ref vanillaShieldImpactStyle,
+                "vanillaShieldImpactStyle",
+                ShieldImpactBrighten);
+            Scribe_Values.Look(
+                ref hexShieldImpactStyle,
+                "hexShieldImpactStyle",
+                ShieldImpactHexWave);
+
             Scribe_Values.Look(
                 ref shieldHexFaceStrength,
                 "shieldHexFaceStrength",
@@ -688,6 +724,28 @@ namespace VisualTweaks
                 shieldHexImpactShare,
                 MinShieldHexImpactShare,
                 MaxShieldHexImpactShare);
+
+            // The valid animation set is per surface, so a hand-edited or future
+            // value falls back to that surface's default rather than to a reaction
+            // it cannot draw.
+            if (crispShieldImpactStyle != ShieldImpactFlare
+                && crispShieldImpactStyle != ShieldImpactBrighten)
+            {
+                crispShieldImpactStyle = ShieldImpactFlare;
+            }
+
+            if (vanillaShieldImpactStyle != ShieldImpactFlare
+                && vanillaShieldImpactStyle != ShieldImpactBrighten)
+            {
+                vanillaShieldImpactStyle = ShieldImpactBrighten;
+            }
+
+            if (hexShieldImpactStyle != ShieldImpactBrighten
+                && hexShieldImpactStyle != ShieldImpactHexWave)
+            {
+                hexShieldImpactStyle = ShieldImpactHexWave;
+            }
+
             shieldDissolveTicks = Mathf.Clamp(
                 shieldDissolveTicks,
                 MinShieldDissolveTicks,
@@ -830,6 +888,9 @@ namespace VisualTweaks
             crispShieldDome = true;
             shieldDomeStyle = ShieldDomeStyleCrisp;
             hexShieldDome = false;
+            crispShieldImpactStyle = ShieldImpactFlare;
+            vanillaShieldImpactStyle = ShieldImpactBrighten;
+            hexShieldImpactStyle = ShieldImpactHexWave;
             shieldHexFaceStrength = 0.22f;
             shieldHexLineStrength = 0.75f;
             shieldHexDensity = 5f;
