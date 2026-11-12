@@ -172,6 +172,17 @@
   <VisualTweaks_ShieldDome_PersonalHexDensityTip>个人护盾腰带只有 1.2~1.55 格宽，屏幕像素远少于大型穹顶，所以使用独立烘焙的贴图，而不是继承大型的密度。默认 k=4（162 格）比大型的 k=5 略疏；调低能让低缩放下的格线更清楚，调高则更细密，但每格低于约 5 像素时格线会按设计自动淡出。只影响腰带，大型穹顶仍用上面自己的密度；格面亮度与格线亮度仍由两种护盾共用。腰带贴图固定为 512²（约 2 MiB），不再单独提供分辨率选项。</VisualTweaks_ShieldDome_PersonalHexDensityTip>
   <VisualTweaks_ShieldDome_PersonalHexBake>应用个人护盾设置</VisualTweaks_ShieldDome_PersonalHexBake>
   <VisualTweaks_ShieldDome_PersonalHexPending>当前生效：k={0}；草稿：k={1}，按上面的按钮重新烘焙后生效（512² 贴图，烘焙很快）。</VisualTweaks_ShieldDome_PersonalHexPending>
+  <VisualTweaks_ShieldDome_PersonalLookGroup>个人护盾外观</VisualTweaks_ShieldDome_PersonalLookGroup>
+  <VisualTweaks_ShieldDome_PersonalOpacity>整体不透明度</VisualTweaks_ShieldDome_PersonalOpacity>
+  <VisualTweaks_ShieldDome_PersonalOpacityTip>大型护盾的不透明度来自原版 GetCurrentAlpha：选中的穹顶大约在 0.2~0.62 之间脉动。个人护盾没有这种脉动，直接按 1.0 绘制会显得比周围的穹顶实得多。这里默认 0.4，取该范围的中段；只影响个人护盾，与大型护盾完全独立。</VisualTweaks_ShieldDome_PersonalOpacityTip>
+  <VisualTweaks_ShieldDome_PersonalHitGroup>个人护盾受击</VisualTweaks_ShieldDome_PersonalHitGroup>
+  <VisualTweaks_ShieldDome_PersonalHitNote>以下设置只影响个人护盾腰带，与上方大型护盾的受击动画（扇形/增亮/六边形波）完全独立。关闭替换护盾绘制时，由原版提供不可调的抖动。</VisualTweaks_ShieldDome_PersonalHitNote>
+  <VisualTweaks_ShieldDome_PersonalJitter>受击抖动</VisualTweaks_ShieldDome_PersonalJitter>
+  <VisualTweaks_ShieldDome_PersonalJitterTip>复刻原版腰带的吸收反馈：被挡下的远程或爆炸伤害会让气泡沿弹道方向轻推，同时按相同幅度收缩，随后在设定时长内衰减到零。原版的吸收音效、闪光和尘土不受影响；关闭后气泡完全静止。</VisualTweaks_ShieldDome_PersonalJitterTip>
+  <VisualTweaks_ShieldDome_PersonalJitterDistance>抖动幅度</VisualTweaks_ShieldDome_PersonalJitterDistance>
+  <VisualTweaks_ShieldDome_PersonalJitterDistanceTip>最大位移，单位格，气泡同时按相同数值收缩。原版是 0.05 格；腰带只有 1.2~1.55 格宽，调到 0.1 以上会显得夸张。</VisualTweaks_ShieldDome_PersonalJitterDistanceTip>
+  <VisualTweaks_ShieldDome_PersonalJitterTicks>抖动时长</VisualTweaks_ShieldDome_PersonalJitterTicks>
+  <VisualTweaks_ShieldDome_PersonalJitterTicksTip>从满幅度线性衰减到 0 的 tick 数，60 tick = 1 秒。原版是 8 tick；暂停时随游戏时间一起冻结。</VisualTweaks_ShieldDome_PersonalJitterTicksTip>
   <VisualTweaks_ShieldDome_HexImpact>受击闪光强度</VisualTweaks_ShieldDome_HexImpact>
   <VisualTweaks_ShieldDome_HexImpactTip>六边形样式选择「六边扩散」时，一次拦截点亮面板的峰值亮度。与上面的「受击效果强度」是两回事：这里直接就是最终亮度，没有额外的内部倍数。</VisualTweaks_ShieldDome_HexImpactTip>
   <VisualTweaks_ShieldDome_HexImpactReach>受击扩散范围</VisualTweaks_ShieldDome_HexImpactReach>

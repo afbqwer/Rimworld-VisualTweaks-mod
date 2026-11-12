@@ -273,6 +273,31 @@ namespace VisualTweaks
         public static float personalShieldHexDensity = 4f;
         public static int personalShieldHexDensityApplied = 4;
 
+        // Overall drawing opacity for belts. An interceptor dome's alpha comes from
+        // GetCurrentAlpha(), which for a selected shield pulses between 0.2 and 0.62
+        // and is much lower when idle; a belt has no such rule, and drawing it at
+        // full alpha made it read far more solid than every dome around it. 0.4 is
+        // the middle of that selected range and the default; independent of the dome
+        // so the two can be tuned separately.
+        public const float MinPersonalShieldOpacity = 0.05f;
+        public const float MaxPersonalShieldOpacity = 1f;
+        public static float personalShieldOpacity = 0.4f;
+
+        // Personal belt hit jitter. This is vanilla's own absorption reaction: the
+        // bubble is pushed along the shot and shrinks by the same amount for a few
+        // ticks. It is deliberately NOT one of the dome's impact animations — a belt
+        // is too small for a flare or a panel wave, and the two features should be
+        // tunable without moving each other. Defaults are vanilla's numbers.
+        public static bool personalShieldHitJitter = true;
+
+        public const float MinPersonalShieldJitterDistance = 0f;
+        public const float MaxPersonalShieldJitterDistance = 0.15f;
+        public static float personalShieldJitterDistance = 0.05f;
+
+        public const float MinPersonalShieldJitterTicks = 2f;
+        public const float MaxPersonalShieldJitterTicks = 30f;
+        public static float personalShieldJitterTicks = 8f;
+
         // The panel style answers a hit differently from the smooth one - a flash that
         // spreads across the lattice instead of a wedge painted on the surface - so it
         // gets its own strength and reach. Sharing the flare's slider was wrong twice
@@ -666,6 +691,22 @@ namespace VisualTweaks
                 ref personalShieldHexDensityApplied,
                 "personalShieldHexDensityApplied",
                 4);
+            Scribe_Values.Look(
+                ref personalShieldOpacity,
+                "personalShieldOpacity",
+                0.4f);
+            Scribe_Values.Look(
+                ref personalShieldHitJitter,
+                "personalShieldHitJitter",
+                true);
+            Scribe_Values.Look(
+                ref personalShieldJitterDistance,
+                "personalShieldJitterDistance",
+                0.05f);
+            Scribe_Values.Look(
+                ref personalShieldJitterTicks,
+                "personalShieldJitterTicks",
+                8f);
             Scribe_Values.Look(ref shieldRidgeWidth, "shieldRidgeWidth", 3.6f);
             Scribe_Values.Look(ref shieldRidgeBrightness, "shieldRidgeBrightness", 0.52f);
             Scribe_Values.Look(ref shieldFlareAlpha, "shieldFlareAlpha", 0.30f);
@@ -804,6 +845,18 @@ namespace VisualTweaks
                 personalShieldHexDensityApplied,
                 (int)MinShieldHexDensity,
                 (int)MaxShieldHexDensity);
+            personalShieldOpacity = Mathf.Clamp(
+                personalShieldOpacity,
+                MinPersonalShieldOpacity,
+                MaxPersonalShieldOpacity);
+            personalShieldJitterDistance = Mathf.Clamp(
+                personalShieldJitterDistance,
+                MinPersonalShieldJitterDistance,
+                MaxPersonalShieldJitterDistance);
+            personalShieldJitterTicks = Mathf.Clamp(
+                personalShieldJitterTicks,
+                MinPersonalShieldJitterTicks,
+                MaxPersonalShieldJitterTicks);
             shieldHexImpactStrength = Mathf.Clamp(
                 shieldHexImpactStrength,
                 MinShieldHexImpactStrength,
@@ -1016,6 +1069,10 @@ namespace VisualTweaks
             shieldHexDensityApplied = 5;
             personalShieldHexDensity = 4f;
             personalShieldHexDensityApplied = 4;
+            personalShieldOpacity = 0.4f;
+            personalShieldHitJitter = true;
+            personalShieldJitterDistance = 0.05f;
+            personalShieldJitterTicks = 8f;
             shieldHexImpactStrength = 0.28f;
             shieldHexImpactShare = 0.32f;
             shieldRidgeWidth = 3.6f;

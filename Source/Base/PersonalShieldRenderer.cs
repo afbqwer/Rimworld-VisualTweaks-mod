@@ -30,9 +30,11 @@ namespace VisualTweaks
     ///   relevant (drafted, hostile, recently hit, ...). That property is protected,
     ///   so it is bound once as a delegate and called rather than copied; a future
     ///   change to the rule then moves both drawings or neither.
-    /// - Alpha is 1.0 whenever the dome is shown. A belt has no idle pulse and no
-    ///   "selected" brightness ramp to borrow — vanilla draws its bubble at full
-    ///   texture alpha — so the shader's own profile is the whole appearance.
+    /// - Alpha is a player setting, not 1.0. A belt has no idle pulse or "selected"
+    ///   brightness ramp to borrow, and drawing it at full shader alpha made it far
+    ///   more solid than any nearby interceptor dome, whose own alpha comes from
+    ///   GetCurrentAlpha() and sits mostly between 0.2 and 0.62. The default tracks
+    ///   that range; the two kinds remain independently adjustable.
     ///
     /// Small size is not special-cased. Every shape constant in the shader is either
     /// radius-relative (glow, stock-like rim, dissolve noise) or expressed in pixels
@@ -48,13 +50,6 @@ namespace VisualTweaks
     /// </summary>
     internal static class PersonalShieldRenderer
     {
-        /// <summary>
-        /// A displayed belt is always fully shown. Unlike an interceptor dome there
-        /// is no selection or idle pulse to modulate, and vanilla's own bubble is
-        /// drawn at the texture's full alpha.
-        /// </summary>
-        private const float DomeAlpha = 1f;
-
         private static readonly float Altitude =
             Altitudes.AltitudeFor(AltitudeLayer.MoteOverhead);
 
@@ -156,6 +151,17 @@ namespace VisualTweaks
                 }
             }
 
+            // Vanilla's absorption jitter, restored with its own settings. It is a
+            // push along the shot plus a matching size reduction, fading linearly
+            // over the configured number of ticks. The dissolve owns the frame when
+            // one is playing, so no jitter is layered on top of it.
+            Vector3 jitterOffset = Vector3.zero;
+            float jitterShrink = 0f;
+            if (dissolve == null)
+            {
+                TryGetJitter(comp, out jitterOffset, out jitterShrink);
+            }
+
             // Vanilla's own sizing rule: the drawn diameter grows with the stored
             // energy, from minDrawSize to maxDrawSize, and it uses the raw energy on
             // purpose (an energy stat above 1 is allowed to overshoot just as it does
@@ -163,10 +169,10 @@ namespace VisualTweaks
             float size = Mathf.Lerp(
                 comp.Props.minDrawSize,
                 comp.Props.maxDrawSize,
-                comp.Energy);
+                comp.Energy) - jitterShrink;
             float radius = Mathf.Max(size * 0.5f, 0.05f);
 
-            Vector3 center = pawn.Drawer.DrawPos;
+            Vector3 center = pawn.Drawer.DrawPos + jitterOffset;
 
             // Crisp and panel silhouettes sit exactly on r == 1, so their quad is
             // exactly the diameter. The stock-like style's soft tail is meant to fade
@@ -220,8 +226,17 @@ namespace VisualTweaks
                 return true;
             }
 
+            // The same role GetCurrentAlpha() plays for an interceptor dome. It is
+            // independent of that dome's value on purpose: a belt is always shown at
+            // one steady level, and the default sits in the middle of the range a
+            // selected dome pulses through.
+            float alpha = Mathf.Clamp(
+                VisualTweaksSettings.personalShieldOpacity,
+                VisualTweaksSettings.MinPersonalShieldOpacity,
+                VisualTweaksSettings.MaxPersonalShieldOpacity);
+
             properties[0] = DrawProperty.Vector(
-                ParamsId, new NVector4(0f, DomeAlpha, time, radius));
+                ParamsId, new NVector4(0f, alpha, time, radius));
             properties[1] = DrawProperty.Vector(Params4Id, centerParam);
             properties[2] = DrawProperty.Color(ColorId, tint);
 
@@ -233,6 +248,56 @@ namespace VisualTweaks
                 null,
                 0,
                 new DrawPropertyBlock(properties.AsSpan(0, 3)));
+            return true;
+        }
+
+        /// <summary>
+        /// The offset and size reduction for the current hit, or zero when no hit is
+        /// live. Reproduces vanilla's formula — full strength on the hit tick, then a
+        /// linear fade to zero — with the amplitude and duration made configurable.
+        ///
+        /// The offset uses <c>HorizontalVectorFromAngle</c>, the exact helper vanilla
+        /// uses for <c>impactAngleVect</c>, so the push follows the same convention as
+        /// the stock bubble rather than an intuitively reversed one.
+        /// </summary>
+        private static bool TryGetJitter(
+            CompShield comp,
+            out Vector3 offset,
+            out float shrink)
+        {
+            offset = Vector3.zero;
+            shrink = 0f;
+
+            if (!VisualTweaksSettings.personalShieldHitJitter)
+            {
+                return false;
+            }
+
+            TickManager? tickManager = Find.TickManager;
+            if (tickManager == null
+                || !PersonalShieldHitLog.TryGet(comp, out int hitTick, out float angle))
+            {
+                return false;
+            }
+
+            int duration = Mathf.Max(
+                1,
+                Mathf.RoundToInt(VisualTweaksSettings.personalShieldJitterTicks));
+            int age = tickManager.TicksGame - hitTick;
+            if (age < 0 || age >= duration)
+            {
+                return false;
+            }
+
+            float fade = (float)(duration - age) / duration;
+            float amount = VisualTweaksSettings.personalShieldJitterDistance * fade;
+            if (amount <= 0f)
+            {
+                return false;
+            }
+
+            offset = Vector3Utility.HorizontalVectorFromAngle(angle) * amount;
+            shrink = amount;
             return true;
         }
     }

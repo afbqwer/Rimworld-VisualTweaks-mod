@@ -1022,6 +1022,58 @@ namespace VisualTweaks
                 }
             }
 
+            // Personal belts get their own absorption reaction. This is not one of
+            // the dome's impact styles: a belt is too small for a flare or a panel
+            // wave, and its jitter should be tunable without moving the big shield's
+            // hit animation. Hidden while the custom drawing is off because vanilla
+            // then supplies its own unconfigurable jitter.
+            if (VisualTweaksSettings.crispShieldDome)
+            {
+                SettingsLayout.SubHeader(
+                    listing,
+                    "VisualTweaks_ShieldDome_PersonalLookGroup".Translate());
+                VisualTweaksSettings.personalShieldOpacity = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_PersonalOpacity".Translate(),
+                    VisualTweaksSettings.personalShieldOpacity,
+                    VisualTweaksSettings.MinPersonalShieldOpacity,
+                    VisualTweaksSettings.MaxPersonalShieldOpacity,
+                    "VisualTweaks_ShieldDome_PersonalOpacityTip".Translate());
+
+                SettingsLayout.SubHeader(
+                    listing,
+                    "VisualTweaks_ShieldDome_PersonalHitGroup".Translate());
+                SettingsLayout.Note(
+                    listing,
+                    "VisualTweaks_ShieldDome_PersonalHitNote".Translate());
+                listing.CheckboxLabeled(
+                    "VisualTweaks_ShieldDome_PersonalJitter".Translate(),
+                    ref VisualTweaksSettings.personalShieldHitJitter,
+                    "VisualTweaks_ShieldDome_PersonalJitterTip".Translate());
+
+                if (VisualTweaksSettings.personalShieldHitJitter)
+                {
+                    VisualTweaksSettings.personalShieldJitterDistance =
+                        SettingsLayout.Slider(
+                            listing,
+                            "VisualTweaks_ShieldDome_PersonalJitterDistance".Translate(),
+                            VisualTweaksSettings.personalShieldJitterDistance,
+                            VisualTweaksSettings.MinPersonalShieldJitterDistance,
+                            VisualTweaksSettings.MaxPersonalShieldJitterDistance,
+                            "VisualTweaks_ShieldDome_PersonalJitterDistanceTip".Translate(),
+                            step: 0.01f);
+                    VisualTweaksSettings.personalShieldJitterTicks =
+                        SettingsLayout.Slider(
+                            listing,
+                            "VisualTweaks_ShieldDome_PersonalJitterTicks".Translate(),
+                            VisualTweaksSettings.personalShieldJitterTicks,
+                            VisualTweaksSettings.MinPersonalShieldJitterTicks,
+                            VisualTweaksSettings.MaxPersonalShieldJitterTicks,
+                            "VisualTweaks_ShieldDome_PersonalJitterTicksTip".Translate(),
+                            step: 1f);
+                }
+            }
+
             // The break animation is per surface for the same reason: a shell loses
             // panels, a continuous surface tears, and Vanilla means do not animate.
             SettingsLayout.SubHeader(

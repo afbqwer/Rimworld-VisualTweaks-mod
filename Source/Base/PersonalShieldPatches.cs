@@ -28,6 +28,11 @@ namespace VisualTweaks
     /// after it is a shield that this damage just broke — the same observation, made
     /// on a method vanilla is unlikely to inline away, and without depending on a
     /// private name.
+    ///
+    /// The same postfix records hits that were absorbed without breaking, so the
+    /// renderer can restore vanilla's short jitter. That reaction has its own
+    /// settings and does not share the dome's impact styles: a belt is too small for
+    /// a flare or a panel wave, and tuning one must not move the other.
     /// </summary>
     internal static class PersonalShieldPatches
     {
@@ -229,6 +234,15 @@ namespace VisualTweaks
         private struct DamageSnapshot
         {
             public bool WasActive;
+
+            /// <summary>
+            /// True when the vanilla method would absorb this damage rather than let
+            /// it through: ranged or explosive, and not flagged to ignore shields.
+            /// Melee and EMP therefore never reach the jitter path (EMP breaks and is
+            /// handled as a state change instead).
+            /// </summary>
+            public bool Absorbable;
+
             public float Angle;
         }
 
@@ -238,28 +252,43 @@ namespace VisualTweaks
             out DamageSnapshot __state)
         {
             __state = default;
-            if (__instance != null && __instance.ShieldState == ShieldState.Active)
+            if (__instance == null || __instance.ShieldState != ShieldState.Active)
             {
-                __state.WasActive = true;
-                __state.Angle = dinfo.Angle;
+                return;
             }
+
+            __state.WasActive = true;
+            __state.Absorbable = !dinfo.Def.ignoreShields
+                && (dinfo.Def.isRanged || dinfo.Def.isExplosive);
+            __state.Angle = dinfo.Angle;
         }
 
         private static void PostPreApplyDamagePostfix(
             CompShield __instance,
             DamageSnapshot __state)
         {
-            // Only a call that started with a working shield can have broken it.
-            // A shield already Resetting or Disabled is hit again and again, and must
-            // not restart a dissolve that is already playing.
-            if (!__state.WasActive
-                || __instance == null
-                || __instance.ShieldState == ShieldState.Active)
+            // Only a call that started with a working shield can have broken it or
+            // absorbed anything. A shield already Resetting or Disabled is hit again
+            // and again, and must not restart an effect that is already playing.
+            if (!__state.WasActive || __instance == null)
             {
                 return;
             }
 
-            BeginIfEnabled(__instance, __state.Angle);
+            if (__instance.ShieldState != ShieldState.Active)
+            {
+                BeginIfEnabled(__instance, __state.Angle);
+                return;
+            }
+
+            // Absorbed without breaking: the belt survives, so this is the jitter
+            // case. A shield that was Active and is still Active did not break, but
+            // only a genuinely absorbable hit should shake the bubble — melee and
+            // ignoreShields damage leave the state untouched too.
+            if (__state.Absorbable && VisualTweaksSettings.personalShieldHitJitter)
+            {
+                PersonalShieldHitLog.Notify(__instance, __state.Angle);
+            }
         }
 
         private static void BeginIfEnabled(CompShield comp, float damageAngle)
