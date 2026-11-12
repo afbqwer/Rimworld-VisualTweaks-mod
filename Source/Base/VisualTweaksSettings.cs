@@ -192,6 +192,15 @@ namespace VisualTweaks
         // a 3-damage spit round cannot vanish.
         public static float shieldFlareDamageInfluence = 0.5f;
 
+        // Overall flare size. Width otherwise follows the projectile's damage through the
+        // same curve the rim ripple uses, so a pistol and a charge lance differ; this is
+        // the single knob for "the wedge is too small / too large" that does not require
+        // retuning that curve, and it is independent of the ripple's own sliders because
+        // the two are separate features.
+        public const float MinShieldFlareSize = 0.5f;
+        public const float MaxShieldFlareSize = 2f;
+        public static float shieldFlareSizeScale = 1f;
+
         // Vacuum leak airflow (Odyssey vacuum maps). Streams converge on ventilation
         // ports while air escapes; hull breaches add a short two-sided burst. The
         // intensity formula itself is state-driven, this slider only scales the look.
@@ -428,6 +437,7 @@ namespace VisualTweaks
                 ref shieldFlareDamageInfluence,
                 "shieldFlareDamageInfluence",
                 0.5f);
+            Scribe_Values.Look(ref shieldFlareSizeScale, "shieldFlareSizeScale", 1f);
             Scribe_Values.Look(ref vacuumLeakEnabled, "vacuumLeakEnabled", true);
             Scribe_Values.Look(ref vacuumLeakIntensity, "vacuumLeakIntensity", 1f);
             Scribe_Values.Look(ref vacuumLeakSpeed, "vacuumLeakSpeed", 1f);
@@ -525,6 +535,10 @@ namespace VisualTweaks
                 MinShieldFlareAlpha,
                 MaxShieldFlareAlpha);
             shieldFlareDamageInfluence = Mathf.Clamp01(shieldFlareDamageInfluence);
+            shieldFlareSizeScale = Mathf.Clamp(
+                shieldFlareSizeScale,
+                MinShieldFlareSize,
+                MaxShieldFlareSize);
             vacuumLeakIntensity = Mathf.Clamp(
                 vacuumLeakIntensity,
                 MinLeakIntensity,
@@ -661,6 +675,7 @@ namespace VisualTweaks
             shieldRidgeBrightness = 0.52f;
             shieldFlareAlpha = 0.30f;
             shieldFlareDamageInfluence = 0.5f;
+            shieldFlareSizeScale = 1f;
             vacuumLeakEnabled = true;
             vacuumLeakIntensity = 1f;
             vacuumLeakSpeed = 1f;

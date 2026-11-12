@@ -72,16 +72,23 @@ namespace VisualTweaks
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// Half-width as a cosine. 0.9135 is about 24 degrees each side.
+        /// How far the flare reaches inward — a radial quantity, deliberately independent
+        /// of the angular width.
+        ///
+        /// Deriving depth from the width was a mistake with a specific failure: depth
+        /// then equals width times tan(half-angle), so the narrower the flare the shorter
+        /// it gets, and on a large shield (5 degrees) it collapsed into a notch at the
+        /// rim that was simply too small to see. Width answers "how wide is the beam",
+        /// depth answers "how far into the dome does it reach"; nothing ties the two.
+        ///
+        /// 0.78 is the fraction the earlier fixed-angle version used, which reads well on
+        /// a normal shield. The cell clamps keep a tiny dome from asking for a negative
+        /// inner radius and a huge one from laying a 19-cell wedge over everything.
         /// </summary>
-        private const float FlareCosHalfAngle = 0.9135f;
+        private const float FlareDepthShare = 0.78f;
 
-        /// <summary>
-        /// Where the flare starts, as a fraction of the radius. Not zero: a flare that
-        /// reaches the centre draws over whatever is standing under the shield, and the
-        /// cue only has to point, not cover.
-        /// </summary>
-        private const float FlareInnerRadius = 0.22f;
+        private const float FlareMinDepthCells = 2.5f;
+        private const float FlareMaxDepthCells = 6f;
 
         /// <summary>
         /// Damage that maps to a damage factor of exactly 1.0 — a vanilla bullet in the
@@ -235,6 +242,14 @@ namespace VisualTweaks
             int now = tickManager.TicksGame;
             bool drew = false;
 
+            // Depth depends only on the shield, so it is resolved once. Width does not:
+            // it follows each impact's damage.
+            float depth = Mathf.Clamp(
+                radius * FlareDepthShare,
+                FlareMinDepthCells,
+                FlareMaxDepthCells);
+            float innerRadius = Mathf.Clamp(1f - depth / radius, 0.05f, 0.9f);
+
             for (int i = impacts.Count - 1; i >= 0; i--)
             {
                 int age = now - impacts[i].Tick;
@@ -256,6 +271,15 @@ namespace VisualTweaks
                     continue;
                 }
 
+                // Width from the impact's damage, through the same curve the rim ripple
+                // uses but with the flare's own tuning and its own size slider. Resolved
+                // per impact, so a heavy hit is visibly wider than a pistol round while
+                // both stay inside the clamps.
+                float footprint = ShieldImpactFootprint.FlareCells(
+                    impacts[i].Damage,
+                    radius);
+                float cosHalfAngle = Mathf.Cos(Mathf.Atan2(footprint, radius));
+
                 // The stored angle is the bearing from the projectile towards the
                 // shield centre, so the flare has to look the other way to point at
                 // the shooter.
@@ -263,8 +287,8 @@ namespace VisualTweaks
                 NVector4 direction = new NVector4(
                     -toward.x,
                     -toward.z,
-                    FlareCosHalfAngle,
-                    FlareInnerRadius);
+                    cosHalfAngle,
+                    innerRadius);
 
                 properties[0] = DrawProperty.Vector(
                     ParamsId, new NVector4(1f, flareAlpha, time, radius));

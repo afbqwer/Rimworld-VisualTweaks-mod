@@ -618,6 +618,13 @@ namespace VisualTweaks
                 0f,
                 1f,
                 "VisualTweaks_ShieldDome_FlareDamageTip".Translate());
+            VisualTweaksSettings.shieldFlareSizeScale = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_FlareSize".Translate(),
+                VisualTweaksSettings.shieldFlareSizeScale,
+                VisualTweaksSettings.MinShieldFlareSize,
+                VisualTweaksSettings.MaxShieldFlareSize,
+                "VisualTweaks_ShieldDome_FlareSizeTip".Translate());
 
             SettingsLayout.Finish(listing);
         }

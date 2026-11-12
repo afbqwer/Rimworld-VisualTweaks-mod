@@ -130,6 +130,8 @@
   <VisualTweaks_ShieldDome_RidgeBrightnessTip>外轮廓那条带的亮度。调到 0 只剩一条细热芯和内辉，轮廓会重新显得薄——要更厚请调上面的粗细。</VisualTweaks_ShieldDome_RidgeBrightnessTip>
   <VisualTweaks_ShieldDome_FlareAlpha>受击火舌不透明度</VisualTweaks_ShieldDome_FlareAlpha>
   <VisualTweaks_ShieldDome_FlareAlphaTip>一次拦截产生的方向火舌的峰值不透明度。原版锥形最高 0.82，看起来像一块实心扇形压在护盾上；这里默认只有它的三分之一。多发射击会各自画一条并叠加变亮。</VisualTweaks_ShieldDome_FlareAlphaTip>
+  <VisualTweaks_ShieldDome_FlareSize>火舌大小</VisualTweaks_ShieldDome_FlareSize>
+  <VisualTweaks_ShieldDome_FlareSizeTip>火舌宽度的整体倍率。宽度本身跟随弹道伤害，但受「不超过护盾半径 45%」的上限约束：小护盾上很快就到顶（否则扇形会盖住整个穹顶），大护盾上重武器才会明显更宽。护盾涟漪是另一个功能，它的设置不会影响火舌。</VisualTweaks_ShieldDome_FlareSizeTip>
   <VisualTweaks_ShieldDome_FlareDamage>火舌伤害影响</VisualTweaks_ShieldDome_FlareDamage>
   <VisualTweaks_ShieldDome_FlareDamageTip>火舌亮度跟随击中伤害的程度。0 时各种武器一样亮；越大重武器越醒目。结果始终限制在 0.55–1.8 倍之间，所以电荷长枪不会糊满整个穹顶，小口径子弹也不会看不见。</VisualTweaks_ShieldDome_FlareDamageTip>
 

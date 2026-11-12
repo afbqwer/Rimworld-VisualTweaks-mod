@@ -150,11 +150,17 @@ void main()
             1.0);
         float profile = smoothstep(0.0, 0.8, axis);
 
-        // Squared radial ramp: the flare belongs to the rim, not to the centre.
-        // A wedge that reaches the middle covers whatever is standing under the
+        // Radial ramp: the flare belongs to the rim, not to the centre —
+        // a wedge that reaches the middle covers whatever is standing under the
         // shield and stops reading as "something hit the surface here".
+        //
+        // Not squared. A squared ramp keeps only the last few pixels bright, and on a
+        // small shield those are the same few pixels the dome's own ridge occupies,
+        // so the flare disappears into the rim it is supposed to disturb. This is
+        // linear with a floor instead: still brightest at the rim, but with enough
+        // body further in to be read as a streak.
         float radial = smoothstep(u._Params3.w, 1.0, r);
-        float flare = radial * radial;
+        float flare = radial * (0.55 + 0.45 * radial);
 
         vec3 halo = u._Color.rgb;
         vec3 coreTint = mix(halo, vec3(1.0), 0.65);

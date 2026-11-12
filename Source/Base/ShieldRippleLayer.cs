@@ -52,31 +52,11 @@ namespace VisualTweaks
         // supplies a ceiling, because a ripple wider than the dome has nowhere to travel
         // and the silhouette clip turns it into a flat arc plastered along the edge.
         //
-        // 12 is the reference point: a vanilla bullet in the 10-15 band lands at 1.0.
-        // The exponents are deliberately below 1 — damage spans two orders of magnitude
-        // (a 3 dmg spit round against a 200 dmg charge blast) and a linear response would
-        // make small arms invisible while turning the top end into a screen-filling ring.
+        // Size itself is not decided here — it lives in ShieldImpactFootprint, which the
+        // interception flare also uses (same curve shape, separate tuning). Only the two
+        // responses unique to a ripple are local: strength and duration.
         // ------------------------------------------------------------------
 
-        /// <summary>Damage that maps to a response factor of exactly 1.0.</summary>
-        private const float ReferenceDamage = 12f;
-
-        /// <summary>Ripple radius in cells at a response factor of 1.0.</summary>
-        private const float BaseRadius = 1.1f;
-
-        private const float MinRippleRadius = 0.35f;
-
-        /// <summary>Absolute ceiling, independent of the shield.</summary>
-        private const float MaxRippleRadius = 2.2f;
-
-        /// <summary>
-        /// The other ceiling: a ripple may never take more than this share of the shield
-        /// radius. At 0.35 the clip still leaves a readable arc (~44% visible); much
-        /// beyond that the ring degenerates into a band hugging the silhouette.
-        /// </summary>
-        private const float ShieldRadiusShare = 0.35f;
-
-        private const float SizeExponent = 0.6f;
         private const float StrengthExponent = 0.35f;
         private const float DurationExponent = 0.5f;
 
@@ -187,25 +167,11 @@ namespace VisualTweaks
             float x = center.x + dirX * shieldRadius;
             float z = center.z + dirZ * shieldRadius;
 
-            // Damage drives all three values. The floor of 2 damage keeps a zero-damage
-            // projectile (EMP carries no damage of its own) from collapsing the response
-            // to nothing, and the slider is applied to the ratio before the exponents so
-            // one control moves size, strength and duration together.
-            float ratio = Mathf.Max(damage, 2f)
-                / ReferenceDamage
-                * VisualTweaksSettings.shieldRippleDamageScale;
-
-            // The shield is now a ceiling only. `cap` is floored at MinRippleRadius
-            // because Mathf.Clamp with min > max returns min, which would silently
-            // un-cap a shield smaller than the minimum ripple.
-            float cap = Mathf.Max(
-                MinRippleRadius,
-                Mathf.Min(MaxRippleRadius, shieldRadius * ShieldRadiusShare));
-
-            float radius = Mathf.Clamp(
-                BaseRadius * Mathf.Pow(ratio, SizeExponent),
-                MinRippleRadius,
-                cap);
+            // Damage drives all three values. The ratio carries the player's damage
+            // scale, so one slider moves size, strength and duration together; size is
+            // resolved by the shared footprint so the flare at the same impact matches.
+            float ratio = ShieldImpactFootprint.RippleDamageRatio(damage);
+            float radius = ShieldImpactFootprint.RippleCells(damage, shieldRadius);
 
             float intensity = Mathf.Clamp(
                 VisualTweaksSettings.shieldRippleIntensity
