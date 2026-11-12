@@ -163,6 +163,8 @@
   <VisualTweaks_ShieldDome_HexImpactTip>六边扩散点亮面板的峰值亮度。</VisualTweaks_ShieldDome_HexImpactTip>
   <VisualTweaks_ShieldDome_HexImpactReach>受击扩散范围</VisualTweaks_ShieldDome_HexImpactReach>
   <VisualTweaks_ShieldDome_HexImpactReachTip>光从命中点向外传播的距离，按到对侧边缘的比例计算。</VisualTweaks_ShieldDome_HexImpactReachTip>
+  <VisualTweaks_ShieldDome_DisableHitDust>关闭受击尘土</VisualTweaks_ShieldDome_DisableHitDust>
+  <VisualTweaks_ShieldDome_DisableHitDustTip>开启后，大型护盾拦截时不再产生尘土；闪光和音效保留。</VisualTweaks_ShieldDome_DisableHitDustTip>
 
   <VisualTweaks_ShieldDome_BreakGroup>破裂动画</VisualTweaks_ShieldDome_BreakGroup>
   <VisualTweaks_ShieldDome_BreakVanilla>原版</VisualTweaks_ShieldDome_BreakVanilla>

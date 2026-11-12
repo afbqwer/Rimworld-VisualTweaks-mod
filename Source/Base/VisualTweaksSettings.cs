@@ -174,6 +174,13 @@ namespace VisualTweaks
         public static bool largeShieldsVanillaOnly = false;
         public static bool personalShieldsVanillaOnly = false;
 
+        // Vanilla's Interceptor_BlockedProjectile effecter contains 3-5 DustPuff
+        // flecks on top of its sound and flash. They are aimed at the impact point
+        // rather than the dome and can bury the custom hit reaction, so they get a
+        // switch. Only the dust children of a large shield's intercept effecter are
+        // removed; the sound and flash, and every other dust puff in the game, stay.
+        public static bool largeShieldDisableHitDust = true;
+
         // Which surface the replacement dome draws. Crisp is the original analytic
         // ring; Hex is the spherical panel shell; Vanilla reproduces the matching
         // stock texture — the narrow ForceField ring on a dome, the broader
@@ -734,6 +741,10 @@ namespace VisualTweaks
                 ref personalShieldsVanillaOnly,
                 "personalShieldsVanillaOnly",
                 false);
+            Scribe_Values.Look(
+                ref largeShieldDisableHitDust,
+                "largeShieldDisableHitDust",
+                true);
 
             Scribe_Values.Look(
                 ref shieldDomeStyle,
@@ -1219,6 +1230,7 @@ namespace VisualTweaks
             replacePersonalShields = true;
             largeShieldsVanillaOnly = false;
             personalShieldsVanillaOnly = false;
+            largeShieldDisableHitDust = true;
             shieldDomeStyle = ShieldDomeStyleCrisp;
             personalShieldDomeStyle = ShieldDomeStyleCrisp;
             crispShieldImpactStyle = ShieldImpactFlare;

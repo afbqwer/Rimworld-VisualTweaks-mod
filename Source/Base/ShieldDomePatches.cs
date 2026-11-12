@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using RimWorld;
@@ -62,6 +63,7 @@ namespace VisualTweaks
             PatchPostDraw(harmony);
             PatchCheckIntercept(harmony);
             PatchShutdowns(harmony);
+            PatchHitDust(harmony);
         }
 
         /// <summary>
@@ -95,6 +97,105 @@ namespace VisualTweaks
                 nameof(ActivePrefix), nameof(ActivePostfix), "mech lord shutdown");
             TryPatch(harmony, nameof(CompProjectileInterceptor.Deactivate),
                 nameof(ActivePrefix), nameof(ActivePostfix), "gravship deactivation");
+        }
+
+        /// <summary>
+        /// Vanilla's intercept effecter carries a dust sprayer on top of its sound
+        /// and flash. The sprayer is a data child, so patching the effecter's
+        /// <c>Trigger</c> and removing only the DustPuff children is cleaner than
+        /// cloning the def: the sound and flash still fire, the def itself is never
+        /// mutated, and turning the switch back on immediately restores the dust on
+        /// the next hit.
+        ///
+        /// The def set is collected once from every comp that can intercept, so a
+        /// modded shield with its own <c>interceptEffect</c> is covered too. Only
+        /// large shield intercept effecters are in it.
+        /// </summary>
+        private static void PatchHitDust(Harmony harmony)
+        {
+            MethodInfo? target = AccessTools.Method(
+                typeof(Effecter),
+                nameof(Effecter.Trigger));
+            MethodInfo? prefix = AccessTools.Method(
+                typeof(ShieldDomePatches),
+                nameof(EffecterTriggerPrefix));
+
+            if (target == null || prefix == null)
+            {
+                Log.Warning("[Visual Tweaks] Cannot patch Effecter.Trigger;"
+                    + " large shield hit dust cannot be switched off.");
+                return;
+            }
+
+            BuildInterceptEffectSet();
+
+            try
+            {
+                harmony.Patch(target, prefix: new HarmonyMethod(prefix));
+                VisualTweaksLog.Info("Patched Effecter.Trigger (large shield hit dust; "
+                    + InterceptEffects.Count + " intercept effecter(s)).");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[Visual Tweaks] Failed to patch Effecter.Trigger: " + ex);
+            }
+        }
+
+        private static readonly HashSet<EffecterDef> InterceptEffects =
+            new HashSet<EffecterDef>();
+
+        private static void BuildInterceptEffectSet()
+        {
+            InterceptEffects.Clear();
+            InterceptEffects.Add(EffecterDefOf.Interceptor_BlockedProjectile);
+
+            EffecterDef? psychic = DefDatabase<EffecterDef>.GetNamedSilentFail(
+                "Interceptor_BlockedProjectilePsychic");
+            if (psychic != null)
+            {
+                InterceptEffects.Add(psychic);
+            }
+
+            foreach (ThingDef thing in DefDatabase<ThingDef>.AllDefs)
+            {
+                List<CompProperties>? comps = thing.comps;
+                if (comps == null)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < comps.Count; i++)
+                {
+                    if (comps[i] is CompProperties_ProjectileInterceptor interceptor
+                        && interceptor.interceptEffect != null)
+                    {
+                        InterceptEffects.Add(interceptor.interceptEffect);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Runs for every effecter trigger in the game, so the common cases return
+        /// immediately: the switch is off, the mod is not drawing large shields, or
+        /// this effecter is not an interception. Only then is the child list touched.
+        /// </summary>
+        private static void EffecterTriggerPrefix(Effecter __instance)
+        {
+            if (!VisualTweaksSettings.largeShieldDisableHitDust
+                || !ShieldDomeBridge.LargeActive
+                || __instance?.def == null
+                || !InterceptEffects.Contains(__instance.def))
+            {
+                return;
+            }
+
+            __instance.children.RemoveAll(IsDustSprayer);
+        }
+
+        private static bool IsDustSprayer(SubEffecter child)
+        {
+            return child?.def?.fleckDef == FleckDefOf.DustPuff;
         }
 
         private static void TryPatch(

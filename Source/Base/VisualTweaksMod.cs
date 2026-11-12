@@ -900,6 +900,10 @@ namespace VisualTweaks
                 listing,
                 "VisualTweaks_ShieldDome_ImpactGroup".Translate());
             DrawDomeImpactChoice(listing);
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_DisableHitDust".Translate(),
+                ref VisualTweaksSettings.largeShieldDisableHitDust,
+                "VisualTweaks_ShieldDome_DisableHitDustTip".Translate());
 
             SettingsLayout.SubHeader(
                 listing,

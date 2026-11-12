@@ -163,6 +163,8 @@
   <VisualTweaks_ShieldDome_HexImpactTip>Peak brightness of the panels lit by Hex wave.</VisualTweaks_ShieldDome_HexImpactTip>
   <VisualTweaks_ShieldDome_HexImpactReach>Hit flash reach</VisualTweaks_ShieldDome_HexImpactReach>
   <VisualTweaks_ShieldDome_HexImpactReachTip>How far the light travels from the impact, as a share of the distance to the far rim.</VisualTweaks_ShieldDome_HexImpactReachTip>
+  <VisualTweaks_ShieldDome_DisableHitDust>Disable hit dust</VisualTweaks_ShieldDome_DisableHitDust>
+  <VisualTweaks_ShieldDome_DisableHitDustTip>On removes dust when a large shield intercepts; the flash and sound remain.</VisualTweaks_ShieldDome_DisableHitDustTip>
 
   <VisualTweaks_ShieldDome_BreakGroup>Break animation</VisualTweaks_ShieldDome_BreakGroup>
   <VisualTweaks_ShieldDome_BreakVanilla>Vanilla</VisualTweaks_ShieldDome_BreakVanilla>
