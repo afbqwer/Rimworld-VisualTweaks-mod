@@ -626,6 +626,29 @@ namespace VisualTweaks
                 VisualTweaksSettings.MaxShieldFlareSize,
                 "VisualTweaks_ShieldDome_FlareSizeTip".Translate());
 
+            // A broken shield used to disappear in one frame. This one tears itself
+            // apart over a short animation; the stock flash and sound still play.
+            listing.Gap(6f);
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_Dissolve".Translate(),
+                ref VisualTweaksSettings.shieldDissolveEnabled,
+                "VisualTweaks_ShieldDome_DissolveTip".Translate());
+            VisualTweaksSettings.shieldDissolveTicks = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_DissolveTime".Translate(),
+                VisualTweaksSettings.shieldDissolveTicks,
+                VisualTweaksSettings.MinShieldDissolveTicks,
+                VisualTweaksSettings.MaxShieldDissolveTicks,
+                "VisualTweaks_ShieldDome_DissolveTimeTip".Translate(),
+                step: 1f);
+            VisualTweaksSettings.shieldDissolveBrightness = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_DissolveBrightness".Translate(),
+                VisualTweaksSettings.shieldDissolveBrightness,
+                VisualTweaksSettings.MinShieldDissolveBrightness,
+                VisualTweaksSettings.MaxShieldDissolveBrightness,
+                "VisualTweaks_ShieldDome_DissolveBrightnessTip".Translate());
+
             SettingsLayout.Finish(listing);
         }
 

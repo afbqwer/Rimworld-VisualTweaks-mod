@@ -201,6 +201,24 @@ namespace VisualTweaks
         public const float MaxShieldFlareSize = 2f;
         public static float shieldFlareSizeScale = 1f;
 
+        // The break animation. It belongs with the shield drawing, not with the
+        // ripples: it replaces the frame on which the dome used to simply disappear.
+        // Vanilla's Shield_Break effecter (flash + sound) still plays underneath.
+        public static bool shieldDissolveEnabled = true;
+
+        // In ticks. 60 ticks is one in-game second at normal speed; 90 gives the tear
+        // time to cross a large dome without lingering into the recharge cycle.
+        public const float MinShieldDissolveTicks = 30f;
+        public const float MaxShieldDissolveTicks = 180f;
+        public static float shieldDissolveTicks = 90f;
+
+        // The dissolve has to supply its own brightness because GetCurrentAlpha() is
+        // already zero by then. 0.9 is just below the intact dome's selected alpha
+        // peak multiplied by the surge, so the break reads as a flare, not a dimming.
+        public const float MinShieldDissolveBrightness = 0.2f;
+        public const float MaxShieldDissolveBrightness = 1.5f;
+        public static float shieldDissolveBrightness = 0.9f;
+
         // Vacuum leak airflow (Odyssey vacuum maps). Streams converge on ventilation
         // ports while air escapes; hull breaches add a short two-sided burst. The
         // intensity formula itself is state-driven, this slider only scales the look.
@@ -438,6 +456,15 @@ namespace VisualTweaks
                 "shieldFlareDamageInfluence",
                 0.5f);
             Scribe_Values.Look(ref shieldFlareSizeScale, "shieldFlareSizeScale", 1f);
+            Scribe_Values.Look(
+                ref shieldDissolveEnabled,
+                "shieldDissolveEnabled",
+                true);
+            Scribe_Values.Look(ref shieldDissolveTicks, "shieldDissolveTicks", 90f);
+            Scribe_Values.Look(
+                ref shieldDissolveBrightness,
+                "shieldDissolveBrightness",
+                0.9f);
             Scribe_Values.Look(ref vacuumLeakEnabled, "vacuumLeakEnabled", true);
             Scribe_Values.Look(ref vacuumLeakIntensity, "vacuumLeakIntensity", 1f);
             Scribe_Values.Look(ref vacuumLeakSpeed, "vacuumLeakSpeed", 1f);
@@ -539,6 +566,14 @@ namespace VisualTweaks
                 shieldFlareSizeScale,
                 MinShieldFlareSize,
                 MaxShieldFlareSize);
+            shieldDissolveTicks = Mathf.Clamp(
+                shieldDissolveTicks,
+                MinShieldDissolveTicks,
+                MaxShieldDissolveTicks);
+            shieldDissolveBrightness = Mathf.Clamp(
+                shieldDissolveBrightness,
+                MinShieldDissolveBrightness,
+                MaxShieldDissolveBrightness);
             vacuumLeakIntensity = Mathf.Clamp(
                 vacuumLeakIntensity,
                 MinLeakIntensity,
@@ -676,6 +711,9 @@ namespace VisualTweaks
             shieldFlareAlpha = 0.30f;
             shieldFlareDamageInfluence = 0.5f;
             shieldFlareSizeScale = 1f;
+            shieldDissolveEnabled = true;
+            shieldDissolveTicks = 90f;
+            shieldDissolveBrightness = 0.9f;
             vacuumLeakEnabled = true;
             vacuumLeakIntensity = 1f;
             vacuumLeakSpeed = 1f;

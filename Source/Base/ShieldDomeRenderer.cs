@@ -178,9 +178,50 @@ namespace VisualTweaks
                 Quaternion.identity,
                 new Vector3(radius * 2f, 1f, radius * 2f));
 
+            // ------------------------------------------------------------------
+            // Dissolve.
+            //
+            // A broken shield has no alpha of its own: vanilla's GetCurrentAlpha()
+            // falls to zero with Active, so the surface has to carry its own clock
+            // and its own brightness for the few ticks it takes to fall apart. The
+            // patch starts that clock at the four real shutdown points; here it is
+            // only read. Progress advances on TicksGame, so it freezes on pause and
+            // speeds up with game speed like a vanilla mote.
+            // ------------------------------------------------------------------
+            ShieldDissolveLog.State? dissolve = null;
+            float dissolveProgress = 0f;
+            if (VisualTweaksSettings.shieldDissolveEnabled)
+            {
+                dissolve = ShieldDissolveLog.Progress(comp, out dissolveProgress);
+            }
+
+            // A generator that recharges mid-animation is a working shield again.
+            // Do not keep painting a dome that is still disintegrating over it.
+            // Active alone is not enough here: Deactivate() leaves it true for the
+            // rest of the tick, so wait until we have actually seen the shield go
+            // down before treating a true value as a reactivation.
+            if (dissolve != null)
+            {
+                if (comp.Active)
+                {
+                    if (dissolve.SawInactive)
+                    {
+                        ShieldDissolveLog.Cancel(comp);
+                        dissolve = null;
+                    }
+                }
+                else
+                {
+                    dissolve.SawInactive = true;
+                }
+            }
+
             // Vanilla paints a selected-but-inactive shield dark grey so "this is off"
-            // is visible at a glance. Same rule, same colour.
-            Color color = !comp.Active && Find.Selector.IsSelected(parent)
+            // is visible at a glance. A shield that is actively tearing itself apart is
+            // emitting light, not sitting idle, so it keeps the def's colour.
+            Color color = dissolve == null
+                && !comp.Active
+                && Find.Selector.IsSelected(parent)
                 ? InactiveColor
                 : comp.Props.color;
 
@@ -193,10 +234,42 @@ namespace VisualTweaks
             {
                 // Flares first: they are additive, so order does not change the
                 // picture, but submitting them under the dome keeps the rim the last
-                // thing written to the surface.
+                // thing written to the surface. A burst that was still fading when the
+                // shield broke should keep fading, not vanish with the dome.
                 drew |= DrawFlares(comp, mat, matrix, tint, centerParam, radius, time);
 
-                if (alpha > 0f)
+                if (dissolve != null)
+                {
+                    // Mode 2. _Params3 switches meaning from a flare's direction to
+                    // the tear's origin / progress / seed; no extra uniform is needed.
+                    properties[0] = DrawProperty.Vector(
+                        ParamsId,
+                        new NVector4(
+                            2f,
+                            VisualTweaksSettings.shieldDissolveBrightness,
+                            time,
+                            radius));
+                    properties[1] = DrawProperty.Vector(
+                        Params3Id,
+                        new NVector4(
+                            dissolve.OriginX,
+                            dissolve.OriginZ,
+                            dissolveProgress,
+                            dissolve.Seed));
+                    properties[2] = DrawProperty.Vector(Params4Id, centerParam);
+                    properties[3] = DrawProperty.Color(ColorId, tint);
+
+                    Graphics.DrawMesh(
+                        MeshPool.plane10,
+                        matrix,
+                        mat,
+                        0,
+                        null,
+                        0,
+                        new DrawPropertyBlock(properties));
+                    drew = true;
+                }
+                else if (alpha > 0f)
                 {
                     properties[0] = DrawProperty.Vector(
                         ParamsId, new NVector4(0f, alpha, time, radius));

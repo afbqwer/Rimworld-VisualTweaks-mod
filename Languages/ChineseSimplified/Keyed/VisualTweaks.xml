@@ -134,6 +134,12 @@
   <VisualTweaks_ShieldDome_FlareSizeTip>火舌宽度的整体倍率。宽度本身跟随弹道伤害，但受「不超过护盾半径 45%」的上限约束：小护盾上很快就到顶（否则扇形会盖住整个穹顶），大护盾上重武器才会明显更宽。护盾涟漪是另一个功能，它的设置不会影响火舌。</VisualTweaks_ShieldDome_FlareSizeTip>
   <VisualTweaks_ShieldDome_FlareDamage>火舌伤害影响</VisualTweaks_ShieldDome_FlareDamage>
   <VisualTweaks_ShieldDome_FlareDamageTip>火舌亮度跟随击中伤害的程度。0 时各种武器一样亮；越大重武器越醒目。结果始终限制在 0.55–1.8 倍之间，所以电荷长枪不会糊满整个穹顶，小口径子弹也不会看不见。</VisualTweaks_ShieldDome_FlareDamageTip>
+  <VisualTweaks_ShieldDome_Dissolve>护盾破裂溶解</VisualTweaks_ShieldDome_Dissolve>
+  <VisualTweaks_ShieldDome_DissolveTip>护盾被打爆、被 EMP 击毁、随机械族首领失效或手动关闭时，穹顶会从受击点开始裂开、逐块消散，而不是一帧内凭空消失。原版的破裂闪光与音效仍然保留。</VisualTweaks_ShieldDome_DissolveTip>
+  <VisualTweaks_ShieldDome_DissolveTime>破裂动画时长</VisualTweaks_ShieldDome_DissolveTime>
+  <VisualTweaks_ShieldDome_DissolveTimeTip>从开始破裂到完全消失的 tick 数（正常速度下 60 tick 为 1 秒）。跟随游戏速度，暂停时冻结。</VisualTweaks_ShieldDome_DissolveTimeTip>
+  <VisualTweaks_ShieldDome_DissolveBrightness>破裂亮度</VisualTweaks_ShieldDome_DissolveBrightness>
+  <VisualTweaks_ShieldDome_DissolveBrightnessTip>破裂瞬间穹顶的亮度。破裂后原版的可见度已经归零，所以溶解必须自带亮度，与上方的轮廓亮度互不影响。</VisualTweaks_ShieldDome_DissolveBrightnessTip>
 
   <!-- 温度：热效应（高温空气热浪）与冷效应（低温房间寒气）共用一页 -->
   <VisualTweaks_Temp_GroupHeat>热效应</VisualTweaks_Temp_GroupHeat>

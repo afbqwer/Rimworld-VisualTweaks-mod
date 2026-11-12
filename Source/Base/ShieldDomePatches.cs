@@ -32,6 +32,11 @@ namespace VisualTweaks
     /// per direction. That also removes this class's old dependency on the private
     /// field, and with it the one place a vanilla rename could have silently flipped
     /// the flare to the wrong side.
+    ///
+    /// The four shutdown entry points are observed as well, to start the dissolve.
+    /// That animation cannot be driven by <c>GetCurrentAlpha()</c>: it collapses to
+    /// zero the moment the shield stops being Active, which is precisely when a
+    /// breaking shield needs to be brightest. See <see cref="ShieldDissolveLog"/>.
     /// </summary>
     internal static class ShieldDomePatches
     {
@@ -56,6 +61,109 @@ namespace VisualTweaks
 
             PatchPostDraw(harmony);
             PatchCheckIntercept(harmony);
+            PatchShutdowns(harmony);
+        }
+
+        /// <summary>
+        /// The four ways a shield actually ends. These are method-level signals on
+        /// purpose: watching <c>Active</c> for a falling edge is not an option, because
+        /// it is also false during cooldown, charging, stuns, dormancy and the tail of
+        /// a timed activation — several of which happen after an ordinary interception.
+        /// An edge detector there would play a full break animation on every bullet.
+        ///
+        /// BreakShieldHitpoints and BreakShieldEmp are private; Notify_LordDestroyed
+        /// and Deactivate are public. None of them is patched for behaviour — they are
+        /// only observed, so a vanilla rename costs the dissolve and nothing else.
+        /// </summary>
+        private static void PatchShutdowns(Harmony harmony)
+        {
+            // HP depletion: vanilla spawns Shield_Break unconditionally here, so this
+            // one needs no state check. It runs from inside CheckIntercept after
+            // currentHitPoints has already been zeroed.
+            TryPatch(harmony, "BreakShieldHitpoints", null, nameof(BreakHitpointsPostfix),
+                "shield HP break");
+
+            // EMP: vanilla only spawns its effecter when the shield was Active at
+            // entry, and stuns it inside the method. The prefix captures that decision
+            // before it is lost.
+            TryPatch(harmony, "BreakShieldEmp", nameof(ActivePrefix),
+                nameof(ActivePostfix), "shield EMP break");
+
+            // The two silent shutdowns. Vanilla gives these no feedback at all — the
+            // dome simply vanishes — so the dissolve is the whole visible event.
+            TryPatch(harmony, nameof(CompProjectileInterceptor.Notify_LordDestroyed),
+                nameof(ActivePrefix), nameof(ActivePostfix), "mech lord shutdown");
+            TryPatch(harmony, nameof(CompProjectileInterceptor.Deactivate),
+                nameof(ActivePrefix), nameof(ActivePostfix), "gravship deactivation");
+        }
+
+        private static void TryPatch(
+            Harmony harmony,
+            string targetName,
+            string? prefixName,
+            string? postfixName,
+            string label)
+        {
+            MethodInfo? target = AccessTools.Method(
+                typeof(CompProjectileInterceptor), targetName);
+            if (target == null)
+            {
+                Log.Warning("[Visual Tweaks] Cannot find CompProjectileInterceptor."
+                    + targetName + "; " + label + " will not dissolve.");
+                return;
+            }
+
+            HarmonyMethod? prefix = prefixName == null
+                ? null
+                : new HarmonyMethod(
+                    AccessTools.Method(typeof(ShieldDomePatches), prefixName));
+            HarmonyMethod? postfix = postfixName == null
+                ? null
+                : new HarmonyMethod(
+                    AccessTools.Method(typeof(ShieldDomePatches), postfixName));
+
+            try
+            {
+                harmony.Patch(target, prefix: prefix, postfix: postfix);
+                VisualTweaksLog.Info("Patched " + targetName + " (" + label + ").");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[Visual Tweaks] Failed to patch " + label + ": " + ex);
+            }
+        }
+
+        /// <summary>Records whether the shield was actually up before this method ran.</summary>
+        private static void ActivePrefix(CompProjectileInterceptor __instance, out bool __state)
+        {
+            __state = __instance != null && __instance.Active;
+        }
+
+        private static void ActivePostfix(CompProjectileInterceptor __instance, bool __state)
+        {
+            if (__state)
+            {
+                BeginIfEnabled(__instance);
+            }
+        }
+
+        private static void BreakHitpointsPostfix(CompProjectileInterceptor __instance)
+        {
+            BeginIfEnabled(__instance);
+        }
+
+        private static void BeginIfEnabled(CompProjectileInterceptor comp)
+        {
+            // No dissolve when the custom dome is not installed (shader failed, setting
+            // off, screenshot mode): the stock look has no surface to tear apart.
+            if (comp == null
+                || !ShieldDomeBridge.Active
+                || !VisualTweaksSettings.shieldDissolveEnabled)
+            {
+                return;
+            }
+
+            ShieldDissolveLog.Begin(comp);
         }
 
         private static void PatchPostDraw(Harmony harmony)
@@ -195,6 +303,15 @@ namespace VisualTweaks
             // the impact itself carries no weight, and the projectile is about to be
             // destroyed without ever landing.
             ShieldImpactLog.Notify(__instance, angle, projectile.DamageAmount);
+
+            // If this was the shot that broke the shield, the dissolve began a moment
+            // ago from inside CheckIntercept and still holds the *previous* hit as its
+            // origin. Hand it the fatal bearing while the tick still matches. A no-op
+            // on every ordinary hit.
+            ShieldDissolveLog.RefreshOrigin(
+                __instance,
+                angle,
+                Find.TickManager?.TicksGame ?? -1);
         }
 
         /// <summary>
