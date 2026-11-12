@@ -470,17 +470,17 @@ namespace VisualTweaks
                 Params5Id,
                 new Vector4(width, CoreSigmaPixels, GlowExponent, DriftWeight));
 
-            // _Params6.w is the SDF gradient floor. It scales with cell density:
-            // denser lattices have a steeper edge-distance field, and the shader
-            // needs that slope to keep a 2.2 px line when fwidth() collapses in
-            // the V-shaped valley of a cell wall.
+            // _Params6.w is 1/eRef, the reciprocal of the angular distance that
+            // maps to edgeDistance 1.0. The shader multiplies it by 1/z (the
+            // orthographic Jacobian) to get the exact field gradient, so line
+            // width is 2.2 px at every zoom and every shield size.
             mat.SetVector(
                 Params6Id,
                 new Vector4(
                     style,
                     face,
                     line,
-                    ShieldHexMap.GradientPerSubdivision * density));
+                    density / ShieldHexMap.ERefPerSubdivision));
         }
 
         private static Material? EnsureMaterial()

@@ -184,19 +184,29 @@ vec2 HexSurface(vec2 p, float aa, float t)
     float jitter = Hash21(face.xy * 37.0) - 0.5;
     float shade = 0.42 + 0.40 * diffuse + 0.28 * fresnel + 0.05 * jitter;
 
-    // fwidth(e) collapses in the V-shaped valley at a wall: neighbours on
-    // opposite slopes cancel in the derivative, so a thin line breaks into two
-    // uneven bright edges. _Params6.w is 1.8*k, the measured gradient of the
-    // baked field per unit r; multiplied by aa (one pixel in units of r) it gives
-    // a stable slope floor at any cell density. 2.2 is the line width in pixels.
-    float slope = max(fwidth(e), aa * u._Params6.w);
+    // The field gradient, analytically — NOT fwidth(e).
+    //
+    // e = clamp(angularDistance / eRef, 0, 1), and the distance is measured on
+    // the unit hemisphere, so |grad_p e| = 1/(eRef * nz) exactly, where nz is the
+    // Jacobian of the orthographic projection. That term is why a cell near the
+    // silhouette carries a much steeper field than one at the centre.
+    //
+    // fwidth(e) was used here and failed in two opposite ways at once, which made
+    // the drawn width depend on zoom: it collapses in the V-shaped valley along a
+    // wall (neighbours sit on opposite slopes, so the derivative cancels), and it
+    // explodes under minification, when one pixel spans several cells and e jumps
+    // between 0 and 1. A constant floor cannot fix both, because the true
+    // gradient varies by 1/nz across the dome. This does.
+    //
+    // _Params6.w is 1/eRef. 2.2 is the line width in screen pixels.
+    float eGrad = u._Params6.w / max(nz, 0.12);
+    float slope = aa * eGrad;
     float line = 1.0 - smoothstep(0.0, slope * 2.2, e);
 
-    // A fine lattice on a distant small dome would put several cell walls in one
-    // pixel, which aliases into shimmering moire. 1/(aa * 1.8k) is the on-screen
-    // width of one cell in pixels; fade the lines out below ~5 px. The panel
-    // shading stays, so the dome still reads as a shell instead of vanishing.
-    float cellPixels = 1.0 / max(aa * u._Params6.w, 1e-4);
+    // One cell spans 2*eRef in r here, i.e. 2*nz/(eRef*aa) pixels. Below ~5 px a
+    // fine lattice would alias into moire, so the lines fade while the panel
+    // shading stays — a distant dome reads as a shell, not as a grid.
+    float cellPixels = 2.0 * nz / max(u._Params6.w * aa, 1e-6);
     line *= smoothstep(2.0, 5.0, cellPixels);
 
     return vec2(clamp(shade, 0.0, 1.5), line);

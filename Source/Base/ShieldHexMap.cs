@@ -71,11 +71,12 @@ namespace VisualTweaks
         internal const int MaxSubdivisions = 8;
 
         /// <summary>
-        /// Measured median |d(edgeDistance)/dr|. The shader uses 1.8*k as a floor for
-        /// fwidth(), which otherwise collapses in the V-shaped valley of a cell
-        /// boundary and makes one line break into two bright edges.
+        /// eRef = ERefPerSubdivision / k is the angular distance that maps to
+        /// edgeDistance 1.0. The shader needs its RECIPROCAL to rebuild the field
+        /// gradient analytically (1/(eRef*z)), so the constant is exposed rather
+        /// than duplicated — the two must not drift apart.
         /// </summary>
-        internal const float GradientPerSubdivision = 1.8f;
+        internal const float ERefPerSubdivision = 0.62f;
 
         private const int Size = 1024;
         private const int BinCount = 24;
@@ -178,7 +179,7 @@ namespace VisualTweaks
                 // spacing theta, and theta scales as 1/k. The exact scale is not
                 // important to the shader (line width is measured with fwidth), but
                 // keeping most cells near 1 avoids clipping them flat.
-                float eRef = 0.62f / k;
+                float eRef = ERefPerSubdivision / k;
 
                 Color[] pixels = new Color[Size * Size];
 
