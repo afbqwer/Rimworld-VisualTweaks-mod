@@ -240,8 +240,7 @@ namespace VisualTweaks
 
             // Additive light first, surface second — the same order the projector
             // dome uses, so the rim is the last thing written. Jitter has already
-            // moved the surface itself and None records no hit, so both are no-ops
-            // here.
+            // moved the surface itself, so that branch is a no-op here.
             DrawImpact(comp, mat, matrix, tint, centerParam, radius, time, hitStyle);
 
             // The same role GetCurrentAlpha() plays for an interceptor dome. It is
@@ -291,8 +290,10 @@ namespace VisualTweaks
             float time,
             int hitStyle)
         {
-            if (hitStyle == VisualTweaksSettings.PersonalShieldHitNone
-                || hitStyle == VisualTweaksSettings.PersonalShieldHitJitter)
+            // Jitter moves the surface instead of drawing a quad, and an unknown
+            // style is safer as no extra draw than as a wrong one.
+            if (hitStyle != VisualTweaksSettings.PersonalShieldHitBrighten
+                && hitStyle != VisualTweaksSettings.PersonalShieldHitHexWave)
             {
                 return false;
             }

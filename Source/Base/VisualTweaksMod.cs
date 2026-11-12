@@ -458,12 +458,9 @@ namespace VisualTweaks
                 };
         }
 
-        // Display order of the belt's hit reactions. None is first so the old
-        // "jitter off" state has an explicit home; the three effects follow in the
-        // order the player asked for them.
+        // Display order of the belt's hit reactions.
         private static readonly int[] PersonalHitOrder =
         {
-            VisualTweaksSettings.PersonalShieldHitNone,
             VisualTweaksSettings.PersonalShieldHitJitter,
             VisualTweaksSettings.PersonalShieldHitBrighten,
             VisualTweaksSettings.PersonalShieldHitHexWave
@@ -486,7 +483,6 @@ namespace VisualTweaks
         {
             return new string[]
             {
-                "VisualTweaks_ShieldDome_PersonalHitNone".Translate(),
                 "VisualTweaks_ShieldDome_PersonalHitJitter".Translate(),
                 "VisualTweaks_ShieldDome_PersonalHitBrighten".Translate(),
                 "VisualTweaks_ShieldDome_PersonalHitHexWave".Translate()
@@ -497,7 +493,6 @@ namespace VisualTweaks
         {
             return new string[]
             {
-                "VisualTweaks_ShieldDome_PersonalHitNoneTip".Translate(),
                 "VisualTweaks_ShieldDome_PersonalHitJitterTip".Translate(),
                 "VisualTweaks_ShieldDome_PersonalHitBrightenTip".Translate(),
                 "VisualTweaks_ShieldDome_PersonalHitHexWaveTip".Translate()
@@ -983,12 +978,12 @@ namespace VisualTweaks
             }
 
             // Independent of which effect is selected: vanilla spawns this dust in
-            // AbsorbedDamage whether the custom surface is drawn or not, so switching
-            // it off is useful even with the reaction set to None.
+            // AbsorbedDamage whichever hit reaction is drawn. On by default, because
+            // the puffs are sized for a pawn and bury a belt's small reaction.
             listing.CheckboxLabeled(
-                "VisualTweaks_ShieldDome_PersonalHitDust".Translate(),
-                ref VisualTweaksSettings.personalShieldHitDust,
-                "VisualTweaks_ShieldDome_PersonalHitDustTip".Translate());
+                "VisualTweaks_ShieldDome_PersonalDisableHitDust".Translate(),
+                ref VisualTweaksSettings.personalShieldDisableHitDust,
+                "VisualTweaks_ShieldDome_PersonalDisableHitDustTip".Translate());
 
             int hitStyle = VisualTweaksSettings.personalShieldHitStyle;
             if (hitStyle == VisualTweaksSettings.PersonalShieldHitJitter)
@@ -1043,18 +1038,15 @@ namespace VisualTweaks
                         "VisualTweaks_ShieldDome_PersonalHexImpactReachTip".Translate());
             }
 
-            if (hitStyle != VisualTweaksSettings.PersonalShieldHitNone)
-            {
-                VisualTweaksSettings.personalShieldJitterTicks =
-                    SettingsLayout.Slider(
-                        listing,
-                        "VisualTweaks_ShieldDome_PersonalHitDuration".Translate(),
-                        VisualTweaksSettings.personalShieldJitterTicks,
-                        VisualTweaksSettings.MinPersonalShieldJitterTicks,
-                        VisualTweaksSettings.MaxPersonalShieldJitterTicks,
-                        "VisualTweaks_ShieldDome_PersonalHitDurationTip".Translate(),
-                        step: 1f);
-            }
+            VisualTweaksSettings.personalShieldJitterTicks =
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_PersonalHitDuration".Translate(),
+                    VisualTweaksSettings.personalShieldJitterTicks,
+                    VisualTweaksSettings.MinPersonalShieldJitterTicks,
+                    VisualTweaksSettings.MaxPersonalShieldJitterTicks,
+                    "VisualTweaks_ShieldDome_PersonalHitDurationTip".Translate(),
+                    step: 1f);
         }
 
         /// <summary>Ridge width and brightness, shared by every crisp surface.</summary>

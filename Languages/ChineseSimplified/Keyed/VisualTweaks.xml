@@ -185,10 +185,8 @@
   <VisualTweaks_ShieldDome_PersonalOpacity>不透明度</VisualTweaks_ShieldDome_PersonalOpacity>
   <VisualTweaks_ShieldDome_PersonalOpacityTip>腰带没有原版的亮暗脉动，默认 0.4 以匹配周围的护盾。</VisualTweaks_ShieldDome_PersonalOpacityTip>
   <VisualTweaks_ShieldDome_PersonalHitGroup>受击效果</VisualTweaks_ShieldDome_PersonalHitGroup>
-  <VisualTweaks_ShieldDome_PersonalHitNone>无</VisualTweaks_ShieldDome_PersonalHitNone>
-  <VisualTweaks_ShieldDome_PersonalHitNoneTip>挡下攻击时不作任何反应。</VisualTweaks_ShieldDome_PersonalHitNoneTip>
-  <VisualTweaks_ShieldDome_PersonalHitDust>受击尘土</VisualTweaks_ShieldDome_PersonalHitDust>
-  <VisualTweaks_ShieldDome_PersonalHitDustTip>关闭后，本 mod 绘制的个人护盾吸收攻击时不再溅起原版的尘土；闪光、音效与破裂尘土保留。</VisualTweaks_ShieldDome_PersonalHitDustTip>
+  <VisualTweaks_ShieldDome_PersonalDisableHitDust>关闭受击尘土</VisualTweaks_ShieldDome_PersonalDisableHitDust>
+  <VisualTweaks_ShieldDome_PersonalDisableHitDustTip>开启后，本 mod 绘制的个人护盾吸收攻击时不再溅起原版尘土；闪光、音效与破裂尘土保留。</VisualTweaks_ShieldDome_PersonalDisableHitDustTip>
   <VisualTweaks_ShieldDome_PersonalHitJitter>抖动</VisualTweaks_ShieldDome_PersonalHitJitter>
   <VisualTweaks_ShieldDome_PersonalHitJitterTip>气泡沿弹道方向轻推并收缩，随后衰减，与原版一致。</VisualTweaks_ShieldDome_PersonalHitJitterTip>
   <VisualTweaks_ShieldDome_PersonalHitBrighten>变亮</VisualTweaks_ShieldDome_PersonalHitBrighten>

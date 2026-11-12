@@ -37,9 +37,9 @@ namespace VisualTweaks
     ///
     /// Vanilla's <c>AbsorbedDamage</c> also throws a handful of dust flecks on every
     /// absorbed hit. They are not part of the surface and they are large relative to
-    /// a belt, so a switch can suppress just those. The suppression is scoped to the
-    /// inside of that one method: the flash, the sound, the break burst and every
-    /// other dust puff in the game are unaffected.
+    /// a belt, so a switch, on by default, suppresses just those. The suppression is
+    /// scoped to the inside of that one method: the flash, the sound, the break burst
+    /// and every other dust puff in the game are unaffected.
     /// </summary>
     internal static class PersonalShieldPatches
     {
@@ -271,7 +271,7 @@ namespace VisualTweaks
             // Only while this mod is the one drawing the belt: turning the
             // replacement off hands the whole presentation, dust included, back to
             // vanilla instead of leaving one hidden visual change behind.
-            suppressAbsorbedDust = !VisualTweaksSettings.personalShieldHitDust
+            suppressAbsorbedDust = VisualTweaksSettings.personalShieldDisableHitDust
                 && ShieldDomeBridge.ShouldReplace(__instance);
         }
 
@@ -413,11 +413,9 @@ namespace VisualTweaks
             // Absorbed without breaking: the belt survives, so this is the hit-effect
             // case. A shield that was Active and is still Active did not break, but
             // only a genuinely absorbable hit should react — melee and ignoreShields
-            // damage leave the state untouched too. With the effect switched off
-            // there is nothing to record.
-            if (__state.Absorbable
-                && VisualTweaksSettings.personalShieldHitStyle
-                    != VisualTweaksSettings.PersonalShieldHitNone)
+            // damage leave the state untouched too. Every effect needs the record,
+            // including the jitter, which only reads it when drawing.
+            if (__state.Absorbable)
             {
                 PersonalShieldHitLog.Notify(__instance, __state.Angle);
             }

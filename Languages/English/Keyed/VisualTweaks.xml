@@ -185,10 +185,8 @@
   <VisualTweaks_ShieldDome_PersonalOpacity>Opacity</VisualTweaks_ShieldDome_PersonalOpacity>
   <VisualTweaks_ShieldDome_PersonalOpacityTip>Belts lack vanilla's pulsing alpha; the default 0.4 matches nearby shields.</VisualTweaks_ShieldDome_PersonalOpacityTip>
   <VisualTweaks_ShieldDome_PersonalHitGroup>Hit effect</VisualTweaks_ShieldDome_PersonalHitGroup>
-  <VisualTweaks_ShieldDome_PersonalHitNone>None</VisualTweaks_ShieldDome_PersonalHitNone>
-  <VisualTweaks_ShieldDome_PersonalHitNoneTip>The bubble does not react when it absorbs a hit.</VisualTweaks_ShieldDome_PersonalHitNoneTip>
-  <VisualTweaks_ShieldDome_PersonalHitDust>Hit dust</VisualTweaks_ShieldDome_PersonalHitDust>
-  <VisualTweaks_ShieldDome_PersonalHitDustTip>Off removes vanilla's dust puffs when this mod's personal shield absorbs a hit; the flash, sound and break burst remain.</VisualTweaks_ShieldDome_PersonalHitDustTip>
+  <VisualTweaks_ShieldDome_PersonalDisableHitDust>Disable hit dust</VisualTweaks_ShieldDome_PersonalDisableHitDust>
+  <VisualTweaks_ShieldDome_PersonalDisableHitDustTip>On removes vanilla's dust puffs when this mod's personal shield absorbs a hit; the flash, sound and break burst remain.</VisualTweaks_ShieldDome_PersonalDisableHitDustTip>
   <VisualTweaks_ShieldDome_PersonalHitJitter>Jitter</VisualTweaks_ShieldDome_PersonalHitJitter>
   <VisualTweaks_ShieldDome_PersonalHitJitterTip>The bubble is pushed along the shot and shrinks, then fades — vanilla's own reaction.</VisualTweaks_ShieldDome_PersonalHitJitterTip>
   <VisualTweaks_ShieldDome_PersonalHitBrighten>Brighten</VisualTweaks_ShieldDome_PersonalHitBrighten>

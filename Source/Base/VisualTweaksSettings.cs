@@ -343,25 +343,21 @@ namespace VisualTweaks
         // that read on a 25-cell projector do not automatically read here, and tuning
         // one family must not move the other.
         //
-        //   None      — no reaction, like switching the old jitter checkbox off.
         //   Jitter    — vanilla's push-and-shrink, restored with tunable amplitude.
         //   Brighten  — the dome's mode 4: the struck sector of the surface lights up.
         //   HexSpread — the dome's mode 3: panels around the hit light and walk
         //               outward. It samples the belt's own baked lattice, so that
         //               atlas is baked even when the belt surface itself is not hex.
         //
-        // An int rather than four bools for the same reason the surface style is one:
-        // the effects are mutually exclusive. The old personalShieldHitJitter boolean
-        // is still read during ExposeData migration.
-        public const int PersonalShieldHitNone = 0;
+        // An int rather than three bools for the same reason the surface style is one:
+        // the effects are mutually exclusive. There is deliberately no "off" value:
+        // the switch is about *which* answer a hit gets, and the dust toggle below
+        // handles the only part of vanilla's feedback that is not wanted.
         public const int PersonalShieldHitJitter = 1;
         public const int PersonalShieldHitBrighten = 2;
         public const int PersonalShieldHitHexWave = 3;
 
         public static int personalShieldHitStyle = PersonalShieldHitJitter;
-
-        // Legacy save value; only read during ExposeData migration.
-        private static bool personalShieldHitJitter;
 
         /// <summary>True when the belt's hit effect needs the baked lattice.</summary>
         internal static bool PersonalShieldHitUsesHexMap =>
@@ -369,10 +365,10 @@ namespace VisualTweaks
 
         // Vanilla's absorbed-hit feedback includes a burst of DustPuff flecks on top
         // of the flash and the sound. They are unrelated to the surface and can bury
-        // the small, deliberate hit animations this mod draws, so they get a switch.
-        // Only AbsorbedDamage's dust is affected: the break burst and every other
-        // dust puff in the game are untouched.
-        public static bool personalShieldHitDust = true;
+        // the small, deliberate hit animations this mod draws, so they are switched
+        // off by default. Only AbsorbedDamage's dust is affected: the break burst and
+        // every other dust puff in the game are untouched.
+        public static bool personalShieldDisableHitDust = true;
 
         // Amplitude of the vanilla-style push. Only the Jitter effect uses it.
         public const float MinPersonalShieldJitterDistance = 0f;
@@ -839,25 +835,24 @@ namespace VisualTweaks
                 ref personalShieldOpacity,
                 "personalShieldOpacity",
                 0.4f);
-            // -1 means the new key was absent, so the old boolean decides: on becomes
-            // Jitter, off becomes None. Otherwise the new choice wins even when a
-            // stale boolean disagrees.
-            Scribe_Values.Look(ref personalShieldHitStyle, "personalShieldHitStyle", -1);
+            // The effect switch has no "off" value any more. A save that wrote the old
+            // 0, or an older jitter-off boolean that used to migrate to 0, falls back
+            // to the jitter rather than to no reaction at all.
             Scribe_Values.Look(
-                ref personalShieldHitJitter,
-                "personalShieldHitJitter",
-                true);
-            if (personalShieldHitStyle < PersonalShieldHitNone
+                ref personalShieldHitStyle,
+                "personalShieldHitStyle",
+                PersonalShieldHitJitter);
+            if (personalShieldHitStyle < PersonalShieldHitJitter
                 || personalShieldHitStyle > PersonalShieldHitHexWave)
             {
-                personalShieldHitStyle = personalShieldHitJitter
-                    ? PersonalShieldHitJitter
-                    : PersonalShieldHitNone;
+                personalShieldHitStyle = PersonalShieldHitJitter;
             }
 
+            // On by default: the dust is vanilla noise around a belt-sized bubble,
+            // and the custom surface has its own hit reaction.
             Scribe_Values.Look(
-                ref personalShieldHitDust,
-                "personalShieldHitDust",
+                ref personalShieldDisableHitDust,
+                "personalShieldDisableHitDust",
                 true);
             Scribe_Values.Look(
                 ref personalShieldJitterDistance,
@@ -1033,7 +1028,7 @@ namespace VisualTweaks
                 personalShieldJitterTicks,
                 MinPersonalShieldJitterTicks,
                 MaxPersonalShieldJitterTicks);
-            if (personalShieldHitStyle < PersonalShieldHitNone
+            if (personalShieldHitStyle < PersonalShieldHitJitter
                 || personalShieldHitStyle > PersonalShieldHitHexWave)
             {
                 personalShieldHitStyle = PersonalShieldHitJitter;
@@ -1274,8 +1269,7 @@ namespace VisualTweaks
             personalShieldHexDensityApplied = 4;
             personalShieldOpacity = 0.4f;
             personalShieldHitStyle = PersonalShieldHitJitter;
-            personalShieldHitJitter = true;
-            personalShieldHitDust = true;
+            personalShieldDisableHitDust = true;
             personalShieldJitterDistance = 0.05f;
             personalShieldJitterTicks = 8f;
             personalShieldBrightenStrength = 0.55f;
