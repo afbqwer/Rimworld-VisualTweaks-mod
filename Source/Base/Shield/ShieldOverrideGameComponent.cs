@@ -96,8 +96,31 @@ namespace VisualTweaks
         {
         }
 
-        private static ShieldOverrideGameComponent? GetCurrent() =>
-            Current.Game?.GetComponent<ShieldOverrideGameComponent>();
+        // Resolved on every shield draw. The game object rarely changes, so the
+        // component lookup is cached until a different Game appears. While the
+        // component is still absent (early game construction), the lookup is
+        // retried instead of caching a null forever.
+        private static Game? cachedGame;
+        private static ShieldOverrideGameComponent? cachedComponent;
+
+        private static ShieldOverrideGameComponent? GetCurrent()
+        {
+            Game? game = Current.Game;
+            if (game == null)
+            {
+                cachedGame = null;
+                cachedComponent = null;
+                return null;
+            }
+
+            if (!ReferenceEquals(game, cachedGame) || cachedComponent == null)
+            {
+                cachedGame = game;
+                cachedComponent = game.GetComponent<ShieldOverrideGameComponent>();
+            }
+
+            return cachedComponent;
+        }
 
         internal static ShieldStyleOverride? Get(Thing? thing)
         {
@@ -121,8 +144,17 @@ namespace VisualTweaks
                 return component.GetOrCreate(thing.thingIDNumber, target);
             }
 
-            // Only reachable outside a running game; the window cannot be opened
-            // there, so a detached record is a safe fallback rather than a crash.
+            // Only reachable outside a running game, or if the component failed to
+            // instantiate. A detached record keeps the window usable; the missing
+            // persistence is reported once.
+            if (Current.Game != null)
+            {
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Per-shield override component is missing;"
+                        + " style changes will not be saved.",
+                    typeof(ShieldOverrideGameComponent).GetHashCode());
+            }
+
             return new ShieldStyleOverride
             {
                 ThingId = thing.thingIDNumber,
@@ -160,7 +192,9 @@ namespace VisualTweaks
 
         private ShieldStyleOverride? Find(int thingId)
         {
-            if (lookup.Count == 0)
+            // The common case is "no override for anything": do not rebuild an
+            // empty dictionary on every shield, every frame.
+            if (lookup.Count == 0 && entries != null && entries.Count > 0)
             {
                 RebuildLookup();
             }
@@ -229,9 +263,19 @@ namespace VisualTweaks
         {
             bool large = false;
             bool personal = false;
+            if (entries == null)
+            {
+                return;
+            }
+
             for (int i = 0; i < entries.Count; i++)
             {
-                ShieldStyleOverride entry = entries[i];
+                ShieldStyleOverride? entry = entries[i];
+                if (entry == null)
+                {
+                    continue;
+                }
+
                 if (entry.OverrideSurface
                     && (entry.Surface == ShieldDomeStyle.Hex
                         || entry.Surface == ShieldDomeStyle.HexBubble))

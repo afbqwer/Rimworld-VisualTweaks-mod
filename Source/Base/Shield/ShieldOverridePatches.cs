@@ -20,6 +20,8 @@ namespace VisualTweaks
     internal static class ShieldOverridePatches
     {
         private const string GizmoIconPath = "UI/Commands/ChangeColor";
+        private static Texture2D? gizmoIcon;
+        private static bool gizmoIconResolved;
 
         internal static void Apply(Harmony harmony)
         {
@@ -109,7 +111,28 @@ namespace VisualTweaks
 
         private static void DestroyPostfix(Thing __instance)
         {
-            ShieldOverrideGameComponent.Remove(__instance);
+            try
+            {
+                ShieldOverrideGameComponent.Remove(__instance);
+            }
+            catch (Exception ex)
+            {
+                // Cleanup is a convenience, never a reason to fail a Destroy.
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Per-shield override cleanup failed: " + ex,
+                    typeof(ShieldOverridePatches).GetHashCode() ^ 0x2D);
+            }
+        }
+
+        private static Texture2D? GizmoIcon()
+        {
+            if (!gizmoIconResolved)
+            {
+                gizmoIconResolved = true;
+                gizmoIcon = ContentFinder<Texture2D>.Get(GizmoIconPath, false);
+            }
+
+            return gizmoIcon;
         }
 
         private static IEnumerable<Gizmo> Append(
@@ -132,7 +155,7 @@ namespace VisualTweaks
             {
                 defaultLabel = "VisualTweaks_ShieldOverride_GizmoLabel".Translate(),
                 defaultDesc = "VisualTweaks_ShieldOverride_GizmoTip".Translate(),
-                icon = ContentFinder<Texture2D>.Get(GizmoIconPath, false),
+                icon = GizmoIcon(),
                 action = delegate
                 {
                     Find.WindowStack?.Add(

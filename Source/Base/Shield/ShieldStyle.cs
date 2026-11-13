@@ -1,4 +1,3 @@
-using System;
 using Verse;
 
 namespace VisualTweaks
@@ -64,8 +63,23 @@ namespace VisualTweaks
         /// set through the gizmo follows the object that owns the shield rather than
         /// the comp or apparel that happens to draw it.
         /// </summary>
-        internal static ShieldStyle For(ShieldHexTarget target, Thing? host) =>
-            Build(target, ShieldOverrideGameComponent.Get(host));
+        internal static ShieldStyle For(ShieldHexTarget target, Thing? host)
+        {
+            try
+            {
+                return Build(target, ShieldOverrideGameComponent.Get(host));
+            }
+            catch (System.Exception ex)
+            {
+                // A corrupt override must never take shield drawing down with it.
+                // Fall back to the global style for this frame and report once.
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Per-shield style resolution failed; using"
+                        + " the global style: " + ex,
+                    typeof(ShieldStyle).GetHashCode());
+                return Build(target, null);
+            }
+        }
 
         private static ShieldStyle Build(
             ShieldHexTarget target,
@@ -77,7 +91,7 @@ namespace VisualTweaks
             ShieldDomeStyle surface = selection != null && selection.OverrideSurface
                 ? selection.Surface
                 : globalSurface;
-            if (!Enum.IsDefined(typeof(ShieldDomeStyle), surface))
+            if (!IsKnownSurface(surface))
             {
                 surface = globalSurface;
             }
@@ -218,6 +232,18 @@ namespace VisualTweaks
                 ? SanitizePersonalHit(wanted.Value)
                 : fallback;
         }
+
+        /// <summary>
+        /// Explicit range check instead of Enum.IsDefined. This runs once per
+        /// shield per frame, and Enum.IsDefined boxes the value and goes through
+        /// reflection; the five legal values are fixed by the enum above.
+        /// </summary>
+        private static bool IsKnownSurface(ShieldDomeStyle surface) =>
+            surface == ShieldDomeStyle.Crisp
+            || surface == ShieldDomeStyle.Hex
+            || surface == ShieldDomeStyle.Vanilla
+            || surface == ShieldDomeStyle.Bubble
+            || surface == ShieldDomeStyle.HexBubble;
 
         internal static bool IsHexSurface(ShieldDomeStyle surface) =>
             surface == ShieldDomeStyle.Hex

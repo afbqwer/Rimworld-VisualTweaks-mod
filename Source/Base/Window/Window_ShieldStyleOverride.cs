@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Verse;
 
@@ -37,55 +38,77 @@ namespace VisualTweaks
 
         public override void DoWindowContents(Rect inRect)
         {
-            ShieldStyleOverride entry =
-                ShieldOverrideGameComponent.GetOrCreate(thing, target);
-
-            Rect viewRect = new Rect(
-                0f,
-                0f,
-                inRect.width - ScrollbarWidth,
-                ViewHeight);
-            Widgets.BeginScrollView(inRect, ref scroll, viewRect);
-
-            listing.maxOneColumn = true;
-            listing.Begin(viewRect);
-
-            listing.Label(thing.LabelShortCap);
-            SettingsLayout.Note(
-                listing,
-                entry.IsEmpty
-                    ? "VisualTweaks_ShieldOverride_UsingGlobal".Translate()
-                    : "VisualTweaks_ShieldOverride_UsingLocal".Translate());
-
-            if (!ReplacementActive())
+            bool scrollOpen = false;
+            try
             {
-                SettingsLayout.Warning(
+                ShieldStyleOverride entry =
+                    ShieldOverrideGameComponent.GetOrCreate(thing, target);
+
+                Rect viewRect = new Rect(
+                    0f,
+                    0f,
+                    inRect.width - ScrollbarWidth,
+                    ViewHeight);
+                Widgets.BeginScrollView(inRect, ref scroll, viewRect);
+                scrollOpen = true;
+
+                listing.maxOneColumn = true;
+                listing.Begin(viewRect);
+
+                listing.Label(thing.LabelShortCap);
+                SettingsLayout.Note(
                     listing,
-                    "VisualTweaks_ShieldOverride_ReplacementOff".Translate());
+                    entry.IsEmpty
+                        ? "VisualTweaks_ShieldOverride_UsingGlobal".Translate()
+                        : "VisualTweaks_ShieldOverride_UsingLocal".Translate());
+
+                if (!ReplacementActive())
+                {
+                    SettingsLayout.Warning(
+                        listing,
+                        "VisualTweaks_ShieldOverride_ReplacementOff".Translate());
+                }
+
+                DrawSurfaceRow(listing, entry);
+
+                // The surface choice decides which impact and break sets exist, so
+                // the rows below read the effective style rather than the raw
+                // override.
+                ShieldStyle effective = ShieldStyle.For(target, thing);
+                NormalizeImpactAndBreak(entry, effective);
+
+                if (target == ShieldHexTarget.Large)
+                {
+                    DrawLargeImpactRow(listing, entry, effective);
+                }
+                else
+                {
+                    DrawPersonalHitRow(listing, entry);
+                }
+
+                DrawBreakRow(listing, entry, effective);
+                DrawRestoreRow(listing, entry);
+                DrawResetRow(listing, entry);
+
+                listing.End();
             }
-
-            DrawSurfaceRow(listing, entry);
-
-            // The surface choice decides which impact and break sets exist, so the
-            // rows below read the effective style rather than the raw override.
-            ShieldStyle effective = ShieldStyle.For(target, thing);
-            NormalizeImpactAndBreak(entry, effective);
-
-            if (target == ShieldHexTarget.Large)
+            catch (Exception ex)
             {
-                DrawLargeImpactRow(listing, entry, effective);
+                // A throwing window would retry every GUI frame and bury the log.
+                // Close it and report once; the shield keeps whatever style it
+                // already had.
+                Close();
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Shield style window failed; closed it: " + ex,
+                    typeof(Window_ShieldStyleOverride).GetHashCode());
             }
-            else
+            finally
             {
-                DrawPersonalHitRow(listing, entry);
+                if (scrollOpen)
+                {
+                    Widgets.EndScrollView();
+                }
             }
-
-            DrawBreakRow(listing, entry, effective);
-            DrawRestoreRow(listing, entry);
-            DrawResetRow(listing, entry);
-
-            listing.End();
-            Widgets.EndScrollView();
         }
 
         private void DrawSurfaceRow(
