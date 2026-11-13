@@ -410,6 +410,37 @@ namespace VisualTweaks
         public static float largeShieldHexLineStrength = 0.25f;
         public static float personalShieldHexLineStrength = 0.25f;
 
+        // ---- The two lattice styles: centre aperture ------------------------
+        //
+        // The panel shell and the hex bubble both sit over whatever they protect,
+        // and a shield is most in the way exactly where a real glass dome is
+        // clearest: dead centre, where the surface faces the viewer. These two
+        // values scale the STATIC material down toward the middle so pawns and the
+        // emitter stay readable. The rim, the hex bubble's scan band, and every
+        // hit / break effect are deliberately outside it.
+        //
+        // clearRadius is a share of the gameplay radius, never a pixel count, so a
+        // 1.2-cell belt and a 25-cell gravship dome carry the same shape at every
+        // zoom. 0 disables the effect entirely. The ceiling is 0.75 rather than 1:
+        // the ridge and white-hot core live in the last few pixels of r == 1 (and
+        // the ridge's inner shoulder reaches further inward on a small belt at low
+        // zoom), so the aperture has to be back at full strength before them or
+        // the silhouette would dim. The shader clamps to the same value.
+        //
+        // centreKeep is the alpha kept at the exact centre. Zero is a true hole;
+        // the defaults stay above it on purpose, so the middle still reads as a
+        // faint pane of the lattice rather than as a ring with its middle punched
+        // out. It is the "faint net" the player can slide all the way off.
+        public const float MinShieldCenterClear = 0f;
+        public const float MaxShieldCenterClear = 0.75f;
+        public static float largeShieldCenterClear = 0.60f;
+        public static float personalShieldCenterClear = 0.45f;
+
+        public const float MinShieldCenterKeep = 0f;
+        public const float MaxShieldCenterKeep = 1f;
+        public static float largeShieldCenterKeep = 0.12f;
+        public static float personalShieldCenterKeep = 0.20f;
+
         // Icosahedron subdivision k: 10k^2+2 cells over the whole sphere (12 of
         // them pentagons, always). k=2 reads like a football, k=12 like a fine
         // energy mesh (1442 cells).
@@ -960,6 +991,22 @@ namespace VisualTweaks
                 ref personalShieldHexLineStrength,
                 "personalShieldHexLineStrength",
                 0.25f);
+            Scribe_Values.Look(
+                ref largeShieldCenterClear,
+                "largeShieldCenterClear",
+                0.60f);
+            Scribe_Values.Look(
+                ref personalShieldCenterClear,
+                "personalShieldCenterClear",
+                0.45f);
+            Scribe_Values.Look(
+                ref largeShieldCenterKeep,
+                "largeShieldCenterKeep",
+                0.12f);
+            Scribe_Values.Look(
+                ref personalShieldCenterKeep,
+                "personalShieldCenterKeep",
+                0.20f);
             Scribe_Values.Look(ref shieldHexDensity, "shieldHexDensity", 5f);
             Scribe_Values.Look(
                 ref shieldHexImpactStrength,
@@ -1197,6 +1244,22 @@ namespace VisualTweaks
                 personalShieldHexLineStrength,
                 MinShieldHexLine,
                 MaxShieldHexLine);
+            largeShieldCenterClear = Mathf.Clamp(
+                largeShieldCenterClear,
+                MinShieldCenterClear,
+                MaxShieldCenterClear);
+            personalShieldCenterClear = Mathf.Clamp(
+                personalShieldCenterClear,
+                MinShieldCenterClear,
+                MaxShieldCenterClear);
+            largeShieldCenterKeep = Mathf.Clamp(
+                largeShieldCenterKeep,
+                MinShieldCenterKeep,
+                MaxShieldCenterKeep);
+            personalShieldCenterKeep = Mathf.Clamp(
+                personalShieldCenterKeep,
+                MinShieldCenterKeep,
+                MaxShieldCenterKeep);
             shieldHexDensity = Mathf.Clamp(
                 shieldHexDensity,
                 MinShieldHexDensity,

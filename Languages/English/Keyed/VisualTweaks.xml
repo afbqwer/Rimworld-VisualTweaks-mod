@@ -164,6 +164,11 @@
   <VisualTweaks_ShieldDome_HexFaceTip>Fill brightness of each panel; too high drowns the cell lines.</VisualTweaks_ShieldDome_HexFaceTip>
   <VisualTweaks_ShieldDome_HexLine>Cell line brightness</VisualTweaks_ShieldDome_HexLine>
   <VisualTweaks_ShieldDome_HexLineTip>Strength of the bright line between panels; its width stays constant at any zoom.</VisualTweaks_ShieldDome_HexLineTip>
+  <VisualTweaks_ShieldDome_HexCenterGroup>Clear centre</VisualTweaks_ShieldDome_HexCenterGroup>
+  <VisualTweaks_ShieldDome_HexCenterClear>Clear radius</VisualTweaks_ShieldDome_HexCenterClear>
+  <VisualTweaks_ShieldDome_HexCenterClearTip>Brightness returns to full over this share of the radius, so pawns and buildings underneath show through. 0 disables it. The rim, scan band, hit and break effects are unaffected.</VisualTweaks_ShieldDome_HexCenterClearTip>
+  <VisualTweaks_ShieldDome_HexCenterKeep>Centre residue</VisualTweaks_ShieldDome_HexCenterKeep>
+  <VisualTweaks_ShieldDome_HexCenterKeepTip>Surface brightness kept at the exact centre. 0 is fully clear; the default leaves a faint lattice so the middle does not read as a punched-out hole.</VisualTweaks_ShieldDome_HexCenterKeepTip>
   <VisualTweaks_ShieldDome_HexDensity>Cell density</VisualTweaks_ShieldDome_HexDensity>
   <VisualTweaks_ShieldDome_HexDensityTip>Panels over the sphere grow with k: 2 ≈ 42, 5 ≈ 252, 12 ≈ 1442. The slider is a draft; press the button to bake it.</VisualTweaks_ShieldDome_HexDensityTip>
   <VisualTweaks_ShieldDome_HexBake>Apply and bake</VisualTweaks_ShieldDome_HexBake>

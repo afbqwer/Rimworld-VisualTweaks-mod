@@ -60,6 +60,7 @@ namespace VisualTweaks
         private static readonly int Params6Id = Shader.PropertyToID("_Params6");
         private static readonly int Params7Id = Shader.PropertyToID("_Params7");
         private static readonly int Params8Id = Shader.PropertyToID("_Params8");
+        private static readonly int Params9Id = Shader.PropertyToID("_Params9");
 
         private readonly ShieldHexTarget target;
 
@@ -76,6 +77,7 @@ namespace VisualTweaks
         private int appliedHexDensity = -1;
         private Vector4 appliedScan7 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
         private Vector4 appliedScan8 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
+        private Vector4 appliedAperture = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
 
         internal ShieldDomeMaterial(ShieldHexTarget target)
         {
@@ -188,6 +190,12 @@ namespace VisualTweaks
             float line = personal
                 ? VisualTweaksSettings.personalShieldHexLineStrength
                 : VisualTweaksSettings.largeShieldHexLineStrength;
+            float centerClear = personal
+                ? VisualTweaksSettings.personalShieldCenterClear
+                : VisualTweaksSettings.largeShieldCenterClear;
+            float centerKeep = personal
+                ? VisualTweaksSettings.personalShieldCenterKeep
+                : VisualTweaksSettings.largeShieldCenterKeep;
 
             // The spherical lattice is baked once per target and shared by every
             // shield of that target. Bind is cheap to call every frame: it only
@@ -267,6 +275,13 @@ namespace VisualTweaks
                 ShieldHexBubble.LeadStrength,
                 0f);
 
+            // The centre aperture is a property of the two lattice surfaces, but
+            // the material is per family, not per style: the same value is uploaded
+            // whether or not the current surface reads it. Both families therefore
+            // keep their own clear radius, because a 1.2-cell belt and a 25-cell
+            // dome need very different amounts of clearance.
+            Vector4 aperture9 = new Vector4(centerClear, centerKeep, 0f, 0f);
+
             if (width == appliedRidgeWidth
                 && brightness == appliedRidgeBrightness
                 && style == appliedDomeStyle
@@ -274,7 +289,8 @@ namespace VisualTweaks
                 && lineValue == appliedHexLine
                 && density == appliedHexDensity
                 && scan7 == appliedScan7
-                && scan8 == appliedScan8)
+                && scan8 == appliedScan8
+                && aperture9 == appliedAperture)
             {
                 return;
             }
@@ -287,6 +303,7 @@ namespace VisualTweaks
             appliedHexDensity = density;
             appliedScan7 = scan7;
             appliedScan8 = scan8;
+            appliedAperture = aperture9;
 
             // _Params2 = (ridge, core, glow, body) weights.
             mat.SetVector(
@@ -316,6 +333,11 @@ namespace VisualTweaks
             // is the only value that changes every frame.
             mat.SetVector(Params7Id, scan7);
             mat.SetVector(Params8Id, scan8);
+
+            // _Params9 = (clear radius as a share of R, alpha kept at the centre).
+            // 0 in .x is the off switch: the shader's CenterAperture returns 1
+            // immediately, so the two lattice styles behave exactly as before.
+            mat.SetVector(Params9Id, aperture9);
         }
 
         private void Invalidate()
@@ -328,6 +350,7 @@ namespace VisualTweaks
             appliedHexDensity = -1;
             appliedScan7 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
             appliedScan8 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
+            appliedAperture = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
         }
     }
 }

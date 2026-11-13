@@ -108,6 +108,11 @@
 // the same texture the surface is drawn from, a wave can only ever light panels that
 // exist, and it stays correct when the density changes.
 //
+// Both lattice surfaces also carry a centre aperture (see CenterAperture below):
+// the static panels/net fade toward the middle so pawns and the emitter the shield
+// is anchored to stay readable. The rim, the scan band and every hit/break event
+// stay at full strength; only the material gets out of the way.
+//
 // ---- the stock-like style (third style) ----------------------------------
 //
 // Vanilla paints a projector dome with Other/ForceField and a personal belt with
@@ -155,6 +160,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
     vec4 _Params6; // @default = vec4(0.0, 0.22, 0.75, 9.0)    // style (0 crisp, 1 hex, 2 stock dome, 3 stock belt, 4 hex bubble), hex face, hex line, SDF gradient (1/eRef)
     vec4 _Params7; // @default = vec4(1.0, 2.4, 0.20, 0.12)    // HexBubble: scan dir (+1 down / -1 up), period (s), feather, net baseline
     vec4 _Params8; // @default = vec4(1.0, 0.06, 0.0, 0.0)     // HexBubble: stripe count, band half width, leading edge (fixed 0), reserved
+    vec4 _Params9; // @default = vec4(0.60, 0.12, 0.0, 0.0)    // lattice styles: clear radius (share of R), alpha kept at the centre
     vec4 _Color;   // @color @default = vec4(1.0, 1.0, 1.0, 1.0)
 } u;
 
@@ -300,6 +306,46 @@ vec2 HexSurface(vec2 p, float aa, float t)
     line *= smoothstep(2.0, 5.0, cellPixels);
 
     return vec2(clamp(shade, 0.0, 1.5), line);
+}
+
+// ---- the centre aperture (the two lattice styles) -------------------------
+//
+// A dome that covers a pawn or the emitter it is anchored to is at its most
+// obstructive exactly where it is least visible in the real thing: head-on, the
+// surface normal points at the viewer, so a glass/energy shell is clearest there
+// and only turns bright toward the grazing silhouette. The glow and fresnel terms
+// already tell the second half of that story; this aperture tells the first.
+//
+// It is a pure alpha weight, because the surface is drawn additively
+// (SrcAlpha * src + dst): scaling the alpha of the static material down to zero
+// adds no light at all, so whatever is underneath shows through completely. It
+// must NOT touch the ridge, core or the r == 1 silhouette, which is why it
+// reaches 1.0 well before the rim (clearEnd is clamped below that); and it is
+// measured as a share of the radius, never in pixels, so a belt and a 25-cell
+// dome carry the same shape at every zoom.
+//
+// Only the *material* is apertured. Hit reactions and break fronts are events:
+// they stay at full strength wherever they land, including the centre. The one
+// exception is the hex bubble's scan band, which is deliberately left outside
+// the aperture as well — it is the surface's signature motion, not a static fill.
+// The static net floor, however, is scaled, because that is what sits over a
+// pawn at all times.
+float CenterAperture(float r)
+{
+    // The ceiling is well below the ridge: the aperture must be at full strength
+    // before the rim band starts, or a small belt at low zoom would lose part of
+    // its silhouette. The CPU clamps the slider to the same value; this guard
+    // keeps a stale or hand-edited uniform from breaking the edge contract.
+    float end = clamp(u._Params9.x, 0.0, 0.75);
+    if (end <= 0.001)
+    {
+        return 1.0;
+    }
+
+    // A floor, not a hole by default: a small residue keeps the surface reading
+    // as glass rather than as a ring with the middle punched out.
+    return mix(clamp(u._Params9.y, 0.0, 1.0), 1.0,
+               smoothstep(0.0, end, r));
 }
 
 // ---- the two stock-like surfaces -----------------------------------------
@@ -459,7 +505,13 @@ float HexBubbleScanMask(float py, float t)
 // would double its brightness inside the lit sector.
 vec4 HexBubbleDomeColor(float r, vec2 p, float aa, float t)
 {
+    float aperture = CenterAperture(r);
+
+    // The bubble body and its haze are static material, so they take the
+    // aperture. Scaling the alpha (not the rgb) is what additive blending reads.
     vec4 bubble = StockBubbleDomeColor(r);
+    bubble.a *= aperture;
+
     float mode = u._Params.x;
     bool netVisible = mode < 0.5
         || (mode > 1.5 && mode < 2.5)
@@ -474,8 +526,12 @@ vec4 HexBubbleDomeColor(float r, vec2 p, float aa, float t)
     // line — is used; .x is the per-panel shade a transparent net has no use for.
     float net = u._Params6.z * HexSurface(p, aa, 0.0).y;
 
-    float mask = u._Params7.w
-        + (1.0 - u._Params7.w) * HexBubbleScanMask(p.y, t);
+    // Only the net's static floor is apertured; the scan band keeps full
+    // strength so the sweep still crosses the centre. With baseline scaled to
+    // zero this collapses to the scan alone, which is the intended extreme.
+    float baseline = u._Params7.w * aperture;
+    float mask = baseline
+        + (1.0 - baseline) * HexBubbleScanMask(p.y, t);
 
     // _Params4.z is the per-draw hold, computed on the CPU from hit / break
     // progress. 1 forces the whole net opaque for that animation, with a short
@@ -553,6 +609,14 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
 
     float sum = ridgeTerm + coreTerm + glowTerm + bodyTerm;
 
+    // The panel shell is the other lattice surface. Its ridge and core live at
+    // r == 1, where the aperture is already 1, so the silhouette is untouched;
+    // what loses weight in the middle is the panel fill and the cell lines,
+    // which are the parts that cover a pawn. Crisp keeps its full interior.
+    float aperture = (u._Params6.x > 0.5 && u._Params6.x < 1.5)
+        ? CenterAperture(r)
+        : 1.0;
+
     vec3 halo = u._Color.rgb;
     vec3 coreTint = mix(halo, vec3(1.0), 0.65);
     vec3 lineTint = mix(halo, vec3(1.0), 0.85);
@@ -560,7 +624,7 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
             + coreTint * coreTerm + lineTint * hexLine)
         / max(sum, 1e-4);
 
-    return vec4(tint, sum * drift);
+    return vec4(tint, sum * drift * aperture);
 }
 
 // Where a break animation is allowed to paint, as opposed to where the idle dome

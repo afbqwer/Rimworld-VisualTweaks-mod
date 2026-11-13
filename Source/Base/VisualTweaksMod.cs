@@ -1294,6 +1294,7 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldDome_HexBubbleNote".Translate());
 
             DrawHexLineSlider(listing, personal);
+            DrawHexCenterAperture(listing, personal);
             DrawHexDensity(listing, personal);
         }
 
@@ -1326,6 +1327,7 @@ namespace VisualTweaks
             }
 
             DrawHexLineSlider(listing, personal);
+            DrawHexCenterAperture(listing, personal);
         }
 
         /// <summary>
@@ -1357,6 +1359,62 @@ namespace VisualTweaks
                     VisualTweaksSettings.MinShieldHexLine,
                     VisualTweaksSettings.MaxShieldHexLine,
                     "VisualTweaks_ShieldDome_HexLineTip".Translate());
+        }
+
+        /// <summary>
+        /// The centre aperture shared by the panel shell and the hex bubble. A
+        /// shield is most in the way where a real glass dome is clearest — dead
+        /// centre, facing the viewer — so the static surface fades toward the
+        /// middle while the rim, the scan band and every hit/break effect stay
+        /// untouched. Both values are per family: a 1.2-cell belt is centred on
+        /// the pawn it protects and needs a different amount of clearance than a
+        /// 25-cell projector dome.
+        /// </summary>
+        private static void DrawHexCenterAperture(
+            Listing_Standard listing,
+            bool personal)
+        {
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldDome_HexCenterGroup".Translate());
+
+            if (personal)
+            {
+                VisualTweaksSettings.personalShieldCenterClear =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_HexCenterClear".Translate(),
+                        VisualTweaksSettings.personalShieldCenterClear,
+                        VisualTweaksSettings.MinShieldCenterClear,
+                        VisualTweaksSettings.MaxShieldCenterClear,
+                        "VisualTweaks_ShieldDome_HexCenterClearTip".Translate());
+                VisualTweaksSettings.personalShieldCenterKeep =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_HexCenterKeep".Translate(),
+                        VisualTweaksSettings.personalShieldCenterKeep,
+                        VisualTweaksSettings.MinShieldCenterKeep,
+                        VisualTweaksSettings.MaxShieldCenterKeep,
+                        "VisualTweaks_ShieldDome_HexCenterKeepTip".Translate());
+                return;
+            }
+
+            VisualTweaksSettings.largeShieldCenterClear =
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexCenterClear".Translate(),
+                    VisualTweaksSettings.largeShieldCenterClear,
+                    VisualTweaksSettings.MinShieldCenterClear,
+                    VisualTweaksSettings.MaxShieldCenterClear,
+                    "VisualTweaks_ShieldDome_HexCenterClearTip".Translate());
+            VisualTweaksSettings.largeShieldCenterKeep =
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexCenterKeep".Translate(),
+                    VisualTweaksSettings.largeShieldCenterKeep,
+                    VisualTweaksSettings.MinShieldCenterKeep,
+                    VisualTweaksSettings.MaxShieldCenterKeep,
+                    "VisualTweaks_ShieldDome_HexCenterKeepTip".Translate());
         }
 
         /// <summary>
