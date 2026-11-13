@@ -554,11 +554,13 @@ namespace VisualTweaks
             float progress = (float)age / duration;
             float life = 1f - progress;
 
-            // The stored bearing runs along the shot, matching vanilla's
-            // impactAngleVect. The light belongs on the side the round came from, so
-            // the shader's direction is its negation — the same convention the dome
-            // uses for its impacts.
-            Vector3 toward = Vector3Utility.FromAngleFlat(angle);
+            // The stored bearing is a DamageInfo.Angle, i.e. Unity's Y-euler
+            // convention (the same one vanilla's impactAngleVect uses), not the
+            // AngleToFlat convention the interceptor logs. HorizontalVectorFromAngle
+            // is the matching conversion; using FromAngleFlat here rotated every
+            // sector 90 degrees clockwise. The light belongs on the side the round
+            // came from, so the shot's own vector is negated.
+            Vector3 toward = Vector3Utility.HorizontalVectorFromAngle(angle);
             float dx = -toward.x;
             float dz = -toward.z;
 

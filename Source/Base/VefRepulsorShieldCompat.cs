@@ -211,10 +211,13 @@ namespace VisualTweaks
 
         /// <summary>
         /// Both absorb overloads end in the float one, so patching that single method
-        /// records every intercepted projectile exactly once. The angle is VEF's own:
-        /// a bearing from the projectile towards the shield, the same convention
-        /// vanilla's <c>lastInterceptAngle</c> uses, so the renderer's existing
-        /// "point it back at the shooter" rule applies unchanged.
+        /// records every intercepted projectile exactly once. VEF's angle means the
+        /// same thing as vanilla's <c>lastInterceptAngle</c> — a bearing from the
+        /// projectile towards the shield — but it is expressed in Unity's Y-euler
+        /// convention (<c>AngleFlat</c> / <c>exactRotation.eulerAngles.y</c>), not in
+        /// the <c>AngleToFlat</c> convention the interceptor logs use. That is a
+        /// 90-degree difference, converted once in the postfix so every shared
+        /// consumer (impact log, dissolve origin, ripple) receives the dome convention.
         /// </summary>
         private static void PatchAbsorbDamage(Harmony harmony)
         {
@@ -604,9 +607,14 @@ namespace VisualTweaks
             // disables this file's hit bookkeeping, never the drawing.
             try
             {
+                // VEF reports a Unity Y-euler bearing; the dome's logs are keyed in
+                // the interceptor's AngleToFlat convention. The two differ by 90
+                // degrees, so convert once instead of at every consumer.
+                float domeAngle = angle - 90f;
+
                 if (ShieldDomeBridge.RepulsorActive)
                 {
-                    ShieldImpactLog.Notify(__instance, angle, amount);
+                    ShieldImpactLog.Notify(__instance, domeAngle, amount);
 
                     // A fatal shot depletes the energy before this postfix runs, so
                     // the dissolve already exists and only its origin is missing. This
@@ -614,14 +622,14 @@ namespace VisualTweaks
                     // no-op otherwise.
                     ShieldDissolveLog.RefreshOrigin(
                         __instance,
-                        angle,
+                        domeAngle,
                         Find.TickManager?.TicksGame ?? -1);
                 }
 
                 // The repulsor's own hit effect says nothing about where the shot came
                 // from on the surface, so the same bearing is turned into a rim point
-                // for the refraction ripple. VEF's angle points from the projectile
-                // towards the shield, so the impact sits opposite the centre.
+                // for the refraction ripple. The angle follows the shot, so the impact
+                // sits on the opposite side of the centre.
                 Map? map = __instance.parent.Map;
                 if (map == null || !ShieldRippleLayer.Active)
                 {
@@ -635,7 +643,7 @@ namespace VisualTweaks
                 }
 
                 Vector3 center = __instance.parent.DrawPos;
-                Vector3 toward = Vector3Utility.FromAngleFlat(angle);
+                Vector3 toward = Vector3Utility.HorizontalVectorFromAngle(angle);
 
                 map.GetComponent<OverlayMapComponent>()?.NotifyShieldHit(
                     __instance.parent,

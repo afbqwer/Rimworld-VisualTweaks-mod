@@ -32,8 +32,12 @@ namespace VisualTweaks
             new ConditionalWeakTable<object, Hit>();
 
         /// <summary>
-        /// Records an absorbed hit. The angle is the damage direction — the same
-        /// convention vanilla uses for <c>impactAngleVect</c>, i.e. along the shot.
+        /// Records an absorbed hit. The angle is a <c>DamageInfo.Angle</c>: Unity's
+        /// Y-euler convention, the same one vanilla uses for <c>impactAngleVect</c>
+        /// (along the shot). It is NOT the <c>AngleToFlat</c> convention of the
+        /// interceptor's <c>lastInterceptAngle</c> — the two differ by 90 degrees — so
+        /// consumers must convert with <c>HorizontalVectorFromAngle</c>, not
+        /// <c>FromAngleFlat</c>.
         /// </summary>
         internal static void Notify(object comp, float angle)
         {

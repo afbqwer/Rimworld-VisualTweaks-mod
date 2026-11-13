@@ -67,9 +67,12 @@ namespace VisualTweaks
 
             if (damageAngle.HasValue)
             {
-                // The same convention as the dome: the stored angle points along the
-                // shot, so the failure point is the opposite vector.
-                Vector3 toward = Vector3Utility.FromAngleFlat(damageAngle.Value);
+                // The stored angle is a DamageInfo.Angle, so it is in Unity's Y-euler
+                // convention, not the AngleToFlat convention the dome's log uses.
+                // HorizontalVectorFromAngle gives the shot's own direction; the tear
+                // opens on the opposite side, where the round came from.
+                Vector3 toward = Vector3Utility.HorizontalVectorFromAngle(
+                    damageAngle.Value);
                 ox = -toward.x;
                 oz = -toward.z;
             }

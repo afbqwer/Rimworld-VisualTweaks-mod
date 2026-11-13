@@ -62,7 +62,12 @@ namespace VisualTweaks
 
         internal struct Impact
         {
-            /// <summary>Same convention as vanilla: bearing from the projectile toward the shield.</summary>
+            /// <summary>
+            /// Same convention as vanilla's <c>lastInterceptAngle</c>: the
+            /// <c>AngleToFlat</c> bearing from the projectile toward the shield.
+            /// Callers whose angle is a Unity Y-euler value (VEF's repulsor, for
+            /// instance) must convert by subtracting 90 degrees before notifying.
+            /// </summary>
             public float Angle;
 
             /// <summary>
