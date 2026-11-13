@@ -156,12 +156,54 @@ namespace VisualTweaks
                 defaultLabel = "VisualTweaks_ShieldOverride_GizmoLabel".Translate(),
                 defaultDesc = "VisualTweaks_ShieldOverride_GizmoTip".Translate(),
                 icon = GizmoIcon(),
-                action = delegate
-                {
-                    Find.WindowStack?.Add(
-                        new Window_ShieldStyleOverride(thing, target));
-                },
+                // Vanilla keeps only the first gizmo of a group whose label and
+                // icon match (GizmoGridDrawer + Command.GroupsWith), so a
+                // multi-selection draws this command once and drops the copies.
+                // The action therefore reads the live selection rather than the
+                // captured thing: every selected shield is edited together by the
+                // one window that opens.
+                action = delegate { OpenForSelection(thing, target); },
             };
+        }
+
+        private static void OpenForSelection(
+            ThingWithComps fallback,
+            ShieldHexTarget fallbackTarget)
+        {
+            List<ShieldHost> hosts = CollectSelectedShieldHosts();
+
+            if (hosts.Count == 0)
+            {
+                // Selection changed between drawing the gizmo and clicking it.
+                hosts.Add(new ShieldHost(fallback, fallbackTarget));
+            }
+
+            Find.WindowStack?.Add(new Window_ShieldStyleOverride(hosts));
+        }
+
+        private static List<ShieldHost> CollectSelectedShieldHosts()
+        {
+            List<ShieldHost> hosts = new List<ShieldHost>();
+            List<object>? selected = Find.Selector?.SelectedObjects;
+            if (selected == null)
+            {
+                return hosts;
+            }
+
+            for (int i = 0; i < selected.Count; i++)
+            {
+                if (selected[i] is not ThingWithComps candidate)
+                {
+                    continue;
+                }
+
+                if (TryGetShieldTarget(candidate, out ShieldHexTarget target))
+                {
+                    hosts.Add(new ShieldHost(candidate, target));
+                }
+            }
+
+            return hosts;
         }
 
         /// <summary>

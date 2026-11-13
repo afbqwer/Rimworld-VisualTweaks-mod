@@ -144,7 +144,8 @@ namespace VisualTweaks
             float min,
             float max,
             string? tooltip = null,
-            float step = 0.01f)
+            float step = 0.01f,
+            string? valueText = null)
         {
             Rect rect = listing.GetRect(SliderRowHeight);
 
@@ -160,7 +161,9 @@ namespace VisualTweaks
 
             Text.Anchor = TextAnchor.LowerRight;
             GUI.color = ValueText;
-            Widgets.Label(valueRect, step >= 1f ? value.ToString("0") : value.ToString("0.00"));
+            Widgets.Label(
+                valueRect,
+                valueText ?? (step >= 1f ? value.ToString("0") : value.ToString("0.00")));
 
             GUI.color = color;
             Text.WordWrap = true;
