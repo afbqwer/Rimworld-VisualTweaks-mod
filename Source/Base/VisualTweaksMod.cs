@@ -155,40 +155,39 @@ namespace VisualTweaks
             }
         }
 
-        private void DrawFooter(Rect inRect)
-        {
-            Rect footer = new Rect(
-                inRect.x,
-                inRect.yMax - FooterHeight + 6f,
-                inRect.width,
-                FooterHeight - 6f);
+        // private void DrawFooter(Rect inRect)
+        // {
+        //     Rect footer = new Rect(
+        //         inRect.x,
+        //         inRect.yMax - FooterHeight + 6f,
+        //         inRect.width,
+        //         FooterHeight - 6f);
 
-            // The dialog carries no version anywhere else, and "which build am I on"
-            // is the first question when a setting looks wrong.
-            string version = Content?.ModMetaData?.ModVersion ?? string.Empty;
-            if (!version.NullOrEmpty())
-            {
-                TextAnchor anchor = Text.Anchor;
-                Color color = GUI.color;
-                Text.Anchor = TextAnchor.MiddleLeft;
-                GUI.color = new Color(0.6f, 0.6f, 0.6f);
-                Widgets.Label(footer, "VisualTweaks_Version".Translate(version));
-                GUI.color = color;
-                Text.Anchor = anchor;
-            }
+        //     // The dialog carries no version anywhere else, and "which build am I on"
+        //     // is the first question when a setting looks wrong.
+        //     string version = Content?.ModMetaData?.ModVersion ?? string.Empty;
+        //     if (!version.NullOrEmpty())
+        //     {
+        //         TextAnchor anchor = Text.Anchor;
+        //         Color color = GUI.color;
+        //         Text.Anchor = TextAnchor.MiddleLeft;
+        //         GUI.color = new Color(0.6f, 0.6f, 0.6f);
+        //         Widgets.Label(footer, "VisualTweaks_Version".Translate(version));
+        //         GUI.color = color;
+        //         Text.Anchor = anchor;
+        //     }
 
-            Rect button = new Rect(
-                footer.xMax - ResetButtonWidth,
-                footer.y + (footer.height - ButtonHeight) / 2f,
-                ResetButtonWidth,
-                ButtonHeight);
+        //     Rect button = new Rect(
+        //         footer.xMax - ResetButtonWidth,
+        //         footer.y + (footer.height - ButtonHeight) / 2f,
+        //         ResetButtonWidth,
+        //         ButtonHeight);
 
-            if (Widgets.ButtonText(button, "VisualTweaks_Reset".Translate()))
-            {
-                VisualTweaksSettings.Reset();
-            }
-
-        }
+        //     if (Widgets.ButtonText(button, "VisualTweaks_Reset".Translate()))
+        //     {
+        //         VisualTweaksSettings.Reset();
+        //     }
+        // }
 
         private void DrawTabBody(Rect outRect)
         {

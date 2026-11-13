@@ -388,8 +388,8 @@ namespace VisualTweaks
 
         public const float MinShieldHexLine = 0f;
         public const float MaxShieldHexLine = 1.2f;
-        public static float largeShieldHexLineStrength = 0.75f;
-        public static float personalShieldHexLineStrength = 0.75f;
+        public static float largeShieldHexLineStrength = 0.25f;
+        public static float personalShieldHexLineStrength = 0.25f;
 
         // Icosahedron subdivision k: 10k^2+2 cells over the whole sphere (12 of
         // them pentagons, always). k=2 reads like a football, k=12 like a fine
@@ -483,7 +483,7 @@ namespace VisualTweaks
         // the dome's, so both defaults sit above the dome's values.
         public const float MinPersonalShieldHexImpactStrength = 0f;
         public const float MaxPersonalShieldHexImpactStrength = 0.8f;
-        public static float personalShieldHexImpactStrength = 0.5f;
+        public static float personalShieldHexImpactStrength = 0.3f;
 
         public const float MinPersonalShieldHexImpactShare = 0.12f;
         public const float MaxPersonalShieldHexImpactShare = 0.6f;
@@ -497,7 +497,7 @@ namespace VisualTweaks
         // angle, which is meaningless for a lattice wave.
         public const float MinShieldHexImpactStrength = 0f;
         public const float MaxShieldHexImpactStrength = 0.8f;
-        public static float shieldHexImpactStrength = 0.28f;
+        public static float shieldHexImpactStrength = 0.25f;
 
         // Share of the run from the impact to the far rim that the wave crosses. A
         // share and not a panel count, because a panel is 1/k of the dome: a fixed
@@ -671,7 +671,7 @@ namespace VisualTweaks
         // genuinely hard freezers.
         public const float MinColdStartTemp = -20f;
         public const float MaxColdStartTemp = 30f;
-        public static float coldMistStartTemp = 0f;
+        public static float coldMistStartTemp = -5f;
 
         // The colder one: at or below this the mist is at full strength.
         public const float MinColdFullTemp = -150f;
@@ -901,16 +901,16 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref largeShieldHexLineStrength,
                 "largeShieldHexLineStrength",
-                0.75f);
+                0.25f);
             Scribe_Values.Look(
                 ref personalShieldHexLineStrength,
                 "personalShieldHexLineStrength",
-                0.75f);
+                0.25f);
             Scribe_Values.Look(ref shieldHexDensity, "shieldHexDensity", 5f);
             Scribe_Values.Look(
                 ref shieldHexImpactStrength,
                 "shieldHexImpactStrength",
-                0.28f);
+                0.25f);
             Scribe_Values.Look(
                 ref shieldHexImpactShare,
                 "shieldHexImpactShare",
@@ -969,7 +969,7 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref personalShieldHexImpactStrength,
                 "personalShieldHexImpactStrength",
-                0.5f);
+                0.3f);
             Scribe_Values.Look(
                 ref personalShieldHexImpactShare,
                 "personalShieldHexImpactShare",
@@ -1036,7 +1036,7 @@ namespace VisualTweaks
             Scribe_Values.Look(ref heatHazeAmplitude, "heatHazeAmplitude", 2.5f);
             Scribe_Values.Look(ref heatHazeFireBoost, "heatHazeFireBoost", 1f);
             Scribe_Values.Look(ref coldMistEnabled, "coldMistEnabled", true);
-            Scribe_Values.Look(ref coldMistStartTemp, "coldMistStartTemp", 0f);
+            Scribe_Values.Look(ref coldMistStartTemp, "coldMistStartTemp", -5f);
             Scribe_Values.Look(ref coldMistFullTemp, "coldMistFullTemp", -75f);
             Scribe_Values.Look(ref coldMistOpacity, "coldMistOpacity", 0.3f);
             Scribe_Values.Look(ref coldMistCoverage, "coldMistCoverage", 0.5f);
@@ -1405,130 +1405,6 @@ namespace VisualTweaks
             }
 
             return ShieldRestoreStyle.Grow;
-        }
-
-        public static void Reset()
-        {
-            replaceAORenderer = true;
-            style = StyleParticle;
-            showGuideLine = false;
-            smoothField = true;
-            density = 0.25f;
-            streakLength = 1f;
-            speedLengthInfluence = 1f;
-            lineWidth = 1f;
-            opacity = 0.5f;
-            coloredParticles = true;
-            animationSpeed = 1f;
-            particleLowWindThreshold = 0f;
-            sixtyFpsMode = true;
-            gpuParticleGeometry = true;
-            pauseWhenPaused = true;
-            scaleSpeedWithGameSpeed = false;
-            useGasField = true;
-            gasFieldSmooth = true;
-            gasFieldNoiseMode = GasNoiseLocalFlow;
-            gasFieldSmoothTau = 0.15f;
-            gasFieldTraceWindows = false;
-            gasFieldDiagnostics = false;
-            gasFieldOpacity = 1f;
-            gasFieldScale = 1f;
-            gasFieldAnimation = 1f;
-            gasFieldBlur = 1f;
-            gasFieldSharpen = 0f;
-            gasFieldFaint = 1f;
-            gasFieldCloudy = true;
-            gasFieldReplaceDeadlife = true;
-            explosionRippleEnabled = true;
-            explosionRippleIntensity = 1f;
-            explosionRippleRadiusScale = 1f;
-            explosionRippleRadiusInfluence = 0.35f;
-            explosionRippleDuration = RippleDurationBaseline;
-            shieldRippleEnabled = true;
-            shieldRippleIntensity = 1.2f;
-            shieldRippleDuration = 0.24f;
-            shieldRippleDamageScale = 1f;
-            alwaysShowShields = false;
-            replaceLargeShields = true;
-            replacePersonalShields = true;
-            replaceRepulsorShields = true;
-            replaceVefShieldBubbles = true;
-            replaceVefHediffShields = true;
-            repulsorShieldOpacity = 0.6f;
-            largeShieldsVanillaOnly = false;
-            personalShieldsVanillaOnly = false;
-            largeShieldDisableHitDust = true;
-            shieldDomeStyle = ShieldDomeStyle.Vanilla;
-            personalShieldDomeStyle = ShieldDomeStyle.Vanilla;
-            crispShieldImpactStyle = ShieldImpactStyle.Flare;
-            vanillaShieldImpactStyle = ShieldImpactStyle.Brighten;
-            hexShieldImpactStyle = ShieldImpactStyle.HexWave;
-            shieldBrightenAngle = 30f;
-            shieldImpactTicks = 40f;
-            largeCrispShieldBreakStyle = ShieldBreakStyle.Dissolve;
-            largeVanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
-            largeHexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
-            personalCrispShieldBreakStyle = ShieldBreakStyle.Dissolve;
-            personalVanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
-            personalHexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
-            largeShieldRestoreStyle = ShieldRestoreStyle.Grow;
-            personalShieldRestoreStyle = ShieldRestoreStyle.Grow;
-            largeShieldRestoreTicks = 60f;
-            personalShieldRestoreTicks = 60f;
-            largeShieldHexFaceStrength = 0.22f;
-            largeShieldHexLineStrength = 0.75f;
-            personalShieldHexFaceStrength = 0.22f;
-            personalShieldHexLineStrength = 0.75f;
-            shieldHexDensity = 5f;
-            shieldHexDensityApplied = 5;
-            personalShieldHexDensity = 4f;
-            personalShieldHexDensityApplied = 4;
-            personalShieldOpacity = 0.2f;
-            personalShieldHitStyle = PersonalShieldHitStyle.Jitter;
-            personalShieldDisableHitDust = true;
-            personalShieldJitterDistance = 0.05f;
-            personalShieldJitterTicks = 8f;
-            personalShieldBrightenStrength = 0.55f;
-            personalShieldBrightenAngle = 30f;
-            personalShieldHexImpactStrength = 0.5f;
-            personalShieldHexImpactShare = 0.4f;
-            shieldHexImpactStrength = 0.28f;
-            shieldHexImpactShare = 0.32f;
-            largeShieldRidgeWidth = 3.6f;
-            largeShieldRidgeBrightness = 0.52f;
-            personalShieldRidgeWidth = 3.6f;
-            personalShieldRidgeBrightness = 0.52f;
-            shieldFlareAlpha = 0.30f;
-            shieldFlareDamageInfluence = 0.5f;
-            shieldFlareSizeScale = 1f;
-            largeShieldDissolveTicks = 90f;
-            personalShieldDissolveTicks = 90f;
-            largeShieldDissolveBrightness = 0.6f;
-            personalShieldDissolveBrightness = 0.6f;
-            vacuumLeakEnabled = true;
-            vacuumLeakIntensity = 1f;
-            vacuumLeakSpeed = 1f;
-            vacuumLeakDurationScale = 1f;
-            vacuumLeakDistortion = true;
-            vacuumLeakDistortionStrength = 6f;
-            vacuumLeakTrace = false;
-            heatHazeEnabled = true;
-            heatHazeHighFrequency = false;
-            heatHazePerCellTemp = false;
-            heatHazeStartTemp = 35f;
-            heatHazeFullTemp = 80f;
-            heatHazeIntensity = 1f;
-            heatHazeScale = 1f;
-            heatHazeSpeed = 1f;
-            heatHazeAmplitude = 2.5f;
-            heatHazeFireBoost = 1f;
-            coldMistEnabled = true;
-            coldMistStartTemp = 0f;
-            coldMistFullTemp = -75f;
-            coldMistOpacity = 0.1f;
-            coldMistCoverage = 0.1f;
-            coldMistScale = 1f;
-            coldMistSpeed = 2f;
         }
     }
 }
