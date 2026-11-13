@@ -849,6 +849,7 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldOverride_Enable".Translate(),
                 ref VisualTweaksSettings.shieldOverrideGizmo,
                 "VisualTweaks_ShieldOverride_EnableTip".Translate());
+            DrawShieldOverrideManagement(listing);
 
             // Each family owns its surface, style and break choices. Turning one off
             // hides only that section and leaves the other drawing untouched. The
@@ -886,6 +887,39 @@ namespace VisualTweaks
             }
 
             SettingsLayout.Finish(listing);
+        }
+
+        /// <summary>
+        /// Counts and clears the per-object overrides. Kept next to the gizmo switch
+        /// because both answer the same question: how much customisation is
+        /// currently on screen.
+        /// </summary>
+        private static void DrawShieldOverrideManagement(Listing_Standard listing)
+        {
+            int count = ShieldOverrideGameComponent.CountActive();
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldOverride_ManageGroup".Translate());
+            SettingsLayout.Note(
+                listing,
+                "VisualTweaks_ShieldOverride_Count".Translate(count));
+
+            bool previous = GUI.enabled;
+            GUI.enabled = previous && count > 0;
+            Rect button = listing.GetRect(SettingsLayout.ButtonRowHeight);
+            if (Widgets.ButtonText(
+                    button,
+                    "VisualTweaks_ShieldOverride_ClearAll".Translate()))
+            {
+                Find.WindowStack?.Add(
+                    Dialog_MessageBox.CreateConfirmation(
+                        "VisualTweaks_ShieldOverride_ClearAllConfirm".Translate(),
+                        delegate { ShieldOverrideGameComponent.ClearAll(); },
+                        destructive: true));
+            }
+
+            GUI.enabled = previous;
+            listing.Gap(SettingsLayout.RowGap);
         }
 
         /// <summary>Feedback on the shield surface; independent of the shockwave tab.</summary>

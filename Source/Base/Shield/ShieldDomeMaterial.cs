@@ -368,6 +368,10 @@ namespace VisualTweaks
     /// One material per (target, surface) pair. The surface is a material uniform,
     /// so a shield that overrides it cannot share a material with one that does
     /// not. Ten instances at most: two families times five surfaces.
+    ///
+    /// Read once per visible shield per frame, from the same main-thread draw
+    /// callbacks as the rest of the renderer. No lock is needed; the only writes
+    /// happen on a cache miss while already on that thread.
     /// </summary>
     internal static class ShieldMaterials
     {

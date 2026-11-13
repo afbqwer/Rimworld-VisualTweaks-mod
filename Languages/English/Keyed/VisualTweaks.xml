@@ -137,6 +137,10 @@
   <VisualTweaks_ShieldOverride_FollowGlobal>Follow global</VisualTweaks_ShieldOverride_FollowGlobal>
   <VisualTweaks_ShieldOverride_FollowGlobalTip>Use whatever the Shields tab currently selects for this row.</VisualTweaks_ShieldOverride_FollowGlobalTip>
   <VisualTweaks_ShieldOverride_Surface>Surface style</VisualTweaks_ShieldOverride_Surface>
+  <VisualTweaks_ShieldOverride_ManageGroup>Per-shield overrides</VisualTweaks_ShieldOverride_ManageGroup>
+  <VisualTweaks_ShieldOverride_Count>Overridden shields: {0}</VisualTweaks_ShieldOverride_Count>
+  <VisualTweaks_ShieldOverride_ClearAll>Clear all overrides</VisualTweaks_ShieldOverride_ClearAll>
+  <VisualTweaks_ShieldOverride_ClearAllConfirm>Clear every per-shield style, color and opacity override? This cannot be undone.</VisualTweaks_ShieldOverride_ClearAllConfirm>
   <VisualTweaks_ShieldOverride_OpacityGroup>Opacity</VisualTweaks_ShieldOverride_OpacityGroup>
   <VisualTweaks_ShieldOverride_Opacity>Opacity multiplier</VisualTweaks_ShieldOverride_Opacity>
   <VisualTweaks_ShieldOverride_OpacityTip>Multiplies this shield's current opacity, including the global opacity setting. 1.00 leaves it unchanged; lower is fainter, higher is stronger. It affects only the surface, not hit flashes or break brightness.</VisualTweaks_ShieldOverride_OpacityTip>

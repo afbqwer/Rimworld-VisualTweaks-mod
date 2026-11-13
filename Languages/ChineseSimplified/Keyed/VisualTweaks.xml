@@ -137,6 +137,10 @@
   <VisualTweaks_ShieldOverride_FollowGlobal>跟随全局</VisualTweaks_ShieldOverride_FollowGlobal>
   <VisualTweaks_ShieldOverride_FollowGlobalTip>使用护盾页签中当前为这一项选择的设置。</VisualTweaks_ShieldOverride_FollowGlobalTip>
   <VisualTweaks_ShieldOverride_Surface>表面样式</VisualTweaks_ShieldOverride_Surface>
+  <VisualTweaks_ShieldOverride_ManageGroup>护盾覆写管理</VisualTweaks_ShieldOverride_ManageGroup>
+  <VisualTweaks_ShieldOverride_Count>已覆写护盾数：{0}</VisualTweaks_ShieldOverride_Count>
+  <VisualTweaks_ShieldOverride_ClearAll>清除所有覆写</VisualTweaks_ShieldOverride_ClearAll>
+  <VisualTweaks_ShieldOverride_ClearAllConfirm>清除所有护盾的独立样式、颜色和透明度覆写？此操作无法撤销。</VisualTweaks_ShieldOverride_ClearAllConfirm>
   <VisualTweaks_ShieldOverride_OpacityGroup>透明度</VisualTweaks_ShieldOverride_OpacityGroup>
   <VisualTweaks_ShieldOverride_Opacity>透明度倍率</VisualTweaks_ShieldOverride_Opacity>
   <VisualTweaks_ShieldOverride_OpacityTip>在当前护盾透明度的基础上乘以该倍率（包含全局透明度设置）。1.00 表示不变，越低越淡，越高越明显；只影响护盾表面，不影响受击闪光和破碎亮度。</VisualTweaks_ShieldOverride_OpacityTip>

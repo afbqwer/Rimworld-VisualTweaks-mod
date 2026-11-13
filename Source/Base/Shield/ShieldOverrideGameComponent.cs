@@ -116,6 +116,12 @@ namespace VisualTweaks
     /// Owns every per-shield style override in one save. A GameComponent is the
     /// smallest vanilla container that is created automatically, survives a save,
     /// and needs no def surgery on the shield comps themselves.
+    ///
+    /// Threading contract: every reader is a main-thread draw callback
+    /// (Thing.PostDraw, MapComponentDraw or the style window) and every writer is
+    /// the same thread (window edits, Thing.Destroy cleanup, save/load). The
+    /// lookup and its cache are therefore intentionally lock-free. Do not call
+    /// these from a background worker without adding synchronization.
     /// </summary>
     internal sealed class ShieldOverrideGameComponent : GameComponent
     {
@@ -206,6 +212,44 @@ namespace VisualTweaks
         }
 
         /// <summary>
+        /// Number of objects with at least one active override. Empty records that
+        /// were only created by opening the window are not counted.
+        /// </summary>
+        internal static int CountActive()
+        {
+            ShieldOverrideGameComponent? component = GetCurrent();
+            if (component?.entries == null)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            for (int i = 0; i < component.entries.Count; i++)
+            {
+                ShieldStyleOverride? entry = component.entries[i];
+                if (entry != null && !entry.IsEmpty)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>Drops every per-object override, including empty records.</summary>
+        internal static void ClearAll()
+        {
+            ShieldOverrideGameComponent? component = GetCurrent();
+            if (component == null)
+            {
+                return;
+            }
+
+            component.entries?.Clear();
+            component.lookup.Clear();
+        }
+
+        /// <summary>
         /// Bakes any lattice a saved override will draw. Loading is the last point
         /// before play where the cost can land on a loading screen instead of the
         /// first frame that happens to show the shield.
@@ -225,11 +269,20 @@ namespace VisualTweaks
 
         private ShieldStyleOverride? Find(int thingId)
         {
-            // The common case is "no override for anything": do not rebuild an
-            // empty dictionary on every shield, every frame.
-            if (lookup.Count == 0 && entries != null && entries.Count > 0)
+            // The common case is "no override for anything": skip both the rebuild
+            // and the hash lookup entirely. This runs once per visible shield per
+            // frame, so the empty path is worth keeping allocation-free and cheap.
+            if (lookup.Count == 0)
             {
-                RebuildLookup();
+                if (entries != null && entries.Count > 0)
+                {
+                    RebuildLookup();
+                }
+
+                if (lookup.Count == 0)
+                {
+                    return null;
+                }
             }
 
             return lookup.TryGetValue(thingId, out ShieldStyleOverride? entry)
