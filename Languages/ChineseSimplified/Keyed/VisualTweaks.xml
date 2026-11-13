@@ -143,7 +143,7 @@
   <VisualTweaks_ShieldDome_StyleBubble>护盾泡泡</VisualTweaks_ShieldDome_StyleBubble>
   <VisualTweaks_ShieldDome_StyleBubbleTip>将个人护盾的柔和气泡套用到大型护盾。</VisualTweaks_ShieldDome_StyleBubbleTip>
   <VisualTweaks_ShieldDome_StyleHexBubble>六边泡泡</VisualTweaks_ShieldDome_StyleHexBubble>
-  <VisualTweaks_ShieldDome_StyleHexBubbleTip>护盾泡泡 + 透明六边形网。常态不闪动，由一条带柔和过渡的扫描条纹让网显现；受击与破裂期间整张网保持不透明。</VisualTweaks_ShieldDome_StyleHexBubbleTip>
+  <VisualTweaks_ShieldDome_StyleHexBubbleTip>护盾泡泡 + 透明六边形网。常态不闪动，由一条带柔和过渡的扫描条纹让网显现；受击与破裂期间整张网保持不透明。受击默认「六边扩散」、破裂默认「六边消散」，与六边形样式共用同一组设置。</VisualTweaks_ShieldDome_StyleHexBubbleTip>
   <VisualTweaks_ShieldDome_HexBubbleGroup>六边形泡泡 · 扫描</VisualTweaks_ShieldDome_HexBubbleGroup>
   <VisualTweaks_ShieldDome_HexBubbleScanPeriod>扫描周期</VisualTweaks_ShieldDome_HexBubbleScanPeriod>
   <VisualTweaks_ShieldDome_HexBubbleScanPeriodTip>扫描条纹扫过一遍所需的时间（秒）。大型护盾与个人护盾共用。</VisualTweaks_ShieldDome_HexBubbleScanPeriodTip>
@@ -175,7 +175,7 @@
   <VisualTweaks_ShieldDome_ImpactBrighten>扇区增亮</VisualTweaks_ShieldDome_ImpactBrighten>
   <VisualTweaks_ShieldDome_ImpactBrightenTip>受击方向的角度扇区变亮，越靠近中心越弱。</VisualTweaks_ShieldDome_ImpactBrightenTip>
   <VisualTweaks_ShieldDome_ImpactHexWave>六边扩散</VisualTweaks_ShieldDome_ImpactHexWave>
-  <VisualTweaks_ShieldDome_ImpactHexWaveTip>命中点附近的面板亮起，并沿网格向外逐圈扩散。仅六边形样式可用。</VisualTweaks_ShieldDome_ImpactHexWaveTip>
+  <VisualTweaks_ShieldDome_ImpactHexWaveTip>命中点附近的面板亮起，并沿网格向外逐圈扩散。六边形与六边泡泡可用。</VisualTweaks_ShieldDome_ImpactHexWaveTip>
   <VisualTweaks_ShieldDome_ImpactDuration>受击动画时长</VisualTweaks_ShieldDome_ImpactDuration>
   <VisualTweaks_ShieldDome_ImpactDurationTip>大型护盾的火舌、扇区增亮或六边扩散持续的时间，60 tick = 1 秒。</VisualTweaks_ShieldDome_ImpactDurationTip>
   <VisualTweaks_ShieldDome_FlareAlpha>受击亮度</VisualTweaks_ShieldDome_FlareAlpha>
@@ -199,7 +199,7 @@
   <VisualTweaks_ShieldDome_BreakDissolve>溶解</VisualTweaks_ShieldDome_BreakDissolve>
   <VisualTweaks_ShieldDome_BreakDissolveTip>沿噪声撕裂前沿逐渐溶解，带热边和细裂纹。</VisualTweaks_ShieldDome_BreakDissolveTip>
   <VisualTweaks_ShieldDome_BreakHexDissipate>六边消散</VisualTweaks_ShieldDome_BreakHexDissipate>
-  <VisualTweaks_ShieldDome_BreakHexDissipateTip>从破裂点向外逐块失去面板。仅六边形样式可用。</VisualTweaks_ShieldDome_BreakHexDissipateTip>
+  <VisualTweaks_ShieldDome_BreakHexDissipateTip>从破裂点向外逐块失去面板。六边形与六边泡泡可用。</VisualTweaks_ShieldDome_BreakHexDissipateTip>
   <VisualTweaks_ShieldDome_DissolveTime>破裂时长</VisualTweaks_ShieldDome_DissolveTime>
   <VisualTweaks_ShieldDome_DissolveTimeTip>从开始破裂到完全消失的 tick 数，60 tick = 1 秒。</VisualTweaks_ShieldDome_DissolveTimeTip>
   <VisualTweaks_ShieldDome_DissolveBrightness>破裂亮度</VisualTweaks_ShieldDome_DissolveBrightness>

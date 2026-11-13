@@ -866,7 +866,13 @@ void main()
         float panel = 0.6 + 0.4 * smoothstep(0.0, 0.25, e);
 
         vec3 hot = mix(u._Color.rgb, vec3(1.0), 0.9);
-        outColor = vec4(hot, lit * panel * u._Params.y * edge);
+        // The hex bubble's idle soft edge reaches 1.16R, but a lattice flash
+        // must not paint outside the shield it belongs to. Every other style
+        // keeps its own edge untouched.
+        float waveEdge = u._Params6.x > 3.5
+            ? 1.0 - smoothstep(0.985, 1.015, r)
+            : edge;
+        outColor = vec4(hot, lit * panel * u._Params.y * waveEdge);
     }
     else if (mode < 4.5)
     {

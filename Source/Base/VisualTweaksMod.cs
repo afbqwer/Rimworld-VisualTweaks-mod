@@ -1439,19 +1439,19 @@ namespace VisualTweaks
         /// <summary>The dome's hit reaction, with the settings of the chosen style.</summary>
         private static void DrawDomeImpactChoice(Listing_Standard listing)
         {
+            // HexBubble offers the panel shell's hit set, including the lattice
+            // wave, and reads/writes the same saved field and default.
             bool hexSurface =
-                VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex;
+                VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex
+                || VisualTweaksSettings.shieldDomeStyle
+                    == ShieldDomeStyle.HexBubble;
             ShieldImpactStyle[] order = hexSurface
                 ? HexImpactOrder
                 : StandardImpactOrder;
-            // HexBubble shares the stock-like impact choice (sector brighten by
-            // default), so the radio must read — and write — that same field.
             ShieldImpactStyle current = hexSurface
                 ? VisualTweaksSettings.hexShieldImpactStyle
                 : (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
-                    || VisualTweaksSettings.shieldDomeStyle
-                        == ShieldDomeStyle.HexBubble)
+                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
                     ? VisualTweaksSettings.vanillaShieldImpactStyle
                     : VisualTweaksSettings.crispShieldImpactStyle;
 
@@ -1469,9 +1469,7 @@ namespace VisualTweaks
                     VisualTweaksSettings.hexShieldImpactStyle = value;
                 }
                 else if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
-                    || VisualTweaksSettings.shieldDomeStyle
-                        == ShieldDomeStyle.HexBubble)
+                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
                 {
                     VisualTweaksSettings.vanillaShieldImpactStyle = value;
                 }
@@ -1606,9 +1604,15 @@ namespace VisualTweaks
         /// </summary>
         private static void DrawBreakChoice(Listing_Standard listing, bool personal)
         {
+            // The hex bubble shares the panel-loss break and its default: the
+            // lattice is the same, so losing whole panels reads the same way.
             bool hexSurface = personal
                 ? VisualTweaksSettings.personalShieldDomeStyle == ShieldDomeStyle.Hex
-                : VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex;
+                    || VisualTweaksSettings.personalShieldDomeStyle
+                        == ShieldDomeStyle.HexBubble
+                : VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex
+                    || VisualTweaksSettings.shieldDomeStyle
+                        == ShieldDomeStyle.HexBubble;
             ShieldBreakStyle[] order = hexSurface
                 ? HexBreakOrder
                 : StandardBreakOrder;
@@ -1635,9 +1639,7 @@ namespace VisualTweaks
                     VisualTweaksSettings.personalHexShieldBreakStyle = value;
                 }
                 else if (VisualTweaksSettings.personalShieldDomeStyle
-                        == ShieldDomeStyle.Vanilla
-                    || VisualTweaksSettings.personalShieldDomeStyle
-                        == ShieldDomeStyle.HexBubble)
+                    == ShieldDomeStyle.Vanilla)
                 {
                     VisualTweaksSettings.personalVanillaShieldBreakStyle = value;
                 }
@@ -1654,9 +1656,7 @@ namespace VisualTweaks
                 VisualTweaksSettings.largeHexShieldBreakStyle = value;
             }
             else if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
-                || VisualTweaksSettings.shieldDomeStyle
-                    == ShieldDomeStyle.HexBubble)
+                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
             {
                 VisualTweaksSettings.largeVanillaShieldBreakStyle = value;
             }

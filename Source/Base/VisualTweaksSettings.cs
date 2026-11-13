@@ -296,18 +296,19 @@ namespace VisualTweaks
         {
             ShieldDomeStyle style = ShieldDomeStyleFor(target);
             bool personal = target == ShieldHexTarget.Personal;
-            if (style == ShieldDomeStyle.Hex)
+            // Both lattice surfaces share one choice and one default. The hex
+            // bubble's net is the same baked lattice, so losing whole panels is
+            // as meaningful there as on the panel shell — the bubble underneath
+            // is just the surface the panels sit on.
+            if (style == ShieldDomeStyle.Hex
+                || style == ShieldDomeStyle.HexBubble)
             {
                 return personal
                     ? personalHexShieldBreakStyle
                     : largeHexShieldBreakStyle;
             }
 
-            // HexBubble breaks with the continuous tear, not the panel-loss
-            // dissolve: its net is a layer on a bubble surface, so losing whole
-            // panels would tear the wrong thing.
             bool stockLike = style == ShieldDomeStyle.Vanilla
-                || style == ShieldDomeStyle.HexBubble
                 || (target == ShieldHexTarget.Large && style == ShieldDomeStyle.Bubble);
             if (stockLike)
             {
@@ -333,11 +334,14 @@ namespace VisualTweaks
         public static ShieldImpactStyle hexShieldImpactStyle = ShieldImpactStyle.HexWave;
 
         /// <summary>The impact animation that belongs to the selected dome style.</summary>
+        // HexBubble shares the panel shell's hit choice and its default (the
+        // lattice wave): both sample the same per-cell ids from the baked map.
         public static ShieldImpactStyle CurrentShieldImpactStyle =>
-            shieldDomeStyle == ShieldDomeStyle.Hex ? hexShieldImpactStyle
+            shieldDomeStyle == ShieldDomeStyle.Hex
+                || shieldDomeStyle == ShieldDomeStyle.HexBubble
+                ? hexShieldImpactStyle
             : (shieldDomeStyle == ShieldDomeStyle.Vanilla
-                || shieldDomeStyle == ShieldDomeStyle.Bubble
-                || shieldDomeStyle == ShieldDomeStyle.HexBubble)
+                || shieldDomeStyle == ShieldDomeStyle.Bubble)
                 ? vanillaShieldImpactStyle
                 : crispShieldImpactStyle;
 

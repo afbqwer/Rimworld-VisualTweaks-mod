@@ -83,15 +83,27 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// True when the panel style is what this target actually shows: the style is
-        /// selected and the target's own lattice texture exists. The style uniform,
-        /// the panel-loss break and the dome's choice of hit reaction go through this,
-        /// so they cannot disagree. A belt's hit reaction is the one exception: Hex
-        /// spread may be chosen on a non-hex surface and checks the texture itself,
-        /// because the surface it lights is the animation's whole point.
-        internal bool HexActive =>
-            VisualTweaksSettings.ShieldDomeStyleFor(target) == ShieldDomeStyle.Hex
-            && ShieldHexMap.Available(target);
+        /// True when a spherical lattice is really being drawn: either the panel
+        /// shell or the hex bubble, with this target's baked texture available.
+        /// Every per-cell effect goes through this gate — the lattice hit wave
+        /// (mode 3), the panel-loss break (mode 5) and the crisp fallback — so a
+        /// shield is never answered by tiles it is not showing. The bubble's
+        /// transparent net samples the same cell ids, so those two effects are as
+        /// valid on it as on the shell. A belt's hit reaction is the one exception:
+        /// Hex spread may be chosen on a non-lattice surface and checks the texture
+        /// itself, because the surface it lights is the animation's whole point.
+        /// </summary>
+        internal bool HexActive
+        {
+            get
+            {
+                ShieldDomeStyle style =
+                    VisualTweaksSettings.ShieldDomeStyleFor(target);
+                return (style == ShieldDomeStyle.Hex
+                        || style == ShieldDomeStyle.HexBubble)
+                    && ShieldHexMap.Available(target);
+            }
+        }
 
         /// <summary>
         /// The material, created on first use. Null means "draw nothing"; every
