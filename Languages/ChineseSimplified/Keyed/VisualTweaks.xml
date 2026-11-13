@@ -126,7 +126,7 @@
   <VisualTweaks_ShieldAlways_Enable>总是显示大型护盾</VisualTweaks_ShieldAlways_Enable>
   <VisualTweaks_ShieldAlways_EnableTip>未选中时也让运作中的大型护盾淡淡显示。个人护盾是否显示仍由原版规则决定。</VisualTweaks_ShieldAlways_EnableTip>
   <VisualTweaks_Shield_PauseWhenPaused>暂停时停止护盾动画</VisualTweaks_Shield_PauseWhenPaused>
-  <VisualTweaks_Shield_PauseWhenPausedTip>游戏暂停时冻结护盾表面的扫描、漂移与常显呼吸光效；关闭后这些动画会继续播放。受击与破裂动画本来就随游戏时间暂停。</VisualTweaks_Shield_PauseWhenPausedTip>
+  <VisualTweaks_Shield_PauseWhenPausedTip>游戏暂停时冻结护盾表面的扫描、漂移，以及原版常显护盾的明暗呼吸；关闭后这些动画会继续播放。受击与破裂动画本来就随游戏时间暂停。</VisualTweaks_Shield_PauseWhenPausedTip>
 
   <VisualTweaks_ShieldDome_Group>大型护盾</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldLarge_VanillaOnly>只替换原版护盾</VisualTweaks_ShieldLarge_VanillaOnly>

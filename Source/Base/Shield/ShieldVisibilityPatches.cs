@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using HarmonyLib;
 using RimWorld;
 using UnityEngine;
@@ -26,10 +28,21 @@ namespace VisualTweaks
     /// The value deliberately ignores minIdleAlpha. Feeding that field into the lerp is
     /// what makes the vanilla property return a negative number in the first place, and
     /// any shield that already sets a visible minIdleAlpha is bright enough on its own.
+    ///
+    /// Vanilla drives both of its alpha pulses — the idle breathing here and the
+    /// selected / drawWithNoSelection pulse — from <c>Time.realtimeSinceStartup</c>.
+    /// That is why a centurion, whose def sets minIdleAlpha 0.2 and
+    /// drawWithNoSelection true, keeps breathing through a pause: its alpha never
+    /// falls below MinAlpha, so the postfix leaves the vanilla value alone, and the
+    /// selected pulse (0.2..0.62) is the one actually visible. Both methods are
+    /// therefore transpiled to read <see cref="ShieldAnimationClock"/>, which keeps
+    /// the pause option authoritative without reimplementing vanilla's alpha rules.
     /// </summary>
     internal static class ShieldVisibilityPatches
     {
         private const string IdleAlphaMethodName = "GetCurrentAlpha_Idle";
+
+        private const string SelectedAlphaMethodName = "GetCurrentAlpha_Selected";
 
         /// <summary>
         /// Bottom of the breathing range, and also the threshold below which vanilla's
@@ -53,28 +66,127 @@ namespace VisualTweaks
 
         internal static void Apply(Harmony harmony)
         {
-            MethodInfo? target = AccessTools.Method(
+            MethodInfo? idle = AccessTools.Method(
                 typeof(CompProjectileInterceptor),
                 IdleAlphaMethodName);
             MethodInfo? postfix = AccessTools.Method(
                 typeof(ShieldVisibilityPatches),
                 nameof(GetCurrentAlphaIdlePostfix));
+            MethodInfo? transpiler = AccessTools.Method(
+                typeof(ShieldVisibilityPatches),
+                nameof(UseShieldClock));
 
-            if (target == null || postfix == null)
+            if (idle == null || postfix == null)
             {
                 Log.Warning("[Visual Tweaks] Cannot patch CompProjectileInterceptor."
                     + IdleAlphaMethodName + ".");
                 return;
             }
 
+            // Apply the two jobs separately: a transpiler that cannot match must not
+            // take the idle-visibility postfix down with it, and vice versa.
             try
             {
-                harmony.Patch(target, postfix: new HarmonyMethod(postfix));
+                harmony.Patch(idle, postfix: new HarmonyMethod(postfix));
                 VisualTweaksLog.Info("Patched CompProjectileInterceptor." + IdleAlphaMethodName + ".");
             }
             catch (Exception ex)
             {
                 Log.Error("[Visual Tweaks] Failed to patch shield idle alpha: " + ex);
+            }
+
+            if (transpiler == null)
+            {
+                Log.Warning("[Visual Tweaks] Shield alpha clock transpiler not found;"
+                    + " vanilla breathing will keep running while paused.");
+                return;
+            }
+
+            PatchPulseClock(harmony, idle, transpiler);
+            PatchPulseClock(
+                harmony,
+                AccessTools.Method(
+                    typeof(CompProjectileInterceptor),
+                    SelectedAlphaMethodName),
+                transpiler);
+        }
+
+        private static void PatchPulseClock(
+            Harmony harmony,
+            MethodInfo? target,
+            MethodInfo transpiler)
+        {
+            if (target == null)
+            {
+                Log.Warning("[Visual Tweaks] Cannot patch a shield alpha pulse;"
+                    + " its breathing will keep running while paused.");
+                return;
+            }
+
+            try
+            {
+                harmony.Patch(target, transpiler: new HarmonyMethod(transpiler));
+                VisualTweaksLog.Info(
+                    "Patched CompProjectileInterceptor." + target.Name + " clock.");
+            }
+            catch (Exception ex)
+            {
+                // Losing this patch only leaves vanilla's pulse on while paused; the
+                // shader clock and the idle fill still work, so do not abort startup.
+                Log.Error("[Visual Tweaks] Failed to patch " + target.Name
+                    + " shield alpha clock: " + ex);
+            }
+        }
+
+        /// <summary>
+        /// Swaps vanilla's <c>Time.realtimeSinceStartup</c> reads in one alpha pulse for
+        /// the shared shield clock. The stack shape is unchanged (float in, float out),
+        /// and the clock returns the same value as before unless the pause option is on.
+        ///
+        /// The replacement is matched by declaring type and name rather than by
+        /// comparing against a captured MethodInfo: Harmony may hand us the same call
+        /// through a different MethodInfo instance, but the operand is always the
+        /// UnityEngine property getter.
+        /// </summary>
+        private static IEnumerable<CodeInstruction> UseShieldClock(
+            IEnumerable<CodeInstruction> instructions)
+        {
+            MethodInfo? clock = AccessTools.PropertyGetter(
+                typeof(ShieldAnimationClock),
+                nameof(ShieldAnimationClock.Time));
+            if (clock == null)
+            {
+                Log.Warning("[Visual Tweaks] ShieldAnimationClock.Time getter not found;"
+                    + " shield alpha pulses will keep running while paused.");
+                foreach (CodeInstruction instruction in instructions)
+                {
+                    yield return instruction;
+                }
+
+                yield break;
+            }
+
+            bool replaced = false;
+            foreach (CodeInstruction instruction in instructions)
+            {
+                // The operand is the property *getter*, so its name is
+                // "get_realtimeSinceStartup", not "realtimeSinceStartup".
+                if (instruction.operand is MethodInfo called
+                    && called.DeclaringType == typeof(Time)
+                    && called.Name == "get_realtimeSinceStartup")
+                {
+                    yield return new CodeInstruction(OpCodes.Call, clock);
+                    replaced = true;
+                    continue;
+                }
+
+                yield return instruction;
+            }
+
+            if (!replaced)
+            {
+                Log.Warning("[Visual Tweaks] No Time.realtimeSinceStartup call found in a"
+                    + " shield alpha pulse; its pause freeze will not apply.");
             }
         }
 

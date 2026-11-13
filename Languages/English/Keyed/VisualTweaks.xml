@@ -126,7 +126,7 @@
   <VisualTweaks_ShieldAlways_Enable>Always show large shields</VisualTweaks_ShieldAlways_Enable>
   <VisualTweaks_ShieldAlways_EnableTip>Keeps active large shields faintly visible when not selected. Personal belts still follow vanilla's visibility rules.</VisualTweaks_ShieldAlways_EnableTip>
   <VisualTweaks_Shield_PauseWhenPaused>Pause shield animation when the game is paused</VisualTweaks_Shield_PauseWhenPaused>
-  <VisualTweaks_Shield_PauseWhenPausedTip>Freezes the shield surface's scan, drift and always-show breathing glow while the game is paused. Turn it off to keep them playing. Hit and break animations already follow game time and pause either way.</VisualTweaks_Shield_PauseWhenPausedTip>
+  <VisualTweaks_Shield_PauseWhenPausedTip>Freezes the shield surface's scan and drift, plus vanilla's always-show breathing alpha, while the game is paused. Turn it off to keep them playing. Hit and break animations already follow game time and pause either way.</VisualTweaks_Shield_PauseWhenPausedTip>
 
   <VisualTweaks_ShieldDome_Group>Large shields</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldLarge_VanillaOnly>Vanilla type only</VisualTweaks_ShieldLarge_VanillaOnly>
