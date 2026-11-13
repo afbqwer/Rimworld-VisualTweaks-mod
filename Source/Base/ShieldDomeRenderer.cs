@@ -204,24 +204,11 @@ namespace VisualTweaks
 
             Vector3 center = host.DrawPos;
 
-            // 2 * radius normally, with no texture-margin factor: the shader puts the
-            // silhouette on r == 1.0, so the quad edge and the gameplay radius are the
-            // same circle. The stock-like style is the exception — its soft rim is
-            // supposed to fade through r == 1 the way vanilla's does, so it gets the
-            // same 1.1601562 margin vanilla uses for Other/ForceField.
-            float quadMargin =
-                VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
-                    ? VanillaQuadMargin
-                    : 1f;
-            Matrix4x4 matrix = default;
-            matrix.SetTRS(
-                new Vector3(center.x, Altitude, center.z),
-                Quaternion.identity,
-                new Vector3(
-                    radius * 2f * quadMargin,
-                    1f,
-                    radius * 2f * quadMargin));
+            // The up edge owns the restore animation. Observed here rather than from a
+            // tick patch because this is the one place that already knows what "up"
+            // means for both adapters: Active for an interceptor, active plus charge
+            // for a repulsor. See ShieldRestoreLog.
+            ShieldRestoreLog.Observe(comp, present);
 
             // ------------------------------------------------------------------
             // Dissolve.
@@ -272,6 +259,61 @@ namespace VisualTweaks
                 }
             }
 
+            // ------------------------------------------------------------------
+            // Restore.
+            //
+            // The opposite edge of the dissolve: a shield that just became available
+            // again fades in, and Grow additionally inflates it from a fraction of
+            // its radius. The alpha still comes from vanilla, so this only scales a
+            // surface that vanilla would already show — an unselected player shield
+            // stays hidden through its own alpha rather than being forced visible.
+            // A break in flight owns the frame, so no restore is applied to it.
+            // ------------------------------------------------------------------
+            ShieldRestoreStyle restoreStyle = VisualTweaksSettings.largeShieldRestoreStyle;
+            float restoreProgress = -1f;
+            if (dissolve == null && restoreStyle != ShieldRestoreStyle.None)
+            {
+                float? progress = ShieldRestoreLog.Progress(comp);
+                if (progress.HasValue)
+                {
+                    restoreProgress = progress.Value;
+                }
+            }
+
+            float restoreAlpha = 1f;
+            float drawnRadius = radius;
+            if (restoreProgress >= 0f)
+            {
+                float eased = ShieldRestoreLog.Ease(restoreProgress);
+                restoreAlpha = eased;
+                if (restoreStyle == ShieldRestoreStyle.Grow)
+                {
+                    drawnRadius = radius * Mathf.Lerp(
+                        ShieldRestoreLog.GrowStartScale,
+                        1f,
+                        eased);
+                }
+            }
+
+            // 2 * radius normally, with no texture-margin factor: the shader puts the
+            // silhouette on r == 1.0, so the quad edge and the gameplay radius are the
+            // same circle. The stock-like style is the exception — its soft rim is
+            // supposed to fade through r == 1 the way vanilla's does, so it gets the
+            // same 1.1601562 margin vanilla uses for Other/ForceField.
+            float quadMargin =
+                VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
+                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
+                    ? VanillaQuadMargin
+                    : 1f;
+            Matrix4x4 matrix = default;
+            matrix.SetTRS(
+                new Vector3(center.x, Altitude, center.z),
+                Quaternion.identity,
+                new Vector3(
+                    drawnRadius * 2f * quadMargin,
+                    1f,
+                    drawnRadius * 2f * quadMargin));
+
             // Nothing is submitted while the surface is fully transparent, no break
             // is in flight and the last recorded hit has already faded. Deciding that
             // before touching the material keeps a hidden shield down to a few field
@@ -304,6 +346,7 @@ namespace VisualTweaks
             NVector4 centerParam = new NVector4(center.x, center.z, 0f, 0f);
             float time = Time.realtimeSinceStartup;
             bool drew = false;
+            bool restoring = dissolve == null && restoreProgress >= 0f;
 
             try
             {
@@ -313,7 +356,9 @@ namespace VisualTweaks
                 // and letting it run over the tear reads as a second, longer animation.
                 // The personal belt already behaves this way (its dissolve returns
                 // before DrawImpact), so this also keeps the two families aligned.
-                if (dissolve == null)
+                // A restoring dome suppresses them for the same reason: a full-strength
+                // flare on a surface that is still fading in reads as a second object.
+                if (dissolve == null && !restoring)
                 {
                     // Which reaction is a player choice now, but not every surface can
                     // draw every one: the lattice wave needs the baked hex map, while the
@@ -331,7 +376,7 @@ namespace VisualTweaks
                     if (impactStyle == ShieldImpactStyle.HexWave)
                     {
                         drew |= DrawHexImpacts(
-                            comp, mat, matrix, tint, centerParam, radius, time);
+                            comp, mat, matrix, tint, centerParam, drawnRadius, time);
                     }
                     else
                     {
@@ -341,7 +386,7 @@ namespace VisualTweaks
                             matrix,
                             tint,
                             centerParam,
-                            radius,
+                            drawnRadius,
                             time,
                             impactStyle == ShieldImpactStyle.Brighten);
                     }
@@ -383,7 +428,12 @@ namespace VisualTweaks
                 else if (alpha > 0f)
                 {
                     properties[0] = DrawProperty.Vector(
-                        ParamsId, new NVector4(0f, alpha, time, radius));
+                        ParamsId,
+                        new NVector4(
+                            0f,
+                            alpha * restoreAlpha,
+                            time,
+                            drawnRadius));
                     properties[1] = DrawProperty.Vector(Params4Id, centerParam);
                     properties[2] = DrawProperty.Color(ColorId, tint);
 

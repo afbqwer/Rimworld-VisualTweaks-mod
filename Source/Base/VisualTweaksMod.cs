@@ -541,6 +541,35 @@ namespace VisualTweaks
                 };
         }
 
+        // Restore animation order. The duration is fixed at 60 ticks for both
+        // families; only the style is a choice.
+        private static readonly ShieldRestoreStyle[] RestoreOrder =
+        {
+            ShieldRestoreStyle.None,
+            ShieldRestoreStyle.Fade,
+            ShieldRestoreStyle.Grow
+        };
+
+        private static string[] RestoreLabels()
+        {
+            return new string[]
+            {
+                "VisualTweaks_ShieldDome_RestoreNone".Translate(),
+                "VisualTweaks_ShieldDome_RestoreFade".Translate(),
+                "VisualTweaks_ShieldDome_RestoreGrow".Translate()
+            };
+        }
+
+        private static string[] RestoreTips()
+        {
+            return new string[]
+            {
+                "VisualTweaks_ShieldDome_RestoreNoneTip".Translate(),
+                "VisualTweaks_ShieldDome_RestoreFadeTip".Translate(),
+                "VisualTweaks_ShieldDome_RestoreGrowTip".Translate()
+            };
+        }
+
         private static void DoGasTab(Listing_Standard listing)
         {
             SettingsLayout.Header(listing, "VisualTweaks_Gas_GroupSwitch".Translate());
@@ -952,6 +981,11 @@ namespace VisualTweaks
             {
                 DrawDissolveSliders(listing, false);
             }
+
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldDome_RestoreGroup".Translate());
+            DrawRestoreChoice(listing, false);
         }
 
         /// <summary>
@@ -1016,6 +1050,11 @@ namespace VisualTweaks
             {
                 DrawDissolveSliders(listing, true);
             }
+
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldDome_RestoreGroup".Translate());
+            DrawRestoreChoice(listing, true);
 
             SettingsLayout.SubHeader(
                 listing,
@@ -1367,6 +1406,37 @@ namespace VisualTweaks
                     VisualTweaksSettings.MaxShieldBrightenAngle,
                     "VisualTweaks_ShieldDome_BrightenAngleTip".Translate(),
                     step: 1f);
+            }
+        }
+
+        /// <summary>
+        /// Restore choice for one family. Family-wide, not per surface: a shield coming
+        /// back online is the same event whichever surface is selected.
+        /// </summary>
+        private static void DrawRestoreChoice(Listing_Standard listing, bool personal)
+        {
+            ShieldRestoreStyle current = personal
+                ? VisualTweaksSettings.personalShieldRestoreStyle
+                : VisualTweaksSettings.largeShieldRestoreStyle;
+
+            int index = IndexOf(RestoreOrder, current);
+            int picked = SettingsLayout.RadioRow(
+                listing,
+                RestoreLabels(),
+                index,
+                RestoreTips());
+            if (picked == index)
+            {
+                return;
+            }
+
+            if (personal)
+            {
+                VisualTweaksSettings.personalShieldRestoreStyle = RestoreOrder[picked];
+            }
+            else
+            {
+                VisualTweaksSettings.largeShieldRestoreStyle = RestoreOrder[picked];
             }
         }
 

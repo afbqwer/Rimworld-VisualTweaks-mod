@@ -188,6 +188,14 @@
   <VisualTweaks_ShieldDome_DissolveBrightness>破裂亮度</VisualTweaks_ShieldDome_DissolveBrightness>
   <VisualTweaks_ShieldDome_DissolveBrightnessTip>破裂瞬间的亮度；原版此时已不可见，因此动画自带亮度。</VisualTweaks_ShieldDome_DissolveBrightnessTip>
 
+  <VisualTweaks_ShieldDome_RestoreGroup>恢复动画</VisualTweaks_ShieldDome_RestoreGroup>
+  <VisualTweaks_ShieldDome_RestoreNone>无</VisualTweaks_ShieldDome_RestoreNone>
+  <VisualTweaks_ShieldDome_RestoreNoneTip>不播放恢复动画：护盾恢复可用时直接以正常大小和不透明度出现。</VisualTweaks_ShieldDome_RestoreNoneTip>
+  <VisualTweaks_ShieldDome_RestoreFade>淡入</VisualTweaks_ShieldDome_RestoreFade>
+  <VisualTweaks_ShieldDome_RestoreFadeTip>护盾恢复可用时从透明逐渐变为正常不透明度，持续 60 tick（1 秒）。</VisualTweaks_ShieldDome_RestoreFadeTip>
+  <VisualTweaks_ShieldDome_RestoreGrow>放大</VisualTweaks_ShieldDome_RestoreGrow>
+  <VisualTweaks_ShieldDome_RestoreGrowTip>护盾恢复可用时从透明、较小尺寸逐渐放大到正常大小，持续 60 tick（1 秒）。默认。</VisualTweaks_ShieldDome_RestoreGrowTip>
+
   <VisualTweaks_ShieldDome_PersonalGroup>个人护盾</VisualTweaks_ShieldDome_PersonalGroup>
   <VisualTweaks_ShieldPersonal_VanillaOnly>只替换原版个人护盾</VisualTweaks_ShieldPersonal_VanillaOnly>
   <VisualTweaks_ShieldDome_PersonalStyle>腰带样式</VisualTweaks_ShieldDome_PersonalStyle>

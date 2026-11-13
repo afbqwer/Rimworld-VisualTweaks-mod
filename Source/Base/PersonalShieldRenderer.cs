@@ -180,6 +180,13 @@ namespace VisualTweaks
             bool visible,
             Color baseColor)
         {
+            // The up edge owns the restore animation, for every adapter that reaches
+            // this core: vanilla belts, VEF bubbles and VEF hediff shields. The
+            // adapters already distinguish "available" from "visible", so the
+            // animation follows the shield state rather than whether the stock rule
+            // happens to paint it right now.
+            ShieldRestoreLog.Observe(comp, active);
+
             ShieldBreakStyle breakStyle =
                 VisualTweaksSettings.CurrentShieldBreakStyleFor(
                     ShieldHexTarget.Personal);
@@ -220,6 +227,43 @@ namespace VisualTweaks
                 }
             }
 
+            // ------------------------------------------------------------------
+            // Restore.
+            //
+            // The belt came back up: fade the surface in, and for Grow also inflate
+            // it from a fraction of its current energy-driven size. This multiplies
+            // the player's opacity rather than replacing it, so the belt never gets
+            // brighter than its normal appearance. A break in flight owns the frame.
+            // ------------------------------------------------------------------
+            ShieldRestoreStyle restoreStyle =
+                VisualTweaksSettings.personalShieldRestoreStyle;
+            float restoreProgress = -1f;
+            if (dissolve == null && restoreStyle != ShieldRestoreStyle.None)
+            {
+                float? progress = ShieldRestoreLog.Progress(comp);
+                if (progress.HasValue)
+                {
+                    restoreProgress = progress.Value;
+                }
+            }
+
+            float restoreAlpha = 1f;
+            float restoreScale = 1f;
+            if (restoreProgress >= 0f)
+            {
+                float eased = ShieldRestoreLog.Ease(restoreProgress);
+                restoreAlpha = eased;
+                if (restoreStyle == ShieldRestoreStyle.Grow)
+                {
+                    restoreScale = Mathf.Lerp(
+                        ShieldRestoreLog.GrowStartScale,
+                        1f,
+                        eased);
+                }
+            }
+
+            bool restoring = dissolve == null && restoreProgress >= 0f;
+
             // Nothing is submitted for a shield that is neither breaking nor active
             // and visible, so the material and its look uniforms are resolved only
             // after that decision.
@@ -241,10 +285,13 @@ namespace VisualTweaks
             // Only the jitter effect moves the bubble. Brighten and the lattice wave
             // are additive quads drawn over the same centred surface, so they must not
             // also displace it. The dissolve owns the frame when one is playing, so no
-            // hit reaction is layered on top of it either.
+            // hit reaction is layered on top of it either; a restoring bubble does the
+            // same, because a full-strength reaction on a surface still fading in
+            // reads as a second object.
             Vector3 jitterOffset = Vector3.zero;
             float jitterShrink = 0f;
             if (dissolve == null
+                && !restoring
                 && hitStyle == PersonalShieldHitStyle.Jitter)
             {
                 TryGetJitter(comp, out jitterOffset, out jitterShrink);
@@ -252,6 +299,7 @@ namespace VisualTweaks
 
             float size = drawnSize - jitterShrink;
             float radius = Mathf.Max(size * 0.5f, 0.05f);
+            float drawnRadius = radius * restoreScale;
 
             Vector3 center = baseCenter + jitterOffset;
 
@@ -269,9 +317,9 @@ namespace VisualTweaks
                 new Vector3(center.x, Altitude, center.z),
                 Quaternion.identity,
                 new Vector3(
-                    radius * 2f * quadMargin,
+                    drawnRadius * 2f * quadMargin,
                     1f,
-                    radius * 2f * quadMargin));
+                    drawnRadius * 2f * quadMargin));
 
             // Vanilla belts have always drawn white here; VEF lets its def pick the
             // bubble colour, so the adapter passes it through instead of hard-coding.
@@ -317,8 +365,20 @@ namespace VisualTweaks
 
             // Additive light first, surface second — the same order the projector
             // dome uses, so the rim is the last thing written. Jitter has already
-            // moved the surface itself, so that branch is a no-op here.
-            DrawImpact(comp, mat, matrix, tint, centerParam, radius, time, hitStyle);
+            // moved the surface itself, so that branch is a no-op here. A restoring
+            // surface suppresses the reaction for the same reason as the dome.
+            if (!restoring)
+            {
+                DrawImpact(
+                    comp,
+                    mat,
+                    matrix,
+                    tint,
+                    centerParam,
+                    drawnRadius,
+                    time,
+                    hitStyle);
+            }
 
             // The same role GetCurrentAlpha() plays for an interceptor dome. It is
             // independent of that dome's value on purpose: a belt is always shown at
@@ -330,7 +390,12 @@ namespace VisualTweaks
                 VisualTweaksSettings.MaxPersonalShieldOpacity);
 
             properties[0] = DrawProperty.Vector(
-                ParamsId, new NVector4(0f, alpha, time, radius));
+                ParamsId,
+                new NVector4(
+                    0f,
+                    alpha * restoreAlpha,
+                    time,
+                    drawnRadius));
             properties[1] = DrawProperty.Vector(Params4Id, centerParam);
             properties[2] = DrawProperty.Color(ColorId, tint);
 

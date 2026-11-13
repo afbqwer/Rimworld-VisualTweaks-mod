@@ -28,6 +28,14 @@ namespace VisualTweaks
         HexDissipate = 2
     }
 
+    /// <summary>How a shield animates when it comes back up.</summary>
+    public enum ShieldRestoreStyle
+    {
+        None = 0,
+        Fade = 1,
+        Grow = 2
+    }
+
     /// <summary>How a personal belt answers an absorbed hit.</summary>
     public enum PersonalShieldHitStyle
     {
@@ -355,6 +363,15 @@ namespace VisualTweaks
             ShieldBreakStyle.Dissolve;
         public static ShieldBreakStyle personalHexShieldBreakStyle =
             ShieldBreakStyle.HexDissipate;
+
+        // How a shield comes back after being down. Unlike the break choice this is
+        // one value per family, not per surface: coming online is the same event on
+        // every surface, and a surface switch should not silently rewrite it. The
+        // animation lasts ShieldRestoreLog.DurationTicks (60 ticks) for both.
+        public static ShieldRestoreStyle largeShieldRestoreStyle =
+            ShieldRestoreStyle.Grow;
+        public static ShieldRestoreStyle personalShieldRestoreStyle =
+            ShieldRestoreStyle.Grow;
 
         /// <summary>The break animation that belongs to the selected dome style.</summary>
         public static ShieldBreakStyle CurrentShieldBreakStyle =>
@@ -852,6 +869,14 @@ namespace VisualTweaks
                 ref personalHexShieldBreakStyle,
                 "personalHexShieldBreakStyle",
                 ShieldBreakStyle.HexDissipate);
+            Scribe_Values.Look(
+                ref largeShieldRestoreStyle,
+                "largeShieldRestoreStyle",
+                ShieldRestoreStyle.Grow);
+            Scribe_Values.Look(
+                ref personalShieldRestoreStyle,
+                "personalShieldRestoreStyle",
+                ShieldRestoreStyle.Grow);
 
             Scribe_Values.Look(
                 ref largeShieldHexFaceStrength,
@@ -1219,6 +1244,11 @@ namespace VisualTweaks
                 ShieldBreakStyle.HexDissipate,
                 true);
 
+            largeShieldRestoreStyle = SanitizeShieldRestoreStyle(
+                largeShieldRestoreStyle);
+            personalShieldRestoreStyle = SanitizeShieldRestoreStyle(
+                personalShieldRestoreStyle);
+
             largeShieldDissolveTicks = Mathf.Clamp(
                 largeShieldDissolveTicks,
                 MinShieldDissolveTicks,
@@ -1343,6 +1373,20 @@ namespace VisualTweaks
             return fallback;
         }
 
+        /// <summary>Restore choices are the same on both families.</summary>
+        private static ShieldRestoreStyle SanitizeShieldRestoreStyle(
+            ShieldRestoreStyle value)
+        {
+            if (value == ShieldRestoreStyle.None
+                || value == ShieldRestoreStyle.Fade
+                || value == ShieldRestoreStyle.Grow)
+            {
+                return value;
+            }
+
+            return ShieldRestoreStyle.Grow;
+        }
+
         public static void Reset()
         {
             replaceAORenderer = true;
@@ -1407,6 +1451,8 @@ namespace VisualTweaks
             personalCrispShieldBreakStyle = ShieldBreakStyle.Dissolve;
             personalVanillaShieldBreakStyle = ShieldBreakStyle.Dissolve;
             personalHexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
+            largeShieldRestoreStyle = ShieldRestoreStyle.Grow;
+            personalShieldRestoreStyle = ShieldRestoreStyle.Grow;
             largeShieldHexFaceStrength = 0.22f;
             largeShieldHexLineStrength = 0.75f;
             personalShieldHexFaceStrength = 0.22f;
