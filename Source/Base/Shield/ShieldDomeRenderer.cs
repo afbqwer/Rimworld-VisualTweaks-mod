@@ -500,7 +500,7 @@ namespace VisualTweaks
                         ParamsId,
                         new NVector4(
                             0f,
-                            drawnAlpha * restoreAlpha,
+                            drawnAlpha * restoreAlpha * style.OpacityMultiplier,
                             time,
                             drawnRadius));
                     properties[1] = DrawProperty.Vector(Params4Id, centerParam);

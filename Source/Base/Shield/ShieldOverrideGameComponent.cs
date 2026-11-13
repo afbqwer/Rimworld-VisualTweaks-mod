@@ -44,13 +44,21 @@ namespace VisualTweaks
         public bool OverrideColor;
         public Color ShieldColor = Color.white;
 
+        /// <summary>
+        /// Multiplier on the family's resolved opacity. 1 means no override.
+        /// Unlike a replacement value this keeps the global opacity setting
+        /// meaningful: moving that slider still moves this shield.
+        /// </summary>
+        public float OpacityMultiplier = 1f;
+
         internal bool IsEmpty =>
             !OverrideSurface
             && !OverrideImpact
             && !OverrideBreak
             && !OverrideRestore
             && !OverridePersonalHit
-            && !OverrideColor;
+            && !OverrideColor
+            && Mathf.Abs(OpacityMultiplier - 1f) <= 0.0001f;
 
         public void ExposeData()
         {
@@ -77,6 +85,19 @@ namespace VisualTweaks
                 ref ShieldColor,
                 "shieldColor",
                 Color.white);
+            Scribe_Values.Look(
+                ref OpacityMultiplier,
+                "opacityMultiplier",
+                1f);
+            if (float.IsNaN(OpacityMultiplier))
+            {
+                OpacityMultiplier = 1f;
+            }
+
+            OpacityMultiplier = Mathf.Clamp(
+                OpacityMultiplier,
+                VisualTweaksSettings.MinShieldOpacityMultiplier,
+                VisualTweaksSettings.MaxShieldOpacityMultiplier);
         }
 
         internal void Clear()
@@ -87,6 +108,7 @@ namespace VisualTweaks
             OverrideRestore = false;
             OverridePersonalHit = false;
             OverrideColor = false;
+            OpacityMultiplier = 1f;
         }
     }
 

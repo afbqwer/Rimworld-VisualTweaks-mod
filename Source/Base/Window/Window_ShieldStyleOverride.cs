@@ -102,6 +102,7 @@ namespace VisualTweaks
 
                 DrawSurfaceRow(listing, entry);
                 DrawColorRow(listing, entry);
+                DrawOpacityRow(listing, entry);
 
                 // The surface choice decides which impact and break sets exist, so
                 // the rows below read the effective style rather than the raw
@@ -246,6 +247,23 @@ namespace VisualTweaks
                 swatch,
                 "VisualTweaks_ShieldOverride_ColorSwatchTip".Translate());
             listing.Gap(SettingsLayout.RowGap);
+        }
+
+        private static void DrawOpacityRow(
+            Listing_Standard listing,
+            ShieldStyleOverride entry)
+        {
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldOverride_OpacityGroup".Translate());
+
+            entry.OpacityMultiplier = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldOverride_Opacity".Translate(),
+                entry.OpacityMultiplier,
+                VisualTweaksSettings.MinShieldOpacityMultiplier,
+                VisualTweaksSettings.MaxShieldOpacityMultiplier,
+                "VisualTweaks_ShieldOverride_OpacityTip".Translate());
         }
 
         /// <summary>The def's own color, used as the picker's starting point.</summary>

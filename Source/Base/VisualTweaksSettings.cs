@@ -261,6 +261,13 @@ namespace VisualTweaks
         public const float MaxRepulsorShieldOpacity = 1.5f;
         public static float repulsorShieldOpacity = 0.6f;
 
+        // Per-object opacity overrides are multipliers, not replacement values:
+        // they scale whatever the family's global opacity already resolved to.
+        // 1.0 therefore means "leave it alone", which is also how an unset
+        // per-object override behaves.
+        public const float MinShieldOpacityMultiplier = 0.1f;
+        public const float MaxShieldOpacityMultiplier = 4f;
+
         // When on, only vanilla comp classes are replaced; mods that derive from them
         // keep their own drawing. Large shields use CompProjectileInterceptor, and the
         // vanilla CompGravshipShieldGenerator is explicitly included as well. Personal

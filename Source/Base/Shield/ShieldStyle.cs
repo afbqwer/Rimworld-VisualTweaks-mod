@@ -25,13 +25,20 @@ namespace VisualTweaks
         /// <summary>Per-object RGB tint, or null to use the def's own color.</summary>
         internal readonly Color? Tint;
 
+        /// <summary>
+        /// Multiplier on the family's resolved opacity. Defaults to 1 so a shield
+        /// without an override keeps the exact global behavior.
+        /// </summary>
+        internal readonly float OpacityMultiplier;
+
         private ShieldStyle(
             ShieldDomeStyle surface,
             ShieldImpactStyle impact,
             ShieldBreakStyle breakStyle,
             ShieldRestoreStyle restore,
             PersonalShieldHitStyle personalHit,
-            Color? tint)
+            Color? tint,
+            float opacityMultiplier)
         {
             Surface = surface;
             Impact = impact;
@@ -39,6 +46,7 @@ namespace VisualTweaks
             Restore = restore;
             PersonalHit = personalHit;
             Tint = tint;
+            OpacityMultiplier = opacityMultiplier;
         }
 
         /// <summary>True for either spherical lattice surface.</summary>
@@ -141,13 +149,27 @@ namespace VisualTweaks
                 ? selection.ShieldColor
                 : (Color?)null;
 
+            float opacityMultiplier = selection != null
+                ? selection.OpacityMultiplier
+                : 1f;
+            if (float.IsNaN(opacityMultiplier))
+            {
+                opacityMultiplier = 1f;
+            }
+
+            opacityMultiplier = Mathf.Clamp(
+                opacityMultiplier,
+                VisualTweaksSettings.MinShieldOpacityMultiplier,
+                VisualTweaksSettings.MaxShieldOpacityMultiplier);
+
             return new ShieldStyle(
                 surface,
                 impact,
                 breakStyle,
                 restore,
                 personalHit,
-                tint);
+                tint,
+                opacityMultiplier);
         }
 
         /// <summary>

@@ -137,6 +137,9 @@
   <VisualTweaks_ShieldOverride_FollowGlobal>Follow global</VisualTweaks_ShieldOverride_FollowGlobal>
   <VisualTweaks_ShieldOverride_FollowGlobalTip>Use whatever the Shields tab currently selects for this row.</VisualTweaks_ShieldOverride_FollowGlobalTip>
   <VisualTweaks_ShieldOverride_Surface>Surface style</VisualTweaks_ShieldOverride_Surface>
+  <VisualTweaks_ShieldOverride_OpacityGroup>Opacity</VisualTweaks_ShieldOverride_OpacityGroup>
+  <VisualTweaks_ShieldOverride_Opacity>Opacity multiplier</VisualTweaks_ShieldOverride_Opacity>
+  <VisualTweaks_ShieldOverride_OpacityTip>Multiplies this shield's current opacity, including the global opacity setting. 1.00 leaves it unchanged; lower is fainter, higher is stronger. It affects only the surface, not hit flashes or break brightness.</VisualTweaks_ShieldOverride_OpacityTip>
   <VisualTweaks_ShieldOverride_ColorGroup>Color</VisualTweaks_ShieldOverride_ColorGroup>
   <VisualTweaks_ShieldOverride_ColorOverride>Override shield color</VisualTweaks_ShieldOverride_ColorOverride>
   <VisualTweaks_ShieldOverride_ColorOverrideTip>Uses a custom RGB tint for this shield instead of its def's color. Transparency still comes from the shield itself, so the picker's alpha is ignored.</VisualTweaks_ShieldOverride_ColorOverrideTip>
