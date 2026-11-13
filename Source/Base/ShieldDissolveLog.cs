@@ -48,15 +48,6 @@ namespace VisualTweaks
 
             /// <summary>Offsets the noise field so two breaks never look identical.</summary>
             public float Seed;
-
-            /// <summary>
-            /// True once at least one frame has been seen with Active == false.
-            /// Deactivate() does not flip Active in the same tick — it arms the charge
-            /// cycle, which only takes effect on the next one — so on the frame the
-            /// dissolve starts the shield can still report itself as active. Watching
-            /// Active alone would cancel the animation before its first frame.
-            /// </summary>
-            public bool SawInactive;
         }
 
         private static readonly ConditionalWeakTable<ThingComp, State>
@@ -122,7 +113,6 @@ namespace VisualTweaks
             // hardened so a future large seed cannot reintroduce the bug.
             int hash = Gen.HashCombineInt(parent.thingIDNumber, now);
             state.Seed = (hash & 0xFFFF) / 65535f * 4f;
-            state.SawInactive = false;
             return state;
         }
 
@@ -178,6 +168,39 @@ namespace VisualTweaks
 
             progress = (float)age / state.DurationTicks;
             return state;
+        }
+
+        /// <summary>
+        /// Removes a break that has finished and reports whether the shield coming
+        /// back should still be animated.
+        ///
+        /// The normal up edge is observed by <see cref="ShieldRestoreLog"/>. That fails
+        /// when a shield is disabled and re-enabled between two draws (or inside one
+        /// tick): no frame ever sees it down, so no edge exists to observe. The break
+        /// state is the evidence that it did go down, so a break that has just run out
+        /// becomes the "it is back" signal. Only a break that ended within one duration
+        /// counts; an old state left over while the shield stayed down must not fade it
+        /// in when it finally returns — Observe handles that case through the down edge.
+        /// </summary>
+        internal static bool TryConsumeFinished(ThingComp comp)
+        {
+            TickManager? tickManager = Find.TickManager;
+            if (tickManager == null
+                || comp == null
+                || !States.TryGetValue(comp, out State? state)
+                || state == null)
+            {
+                return false;
+            }
+
+            int end = state.StartTick + state.DurationTicks;
+            if (tickManager.TicksGame < end)
+            {
+                return false;
+            }
+
+            States.Remove(comp);
+            return tickManager.TicksGame - end <= state.DurationTicks;
         }
 
         /// <summary>

@@ -210,10 +210,9 @@ namespace VisualTweaks
             // tick patch because this is the one place that already knows what "up"
             // means for both adapters: Active for an interceptor, active plus charge
             // for a repulsor. See ShieldRestoreLog.
-            ShieldRestoreLog.Observe(
-                comp,
-                present,
-                Mathf.RoundToInt(VisualTweaksSettings.largeShieldRestoreTicks));
+            int restoreTicks = Mathf.RoundToInt(
+                VisualTweaksSettings.largeShieldRestoreTicks);
+            ShieldRestoreLog.Observe(comp, present, restoreTicks);
 
             // ------------------------------------------------------------------
             // Dissolve.
@@ -231,6 +230,7 @@ namespace VisualTweaks
             // needs the baked lattice, so a missing texture falls back to the tear.
             ShieldBreakStyle breakStyle = VisualTweaksSettings.CurrentShieldBreakStyle;
             bool customBreak = breakStyle != ShieldBreakStyle.Vanilla;
+            ShieldRestoreStyle restoreStyle = VisualTweaksSettings.largeShieldRestoreStyle;
             float dissolveMode = breakStyle
                 == ShieldBreakStyle.HexDissipate && HexActive
                 ? 5f
@@ -243,25 +243,72 @@ namespace VisualTweaks
                 dissolve = ShieldDissolveLog.Progress(comp, out dissolveProgress);
             }
 
-            // A generator that recharges mid-animation is a working shield again.
-            // Do not keep painting a dome that is still disintegrating over it.
-            // Active alone is not enough here: Deactivate() leaves it true for the
-            // rest of the tick, so wait until we have actually seen the shield go
-            // down before treating a true value as a reactivation.
-            if (dissolve != null)
+            int now = Find.TickManager?.TicksGame ?? 0;
+
+            // A break is only ever *drawn* while the shield is down. On the tick a
+            // Deactivate() begins, Active can still be true for the rest of that tick;
+            // that tick is skipped, not canceled, and the tear starts on the next one.
+            //
+            // On any later tick, present means the shield is back. If it returned
+            // within InstantRecoveryTicks the whole thing happened too fast to read —
+            // several mods break and restore a shield in one motion — so neither the
+            // tear nor the restore may play. Beyond that window the shield really was
+            // down: end the tear and fade it back in.
+            if (dissolve != null && present)
             {
-                if (present)
+                int age = now - dissolve.StartTick;
+                if (age > 0)
                 {
-                    if (dissolve.SawInactive)
+                    ShieldDissolveLog.Cancel(comp);
+                    dissolve = null;
+
+                    if (age > ShieldRestoreLog.InstantRecoveryTicks
+                        && restoreStyle != ShieldRestoreStyle.None)
                     {
-                        ShieldDissolveLog.Cancel(comp);
-                        dissolve = null;
+                        ShieldRestoreLog.Begin(comp, restoreTicks);
+                    }
+                    else
+                    {
+                        // Observe() may have stamped this frame's up edge already.
+                        // An instant break-and-restore must leave no trace.
+                        ShieldRestoreLog.Cancel(comp);
                     }
                 }
-                else
-                {
-                    dissolve.SawInactive = true;
-                }
+            }
+
+            // A disable and re-enable that both land between two draws never gives
+            // Observe() a false sample, so its up edge cannot fire. The break state is
+            // proof that the shield did go down; once that break has played out while
+            // the shield is present again, use it as the reactivation signal.
+            if (dissolve == null
+                && present
+                && customBreak
+                && restoreStyle != ShieldRestoreStyle.None
+                && ShieldDissolveLog.TryConsumeFinished(comp))
+            {
+                ShieldRestoreLog.Begin(comp, restoreTicks);
+            }
+
+            // A break surface is submitted only while the shield is actually down, and
+            // only after it has outlived the instant-recovery window. Holding the first
+            // few frames back is what makes a sub-frame break invisible: nothing has
+            // been painted yet when the reactivation cancels it above.
+            bool breaking = dissolve != null
+                && !present
+                && now - dissolve.StartTick > ShieldRestoreLog.InstantRecoveryTicks;
+
+            if (breaking && dissolve != null)
+            {
+                // The delay is not part of the animation: remap the clock so the
+                // first visible frame is the untouched dome (progress 0) and the tear
+                // still finishes on the original end tick.
+                int visibleSpan = Mathf.Max(
+                    1,
+                    dissolve.DurationTicks - ShieldRestoreLog.InstantRecoveryTicks);
+                dissolveProgress = Mathf.Clamp01(
+                    (float)(now - dissolve.StartTick
+                        - ShieldRestoreLog.InstantRecoveryTicks)
+                    / visibleSpan);
             }
 
             // ------------------------------------------------------------------
@@ -274,7 +321,6 @@ namespace VisualTweaks
             // stays hidden through its own alpha rather than being forced visible.
             // A break in flight owns the frame, so no restore is applied to it.
             // ------------------------------------------------------------------
-            ShieldRestoreStyle restoreStyle = VisualTweaksSettings.largeShieldRestoreStyle;
             float restoreProgress = -1f;
             if (dissolve == null && restoreStyle != ShieldRestoreStyle.None)
             {
@@ -397,7 +443,7 @@ namespace VisualTweaks
                     }
                 }
 
-                if (dissolve != null)
+                if (breaking && dissolve != null)
                 {
                     // Mode 2 or 5. Both break animations are driven by the same
                     // clock: _Params3 switches meaning from an impact's direction to

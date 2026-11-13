@@ -42,14 +42,6 @@ namespace VisualTweaks
 
             /// <summary>Offsets the noise field so two breaks never look identical.</summary>
             public float Seed;
-
-            /// <summary>
-            /// True once a frame has been seen with the shield not Active. A comp that
-            /// recharges before the animation ends must not keep painting a torn dome
-            /// over itself, but on the first frame after a break the state can still
-            /// report Active for the rest of the tick.
-            /// </summary>
-            public bool SawInactive;
         }
 
         private static readonly ConditionalWeakTable<object, State> States =
@@ -100,7 +92,6 @@ namespace VisualTweaks
             // blocks after a few hours of play. See ShieldDissolveLog for the details.
             int hash = Gen.HashCombineInt(host.thingIDNumber, now);
             state.Seed = (hash & 0xFFFF) / 65535f * 4f;
-            state.SawInactive = false;
         }
 
         /// <summary>
@@ -129,6 +120,34 @@ namespace VisualTweaks
 
             progress = (float)age / state.DurationTicks;
             return state;
+        }
+
+        /// <summary>
+        /// Removes a break that has finished and reports whether the shield coming
+        /// back should still be animated. Same rule and same reason as
+        /// <see cref="ShieldDissolveLog.TryConsumeFinished"/>: a disable and re-enable
+        /// between two draws leaves no down edge for
+        /// <see cref="ShieldRestoreLog.Observe"/> to see.
+        /// </summary>
+        internal static bool TryConsumeFinished(object comp)
+        {
+            TickManager? tickManager = Find.TickManager;
+            if (tickManager == null
+                || comp == null
+                || !States.TryGetValue(comp, out State? state)
+                || state == null)
+            {
+                return false;
+            }
+
+            int end = state.StartTick + state.DurationTicks;
+            if (tickManager.TicksGame < end)
+            {
+                return false;
+            }
+
+            States.Remove(comp);
+            return tickManager.TicksGame - end <= state.DurationTicks;
         }
 
         /// <summary>Ends a dissolve early, when the belt is back before it finishes.</summary>

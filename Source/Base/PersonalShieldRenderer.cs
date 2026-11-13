@@ -185,16 +185,17 @@ namespace VisualTweaks
             // adapters already distinguish "available" from "visible", so the
             // animation follows the shield state rather than whether the stock rule
             // happens to paint it right now.
-            ShieldRestoreLog.Observe(
-                comp,
-                active,
-                Mathf.RoundToInt(VisualTweaksSettings.personalShieldRestoreTicks));
+            int restoreTicks = Mathf.RoundToInt(
+                VisualTweaksSettings.personalShieldRestoreTicks);
+            ShieldRestoreLog.Observe(comp, active, restoreTicks);
 
             ShieldBreakStyle breakStyle =
                 VisualTweaksSettings.CurrentShieldBreakStyleFor(
                     ShieldHexTarget.Personal);
             PersonalShieldHitStyle hitStyle =
                 VisualTweaksSettings.personalShieldHitStyle;
+            ShieldRestoreStyle restoreStyle =
+                VisualTweaksSettings.personalShieldRestoreStyle;
             bool customBreak = breakStyle != ShieldBreakStyle.Vanilla;
             float dissolveMode = breakStyle
                 == ShieldBreakStyle.HexDissipate
@@ -210,24 +211,71 @@ namespace VisualTweaks
                     comp, out dissolveProgress);
             }
 
-            // A shield that recharges inside the animation is a working shield again.
-            // Do not keep painting a torn dome over it. Active alone is not enough:
-            // the state can still read Active on the frame the break started, so wait
-            // until a frame has actually seen it down.
-            if (dissolve != null)
+            int now = Find.TickManager?.TicksGame ?? 0;
+
+            // A break is only ever *drawn* while the shield is down. On the tick a
+            // break begins the state can still read Active for the rest of that tick;
+            // that tick is skipped, not canceled, and the tear starts on the next one.
+            //
+            // On any later tick, active means the belt is back. If it returned within
+            // InstantRecoveryTicks the whole thing happened too fast to read — several
+            // mods break and restore a shield in one motion — so neither the tear nor
+            // the restore may play. Beyond that window the belt really was down: end
+            // the tear and fade it back in.
+            if (dissolve != null && active)
             {
-                if (active)
+                int age = now - dissolve.StartTick;
+                if (age > 0)
                 {
-                    if (dissolve.SawInactive)
+                    PersonalShieldDissolveLog.Cancel(comp);
+                    dissolve = null;
+
+                    if (age > ShieldRestoreLog.InstantRecoveryTicks
+                        && restoreStyle != ShieldRestoreStyle.None)
                     {
-                        PersonalShieldDissolveLog.Cancel(comp);
-                        dissolve = null;
+                        ShieldRestoreLog.Begin(comp, restoreTicks);
+                    }
+                    else
+                    {
+                        // Observe() may have stamped this frame's up edge already.
+                        // An instant break-and-restore must leave no trace.
+                        ShieldRestoreLog.Cancel(comp);
                     }
                 }
-                else
-                {
-                    dissolve.SawInactive = true;
-                }
+            }
+
+            // A disable and re-enable between two draws gives Observe() no false
+            // sample, so its up edge cannot fire. The finished break is the proof that
+            // the belt did go down; use it as the reactivation signal.
+            if (dissolve == null
+                && active
+                && customBreak
+                && restoreStyle != ShieldRestoreStyle.None
+                && PersonalShieldDissolveLog.TryConsumeFinished(comp))
+            {
+                ShieldRestoreLog.Begin(comp, restoreTicks);
+            }
+
+            // A break surface is submitted only while the belt is actually down, and
+            // only after it has outlived the instant-recovery window. Holding the first
+            // few frames back is what makes a sub-frame break invisible: nothing has
+            // been painted yet when the reactivation cancels it above.
+            bool breaking = dissolve != null
+                && !active
+                && now - dissolve.StartTick > ShieldRestoreLog.InstantRecoveryTicks;
+
+            if (breaking && dissolve != null)
+            {
+                // The delay is not part of the animation: remap the clock so the
+                // first visible frame is the untouched surface (progress 0) and the
+                // tear still finishes on the original end tick.
+                int visibleSpan = Mathf.Max(
+                    1,
+                    dissolve.DurationTicks - ShieldRestoreLog.InstantRecoveryTicks);
+                dissolveProgress = Mathf.Clamp01(
+                    (float)(now - dissolve.StartTick
+                        - ShieldRestoreLog.InstantRecoveryTicks)
+                    / visibleSpan);
             }
 
             // ------------------------------------------------------------------
@@ -238,8 +286,6 @@ namespace VisualTweaks
             // the player's opacity rather than replacing it, so the belt never gets
             // brighter than its normal appearance. A break in flight owns the frame.
             // ------------------------------------------------------------------
-            ShieldRestoreStyle restoreStyle =
-                VisualTweaksSettings.personalShieldRestoreStyle;
             float restoreProgress = -1f;
             if (dissolve == null && restoreStyle != ShieldRestoreStyle.None)
             {
@@ -270,7 +316,7 @@ namespace VisualTweaks
             // Nothing is submitted for a shield that is neither breaking nor active
             // and visible, so the material and its look uniforms are resolved only
             // after that decision.
-            if (dissolve == null && !visible)
+            if (!breaking && !visible)
             {
                 return false;
             }
@@ -334,7 +380,7 @@ namespace VisualTweaks
             NVector4 centerParam = new NVector4(center.x, center.z, 0f, 0f);
             float time = Time.realtimeSinceStartup;
 
-            if (dissolve != null)
+            if (breaking && dissolve != null)
             {
                 // Mode 2 or 5. Both break animations share the same clock; _Params3
                 // switches meaning from a hit bearing to origin / progress / seed.
@@ -370,7 +416,7 @@ namespace VisualTweaks
             // dome uses, so the rim is the last thing written. Jitter has already
             // moved the surface itself, so that branch is a no-op here. A restoring
             // surface suppresses the reaction for the same reason as the dome.
-            if (!restoring)
+            if (dissolve == null && !restoring)
             {
                 DrawImpact(
                     comp,
