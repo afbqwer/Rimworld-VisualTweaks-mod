@@ -54,12 +54,12 @@ namespace VisualTweaks
     /// 25-cell dome; only its lattice density is chosen separately. Those lines fade
     /// on their own when a cell drops below the shader's 5-pixel legibility floor.
     ///
-    /// One material for personal shields, one draw per shield plus at most one
-    /// additive hit quad. The material is separate from the dome's only because the
+    /// One material per personal surface, one draw per shield plus at most one
+    /// additive hit quad. The materials are separate from the dome's because the
     /// hex atlas is a material texture and the two atlases have different densities
-    /// and resolutions; every look constant is still read from the same global
-    /// settings. Everything that differs per shield (centre, radius, tint, alpha,
-    /// break progress, hit bearing) travels as a draw property.
+    /// and resolutions; the numeric look constants are still read from the same
+    /// global settings. Everything that differs per shield (centre, radius, tint,
+    /// alpha, break progress, hit bearing) travels as a draw property.
     /// </summary>
     internal static class PersonalShieldRenderer
     {
@@ -74,12 +74,6 @@ namespace VisualTweaks
         // Reused every frame. DrawPropertyBlock wraps the span without allocating,
         // and the engine copies it into its arena during the DrawMesh call.
         private static readonly DrawProperty[] properties = new DrawProperty[4];
-
-        // A second material, not the dome's: the baked hex atlas is a material
-        // texture, and a belt's lattice has its own density and resolution. All other
-        // look constants still come from the same settings.
-        private static readonly ShieldDomeMaterial Surface =
-            new ShieldDomeMaterial(ShieldHexTarget.Personal);
 
         /// <summary>
         /// Returns true when a dome was submitted, so the patch can skip vanilla's
@@ -125,7 +119,14 @@ namespace VisualTweaks
                 comp.Props.maxDrawSize,
                 comp.Energy);
 
-            return DrawCore(comp, pawn.Drawer.DrawPos, size, active, visible, Color.white);
+            return DrawCore(
+                comp,
+                pawn.Drawer.DrawPos,
+                size,
+                active,
+                visible,
+                Color.white,
+                ShieldStyle.For(ShieldHexTarget.Personal, pawn));
         }
 
         /// <summary>
@@ -153,7 +154,14 @@ namespace VisualTweaks
                 return false;
             }
 
-            return DrawCore(comp, pawn.Drawer.DrawPos, drawnSize, active, visible, color);
+            return DrawCore(
+                comp,
+                pawn.Drawer.DrawPos,
+                drawnSize,
+                active,
+                visible,
+                color,
+                ShieldStyle.For(ShieldHexTarget.Personal, pawn));
         }
 
         /// <summary>
@@ -163,13 +171,21 @@ namespace VisualTweaks
         /// </summary>
         internal static bool Draw(
             object comp,
+            Pawn host,
             Vector3 center,
             float drawnSize,
             bool active,
             bool visible,
             Color color)
         {
-            return DrawCore(comp, center, drawnSize, active, visible, color);
+            return DrawCore(
+                comp,
+                center,
+                drawnSize,
+                active,
+                visible,
+                color,
+                ShieldStyle.For(ShieldHexTarget.Personal, host));
         }
 
         private static bool DrawCore(
@@ -178,7 +194,8 @@ namespace VisualTweaks
             float drawnSize,
             bool active,
             bool visible,
-            Color baseColor)
+            Color baseColor,
+            in ShieldStyle style)
         {
             // The up edge owns the restore animation, for every adapter that reaches
             // this core: vanilla belts, VEF bubbles and VEF hediff shields. The
@@ -189,17 +206,14 @@ namespace VisualTweaks
                 VisualTweaksSettings.personalShieldRestoreTicks);
             ShieldRestoreLog.Observe(comp, active, restoreTicks);
 
-            ShieldBreakStyle breakStyle =
-                VisualTweaksSettings.CurrentShieldBreakStyleFor(
-                    ShieldHexTarget.Personal);
-            PersonalShieldHitStyle hitStyle =
-                VisualTweaksSettings.personalShieldHitStyle;
-            ShieldRestoreStyle restoreStyle =
-                VisualTweaksSettings.personalShieldRestoreStyle;
+            ShieldBreakStyle breakStyle = style.Break;
+            PersonalShieldHitStyle hitStyle = style.PersonalHit;
+            ShieldRestoreStyle restoreStyle = style.Restore;
             bool customBreak = breakStyle != ShieldBreakStyle.Vanilla;
+            bool hexActive = style.HasLattice(ShieldHexTarget.Personal);
             float dissolveMode = breakStyle
                 == ShieldBreakStyle.HexDissipate
-                && Surface.HexActive
+                && hexActive
                 ? 5f
                 : 2f;
 
@@ -321,7 +335,9 @@ namespace VisualTweaks
                 return false;
             }
 
-            Material? mat = Surface.Ensure();
+            ShieldDomeMaterial surface =
+                ShieldMaterials.Get(ShieldHexTarget.Personal, style.Surface);
+            Material? mat = surface.Ensure();
             if (mat == null)
             {
                 return false;
@@ -329,7 +345,7 @@ namespace VisualTweaks
 
             // Shared ridge/face/line weights, but this material resolves the personal
             // surface style and lattice independently of the dome's.
-            Surface.ApplyLook();
+            surface.ApplyLook();
 
             // Only the jitter effect moves the bubble. Brighten and the lattice wave
             // are additive quads drawn over the same centred surface, so they must not
@@ -343,7 +359,11 @@ namespace VisualTweaks
                 && !restoring
                 && hitStyle == PersonalShieldHitStyle.Jitter)
             {
-                TryGetJitter(comp, out jitterOffset, out jitterShrink);
+                TryGetJitter(
+                    comp,
+                    hitStyle,
+                    out jitterOffset,
+                    out jitterShrink);
             }
 
             float size = drawnSize - jitterShrink;
@@ -355,13 +375,9 @@ namespace VisualTweaks
             // Crisp and panel silhouettes sit exactly on r == 1, so their quad is
             // exactly the diameter. The stock-like style's soft tail is meant to fade
             // past the rim, so it gets vanilla's own ForceField margin for that tail.
-            float quadMargin =
-                VisualTweaksSettings.personalShieldDomeStyle
-                        == ShieldDomeStyle.Vanilla
-                    || VisualTweaksSettings.personalShieldDomeStyle
-                        == ShieldDomeStyle.HexBubble
-                    ? ShieldDomeRenderer.VanillaQuadMargin
-                    : 1f;
+            float quadMargin = style.IsStockLike
+                ? ShieldDomeRenderer.VanillaQuadMargin
+                : 1f;
 
             Matrix4x4 matrix = default;
             matrix.SetTRS(
@@ -379,7 +395,7 @@ namespace VisualTweaks
                 baseColor.g,
                 baseColor.b,
                 1f);
-            bool hexBubble = ShieldHexBubble.Active(ShieldHexTarget.Personal);
+            bool hexBubble = style.IsHexBubble;
 
             // The belt's hit clock is its own jitter duration (vanilla's 8 ticks),
             // shared with the brighten / hex-spread quads. The net hold rides in
@@ -638,14 +654,14 @@ namespace VisualTweaks
         /// </summary>
         private static bool TryGetJitter(
             object comp,
+            PersonalShieldHitStyle hitStyle,
             out Vector3 offset,
             out float shrink)
         {
             offset = Vector3.zero;
             shrink = 0f;
 
-            if (VisualTweaksSettings.personalShieldHitStyle
-                != PersonalShieldHitStyle.Jitter)
+            if (hitStyle != PersonalShieldHitStyle.Jitter)
             {
                 return false;
             }

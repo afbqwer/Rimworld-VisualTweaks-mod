@@ -365,7 +365,7 @@ namespace VisualTweaks
         // no separate Bubble row. HexBubble is offered to both families and sits
         // next to Hex because the two share the baked lattice. The dome adds its
         // standalone Bubble as a last, fifth option.
-        private static readonly ShieldDomeStyle[] PersonalShieldStyleOrder =
+        internal static readonly ShieldDomeStyle[] PersonalShieldStyleOrder =
         {
             ShieldDomeStyle.Vanilla,
             ShieldDomeStyle.Crisp,
@@ -373,7 +373,7 @@ namespace VisualTweaks
             ShieldDomeStyle.HexBubble
         };
 
-        private static readonly ShieldDomeStyle[] LargeShieldStyleOrder =
+        internal static readonly ShieldDomeStyle[] LargeShieldStyleOrder =
         {
             ShieldDomeStyle.Vanilla,
             ShieldDomeStyle.Crisp,
@@ -382,13 +382,13 @@ namespace VisualTweaks
             ShieldDomeStyle.Bubble
         };
 
-        private static int IndexOf<T>(T[] order, T value)
+        internal static int IndexOf<T>(T[] order, T value)
         {
             int index = System.Array.IndexOf(order, value);
             return index < 0 ? 0 : index;
         }
 
-        private static string[] ShieldStyleLabels(bool withBubble)
+        internal static string[] ShieldStyleLabels(bool withBubble)
         {
             return withBubble
                 ? new string[]
@@ -408,7 +408,7 @@ namespace VisualTweaks
                 };
         }
 
-        private static string[] ShieldStyleTips(bool withBubble)
+        internal static string[] ShieldStyleTips(bool withBubble)
         {
             return withBubble
                 ? new string[]
@@ -430,19 +430,19 @@ namespace VisualTweaks
 
         // Display order of the hit animations. The panel surface has a third option;
         // the other two surfaces share the flare/brighten pair.
-        private static readonly ShieldImpactStyle[] StandardImpactOrder =
+        internal static readonly ShieldImpactStyle[] StandardImpactOrder =
         {
             ShieldImpactStyle.Flare,
             ShieldImpactStyle.Brighten
         };
 
-        private static readonly ShieldImpactStyle[] HexImpactOrder =
+        internal static readonly ShieldImpactStyle[] HexImpactOrder =
         {
             ShieldImpactStyle.Brighten,
             ShieldImpactStyle.HexWave
         };
 
-        private static string[] ImpactLabels(bool hexSurface)
+        internal static string[] ImpactLabels(bool hexSurface)
         {
             return hexSurface
                 ? new string[]
@@ -457,7 +457,7 @@ namespace VisualTweaks
                 };
         }
 
-        private static string[] ImpactTips(bool hexSurface)
+        internal static string[] ImpactTips(bool hexSurface)
         {
             return hexSurface
                 ? new string[]
@@ -473,14 +473,14 @@ namespace VisualTweaks
         }
 
         // Display order of the belt's hit reactions.
-        private static readonly PersonalShieldHitStyle[] PersonalHitOrder =
+        internal static readonly PersonalShieldHitStyle[] PersonalHitOrder =
         {
             PersonalShieldHitStyle.Jitter,
             PersonalShieldHitStyle.Brighten,
             PersonalShieldHitStyle.HexWave
         };
 
-        private static string[] PersonalHitLabels()
+        internal static string[] PersonalHitLabels()
         {
             return new string[]
             {
@@ -490,7 +490,7 @@ namespace VisualTweaks
             };
         }
 
-        private static string[] PersonalHitTips()
+        internal static string[] PersonalHitTips()
         {
             return new string[]
             {
@@ -502,20 +502,20 @@ namespace VisualTweaks
 
         // Break animation order. The shell gains its panel-loss option; Vanilla is
         // still listed first so the custom animation can be turned off.
-        private static readonly ShieldBreakStyle[] StandardBreakOrder =
+        internal static readonly ShieldBreakStyle[] StandardBreakOrder =
         {
             ShieldBreakStyle.Vanilla,
             ShieldBreakStyle.Dissolve
         };
 
-        private static readonly ShieldBreakStyle[] HexBreakOrder =
+        internal static readonly ShieldBreakStyle[] HexBreakOrder =
         {
             ShieldBreakStyle.Vanilla,
             ShieldBreakStyle.Dissolve,
             ShieldBreakStyle.HexDissipate
         };
 
-        private static string[] BreakLabels(bool hexSurface)
+        internal static string[] BreakLabels(bool hexSurface)
         {
             return hexSurface
                 ? new string[]
@@ -531,7 +531,7 @@ namespace VisualTweaks
                 };
         }
 
-        private static string[] BreakTips(bool hexSurface)
+        internal static string[] BreakTips(bool hexSurface)
         {
             return hexSurface
                 ? new string[]
@@ -548,14 +548,14 @@ namespace VisualTweaks
         }
 
         // Restore animation order. The duration is a separate per-family slider.
-        private static readonly ShieldRestoreStyle[] RestoreOrder =
+        internal static readonly ShieldRestoreStyle[] RestoreOrder =
         {
             ShieldRestoreStyle.None,
             ShieldRestoreStyle.Fade,
             ShieldRestoreStyle.Grow
         };
 
-        private static string[] RestoreLabels()
+        internal static string[] RestoreLabels()
         {
             return new string[]
             {
@@ -565,7 +565,7 @@ namespace VisualTweaks
             };
         }
 
-        private static string[] RestoreTips()
+        internal static string[] RestoreTips()
         {
             return new string[]
             {
@@ -845,6 +845,10 @@ namespace VisualTweaks
                 "VisualTweaks_Shield_PauseWhenPaused".Translate(),
                 ref VisualTweaksSettings.shieldPauseWhenPaused,
                 "VisualTweaks_Shield_PauseWhenPausedTip".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldOverride_Enable".Translate(),
+                ref VisualTweaksSettings.shieldOverrideGizmo,
+                "VisualTweaks_ShieldOverride_EnableTip".Translate());
 
             // Each family owns its surface, style and break choices. Turning one off
             // hides only that section and leaves the other drawing untouched. The

@@ -164,9 +164,18 @@ namespace VisualTweaks
             Vector3 center,
             float radius,
             Color color,
-            float mode)
+            float mode,
+            ShieldDomeStyle surface,
+            ShieldBreakStyle breakStyle)
         {
-            shieldBreaks.Spawn(state, center, radius, color, mode);
+            shieldBreaks.Spawn(
+                state,
+                center,
+                radius,
+                color,
+                mode,
+                surface,
+                breakStyle);
         }
 
         public override void MapComponentDraw()

@@ -8,11 +8,12 @@ namespace VisualTweaks
     /// <summary>
     /// One shield-shaped material and the look uniforms it carries.
     ///
-    /// There is one instance per <see cref="ShieldHexTarget"/>, because both the
-    /// chosen surface style and the baked hex atlas are material state: a belt may
-    /// draw crisp while the dome draws hex, and the two must be able to sample
-    /// different lattices in the same frame. Ridge weight and the face/line weights
-    /// remain shared, so the two families cannot drift apart there.
+    /// There is one instance per (<see cref="ShieldHexTarget"/>, surface) pair,
+    /// because both the chosen surface style and the baked hex atlas are material
+    /// state: a belt may draw crisp while the dome draws hex, and a single shield
+    /// may override its family's surface through the style window. Ridge weight and
+    /// the face/line weights remain shared, so the materials cannot drift apart
+    /// there.
     ///
     /// Per-draw values (alpha, radius, centre, break progress) deliberately do not
     /// live here. They travel as a DrawPropertyBlock, which lets both materials be
@@ -64,6 +65,13 @@ namespace VisualTweaks
 
         private readonly ShieldHexTarget target;
 
+        /// <summary>
+        /// The surface this material is fixed to. There is one instance per
+        /// (target, surface) pair instead of one per target, because the surface is
+        /// a material uniform and individual shields may now override it.
+        /// </summary>
+        private readonly ShieldDomeStyle surfaceStyle;
+
         private Material? material;
         private bool materialFailed;
 
@@ -75,14 +83,18 @@ namespace VisualTweaks
         private float appliedHexFace = float.NaN;
         private float appliedHexLine = float.NaN;
         private int appliedHexDensity = -1;
+        private int appliedHexBindFor = -1;
         private Vector4 appliedScan7 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
         private Vector4 appliedScan8 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
         private Vector4 appliedAperture = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
 
-        internal ShieldDomeMaterial(ShieldHexTarget target)
+        internal ShieldDomeMaterial(ShieldHexTarget target, ShieldDomeStyle surfaceStyle)
         {
             this.target = target;
+            this.surfaceStyle = surfaceStyle;
         }
+
+        internal ShieldDomeStyle SurfaceStyle => surfaceStyle;
 
         /// <summary>
         /// True when a spherical lattice is really being drawn: either the panel
@@ -95,17 +107,9 @@ namespace VisualTweaks
         /// Hex spread may be chosen on a non-lattice surface and checks the texture
         /// itself, because the surface it lights is the animation's whole point.
         /// </summary>
-        internal bool HexActive
-        {
-            get
-            {
-                ShieldDomeStyle style =
-                    VisualTweaksSettings.ShieldDomeStyleFor(target);
-                return (style == ShieldDomeStyle.Hex
-                        || style == ShieldDomeStyle.HexBubble)
-                    && ShieldHexMap.Available(target);
-            }
-        }
+        internal bool HexActive =>
+            ShieldStyle.IsHexSurface(surfaceStyle)
+            && ShieldHexMap.Available(target);
 
         /// <summary>
         /// The material, created on first use. Null means "draw nothing"; every
@@ -208,17 +212,25 @@ namespace VisualTweaks
             // shader's gradient constant has to describe the texture that actually
             // exists, not the one being previewed in a UI.
             int density = ShieldHexMap.AppliedSubdivisions(target);
-            ShieldDomeStyle chosen = VisualTweaksSettings.ShieldDomeStyleFor(target);
+            ShieldDomeStyle chosen = surfaceStyle;
             bool hexBubble = chosen == ShieldDomeStyle.HexBubble;
+
+            // A belt binds the lattice when one of its hit reactions may sample it,
+            // even while the surface is crisp or stock-like. The atlas is baked up
+            // front when the global hit choice is the lattice wave, when a saved
+            // override asks for it, or when the style window selects it; after that
+            // it simply stays available and every belt material can bind it. A large
+            // dome only binds when its surface can actually sample it.
             bool wantHex =
-                chosen == ShieldDomeStyle.Hex
-                || hexBubble
+                ShieldStyle.IsHexSurface(chosen)
                 || (target == ShieldHexTarget.Personal
-                    && VisualTweaksSettings.personalShieldHitStyle
-                        == PersonalShieldHitStyle.HexWave);
-            if (wantHex)
+                    && (VisualTweaksSettings.personalShieldHitStyle
+                            == PersonalShieldHitStyle.HexWave
+                        || ShieldHexMap.Available(target)));
+            if (wantHex && appliedHexBindFor != density)
             {
                 ShieldHexMap.Bind(mat, target, density);
+                appliedHexBindFor = ShieldHexMap.Available(target) ? density : -1;
             }
 
             // A failed bake must not produce a black disc. Falling back to the
@@ -272,11 +284,11 @@ namespace VisualTweaks
                 ShieldHexBubble.LeadStrength,
                 0f);
 
-            // The centre aperture is a property of the two lattice surfaces, but
-            // the material is per family, not per style: the same value is uploaded
-            // whether or not the current surface reads it. Both families therefore
-            // keep their own clear radius, because a 1.2-cell belt and a 25-cell
-            // dome need very different amounts of clearance.
+            // The centre aperture is a property of the two lattice surfaces. The
+            // same value is uploaded whether or not the current surface reads it,
+            // because the material is also reused across shields of the same
+            // family and surface. Both families keep their own clear radius: a
+            // 1.2-cell belt and a 25-cell dome need very different clearances.
             Vector4 aperture9 = new Vector4(centerClear, 0f, 0f, 0f);
 
             if (width == appliedRidgeWidth
@@ -345,9 +357,37 @@ namespace VisualTweaks
             appliedHexFace = float.NaN;
             appliedHexLine = float.NaN;
             appliedHexDensity = -1;
+            appliedHexBindFor = -1;
             appliedScan7 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
             appliedScan8 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
             appliedAperture = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
+        }
+    }
+
+    /// <summary>
+    /// One material per (target, surface) pair. The surface is a material uniform,
+    /// so a shield that overrides it cannot share a material with one that does
+    /// not. Ten instances at most: two families times five surfaces.
+    /// </summary>
+    internal static class ShieldMaterials
+    {
+        private static readonly System.Collections.Generic.Dictionary<
+            int,
+            ShieldDomeMaterial> cache =
+            new System.Collections.Generic.Dictionary<int, ShieldDomeMaterial>();
+
+        internal static ShieldDomeMaterial Get(
+            ShieldHexTarget target,
+            ShieldDomeStyle style)
+        {
+            int key = ((int)target << 8) | (int)style;
+            if (!cache.TryGetValue(key, out ShieldDomeMaterial? material))
+            {
+                material = new ShieldDomeMaterial(target, style);
+                cache[key] = material;
+            }
+
+            return material;
         }
     }
 }

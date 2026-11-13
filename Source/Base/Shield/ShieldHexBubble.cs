@@ -49,11 +49,6 @@ namespace VisualTweaks
         /// </summary>
         internal const float LineGain = 3f;
 
-        /// <summary>True when this shield family draws the hex bubble surface.</summary>
-        internal static bool Active(ShieldHexTarget target) =>
-            VisualTweaksSettings.ShieldDomeStyleFor(target)
-                == ShieldDomeStyle.HexBubble;
-
         private static float Ease(float x)
         {
             x = Mathf.Clamp01(x);

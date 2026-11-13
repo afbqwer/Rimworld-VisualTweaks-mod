@@ -77,6 +77,10 @@ namespace VisualTweaks
         /// </summary>
         internal static bool Available => patched;
 
+        /// <summary>True when this comp is VEF's shield field (a repulsor dome).</summary>
+        internal static bool IsRepulsor(ThingComp? comp) =>
+            comp != null && compType != null && compType.IsInstanceOfType(comp);
+
         internal static void Apply(Harmony harmony)
         {
             try
@@ -669,7 +673,7 @@ namespace VisualTweaks
         {
             if (signalsBroken
                 || !ShouldRecord(__instance)
-                || VisualTweaksSettings.CurrentShieldBreakStyle
+                || ShieldStyle.For(ShieldHexTarget.Large, __instance.parent).Break
                     == ShieldBreakStyle.Vanilla)
             {
                 return;

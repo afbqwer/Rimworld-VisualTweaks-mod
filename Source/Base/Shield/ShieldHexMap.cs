@@ -326,6 +326,22 @@ namespace VisualTweaks
         }
 
         /// <summary>
+        /// Bakes a target's lattice at its applied density. Used by the per-shield
+        /// style window when an override selects a lattice surface: the global
+        /// prewarm only knows the global style, and the first shield drawn with a
+        /// hex override must not pay for a bake in the middle of a fight.
+        /// </summary>
+        internal static void EnsureBaked(ShieldHexTarget target)
+        {
+            if (!ShieldDomeBridge.ShaderReady)
+            {
+                return;
+            }
+
+            EnsureBuilt(SurfaceOf(target), AppliedSubdivisions(target));
+        }
+
+        /// <summary>
         /// Commits a target's draft density and bakes immediately, so the stall lands
         /// on the button press that asked for it instead of on the next shield that
         /// happens to come into view. If nothing would sample the lattice — neither

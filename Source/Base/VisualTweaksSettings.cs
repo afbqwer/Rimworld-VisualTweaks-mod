@@ -209,6 +209,13 @@ namespace VisualTweaks
         // baseline, and this is an opt-in.
         public static bool alwaysShowShields = true;
 
+        // Shows a gizmo on every pawn and building that owns a shield. The gizmo
+        // opens a per-object style window: an override set there applies only to
+        // that shield, while every field left unset keeps following the global
+        // choices above. Off by default so the vanilla gizmo bar is untouched until
+        // the player opts in.
+        public static bool shieldOverrideGizmo = false;
+
         // Whether the custom shield surfaces freeze when the game is paused. The
         // shader animation (HexBubble scan, angular drift, break noise) and the idle
         // breathing alpha otherwise keep running over a paused colony, because their
@@ -299,35 +306,8 @@ namespace VisualTweaks
         /// choice. Both stock-like surfaces share one choice per family: they differ
         /// in profile, not in how they fail.
         /// </summary>
-        internal static ShieldBreakStyle CurrentShieldBreakStyleFor(ShieldHexTarget target)
-        {
-            ShieldDomeStyle style = ShieldDomeStyleFor(target);
-            bool personal = target == ShieldHexTarget.Personal;
-            // Both lattice surfaces share one choice and one default. The hex
-            // bubble's net is the same baked lattice, so losing whole panels is
-            // as meaningful there as on the panel shell — the bubble underneath
-            // is just the surface the panels sit on.
-            if (style == ShieldDomeStyle.Hex
-                || style == ShieldDomeStyle.HexBubble)
-            {
-                return personal
-                    ? personalHexShieldBreakStyle
-                    : largeHexShieldBreakStyle;
-            }
-
-            bool stockLike = style == ShieldDomeStyle.Vanilla
-                || (target == ShieldHexTarget.Large && style == ShieldDomeStyle.Bubble);
-            if (stockLike)
-            {
-                return personal
-                    ? personalVanillaShieldBreakStyle
-                    : largeVanillaShieldBreakStyle;
-            }
-
-            return personal
-                ? personalCrispShieldBreakStyle
-                : largeCrispShieldBreakStyle;
-        }
+        internal static ShieldBreakStyle CurrentShieldBreakStyleFor(ShieldHexTarget target) =>
+            ShieldStyle.Global(target).Break;
 
         // How a hit is answered. This is independent of the dome surface, but the
         // valid choices differ: the panel shell has its own lattice wave, while the
@@ -344,13 +324,7 @@ namespace VisualTweaks
         // HexBubble shares the panel shell's hit choice and its default (the
         // lattice wave): both sample the same per-cell ids from the baked map.
         public static ShieldImpactStyle CurrentShieldImpactStyle =>
-            shieldDomeStyle == ShieldDomeStyle.Hex
-                || shieldDomeStyle == ShieldDomeStyle.HexBubble
-                ? hexShieldImpactStyle
-            : (shieldDomeStyle == ShieldDomeStyle.Vanilla
-                || shieldDomeStyle == ShieldDomeStyle.Bubble)
-                ? vanillaShieldImpactStyle
-                : crispShieldImpactStyle;
+            ShieldStyle.Global(ShieldHexTarget.Large).Impact;
 
         // Vanilla's brighten cone is 30 degrees total. It used to be a constant in
         // the renderer; it is a slider now because 30 is only the stock value, and
@@ -405,7 +379,7 @@ namespace VisualTweaks
 
         /// <summary>The break animation that belongs to the selected dome style.</summary>
         public static ShieldBreakStyle CurrentShieldBreakStyle =>
-            CurrentShieldBreakStyleFor(ShieldHexTarget.Large);
+            ShieldStyle.Global(ShieldHexTarget.Large).Break;
 
         public const float MinShieldHexFace = 0f;
         public const float MaxShieldHexFace = 0.6f;
@@ -869,6 +843,10 @@ namespace VisualTweaks
                 "shieldRippleDamageScale",
                 1f);
             Scribe_Values.Look(ref alwaysShowShields, "alwaysShowShields", true);
+            Scribe_Values.Look(
+                ref shieldOverrideGizmo,
+                "shieldOverrideGizmo",
+                false);
             Scribe_Values.Look(
                 ref shieldPauseWhenPaused,
                 "shieldPauseWhenPaused",

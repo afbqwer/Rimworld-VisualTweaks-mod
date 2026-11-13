@@ -199,7 +199,8 @@ namespace VisualTweaks
                 return;
             }
 
-            ShieldBreakStyle breakStyle = VisualTweaksSettings.CurrentShieldBreakStyle;
+            ShieldStyle style = ShieldStyle.For(ShieldHexTarget.Large, host);
+            ShieldBreakStyle breakStyle = style.Break;
             if (breakStyle == ShieldBreakStyle.Vanilla)
             {
                 return;
@@ -237,7 +238,7 @@ namespace VisualTweaks
             }
 
             float mode = breakStyle == ShieldBreakStyle.HexDissipate
-                && ShieldDomeRenderer.HexActive
+                && style.HasLattice(ShieldHexTarget.Large)
                 ? 5f
                 : 2f;
 
@@ -246,7 +247,9 @@ namespace VisualTweaks
                 host.DrawPos,
                 comp.Props.radius,
                 comp.Props.color,
-                mode);
+                mode,
+                style.Surface,
+                breakStyle);
         }
 
         /// <summary>
@@ -413,7 +416,7 @@ namespace VisualTweaks
             if (fatal
                 || comp == null
                 || !ShieldDomeBridge.ShouldReplace(comp)
-                || VisualTweaksSettings.CurrentShieldBreakStyle
+                || ShieldStyle.For(ShieldHexTarget.Large, comp.parent).Break
                     == ShieldBreakStyle.Vanilla)
             {
                 return;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
@@ -55,6 +56,40 @@ namespace VisualTweaks
         /// is installed. The settings window and the hex prewarm both read this.
         /// </summary>
         internal static bool Available => patched;
+
+        /// <summary>
+        /// True when any hediff on this pawn carries VEF's shield comp. Used only by
+        /// the per-shield style gizmo, so a missing VEF costs one type check.
+        /// </summary>
+        internal static bool PawnHasShield(Pawn? pawn)
+        {
+            Type? type = compType;
+            if (pawn == null || type == null || pawn.health?.hediffSet == null)
+            {
+                return false;
+            }
+
+            List<Hediff> hediffs = pawn.health.hediffSet.hediffs;
+            for (int i = 0; i < hediffs.Count; i++)
+            {
+                if (hediffs[i] is not HediffWithComps withComps
+                    || withComps.comps == null)
+                {
+                    continue;
+                }
+
+                List<HediffComp> comps = withComps.comps;
+                for (int j = 0; j < comps.Count; j++)
+                {
+                    if (type.IsInstanceOfType(comps[j]))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
 
         internal static void Apply(Harmony harmony)
         {
@@ -310,8 +345,9 @@ namespace VisualTweaks
                 // hit below is the only honest feedback.
                 if (draining && resetTicks > 0 && energyNow <= 0f)
                 {
-                    if (VisualTweaksSettings.CurrentShieldBreakStyleFor(
-                            ShieldHexTarget.Personal)
+                    if (ShieldStyle.For(
+                            ShieldHexTarget.Personal,
+                            __instance.Pawn).Break
                         != ShieldBreakStyle.Vanilla)
                     {
                         PersonalShieldDissolveLog.Begin(
@@ -389,6 +425,7 @@ namespace VisualTweaks
 
                 if (PersonalShieldRenderer.Draw(
                         __instance,
+                        pawn,
                         center,
                         size,
                         active,

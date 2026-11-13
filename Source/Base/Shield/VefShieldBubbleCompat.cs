@@ -76,6 +76,10 @@ namespace VisualTweaks
         /// </summary>
         internal static bool Available => patched;
 
+        /// <summary>True when this comp is VEF's personal shield bubble.</summary>
+        internal static bool IsBubble(ThingComp? comp) =>
+            comp != null && compType != null && compType.IsInstanceOfType(comp);
+
         internal static void Apply(Harmony harmony)
         {
             try
@@ -345,8 +349,14 @@ namespace VisualTweaks
                 {
                     // The bubble burst. Start the tear from the side that was hit,
                     // unless the player chose the stock one-frame disappearance.
-                    if (VisualTweaksSettings.CurrentShieldBreakStyleFor(
-                            ShieldHexTarget.Personal)
+                    Pawn? pawn = pawnProperty?.GetValue(__instance) as Pawn;
+                    Thing? host = pawn ?? __instance.parent;
+                    if (host is Apparel apparel && apparel.Wearer != null)
+                    {
+                        host = apparel.Wearer;
+                    }
+
+                    if (ShieldStyle.For(ShieldHexTarget.Personal, host).Break
                         != ShieldBreakStyle.Vanilla)
                     {
                         PersonalShieldDissolveLog.Begin(

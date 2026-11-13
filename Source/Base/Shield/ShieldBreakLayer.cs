@@ -34,6 +34,8 @@ namespace VisualTweaks
             public float Radius;
             public Color Color;
             public float Mode;
+            public ShieldDomeStyle Surface;
+            public ShieldBreakStyle BreakStyle;
             public ShieldDissolveLog.State State = null!;
         }
 
@@ -49,7 +51,9 @@ namespace VisualTweaks
             Vector3 center,
             float radius,
             Color color,
-            float mode)
+            float mode,
+            ShieldDomeStyle surface,
+            ShieldBreakStyle breakStyle)
         {
             if (state == null)
             {
@@ -67,6 +71,8 @@ namespace VisualTweaks
                 Radius = radius,
                 Color = color,
                 Mode = mode,
+                Surface = surface,
+                BreakStyle = breakStyle,
                 State = state,
             });
         }
@@ -80,10 +86,10 @@ namespace VisualTweaks
 
             // Only the custom surface can draw a break. If the replacement is switched
             // off or the shader died, drop the queue rather than leaving stale state
-            // that would reappear if it is switched back on. Vanilla means "no custom
-            // break at all", the same rule the live dome follows.
-            if (!ShieldDomeBridge.LargeActive
-                || VisualTweaksSettings.CurrentShieldBreakStyle == ShieldBreakStyle.Vanilla)
+            // that would reappear if it is switched back on. Each break remembers its
+            // own style choice, because the global style may have moved since the
+            // host was destroyed.
+            if (!ShieldDomeBridge.LargeActive)
             {
                 breaks.Clear();
                 return;
@@ -94,6 +100,12 @@ namespace VisualTweaks
             for (int i = breaks.Count - 1; i >= 0; i--)
             {
                 Break item = breaks[i];
+                if (item.BreakStyle == ShieldBreakStyle.Vanilla)
+                {
+                    breaks.RemoveAt(i);
+                    continue;
+                }
+
                 int age = now - item.State.StartTick;
                 if (age < 0 || age >= item.State.DurationTicks)
                 {
@@ -113,7 +125,8 @@ namespace VisualTweaks
                         progress,
                         item.State.OriginX,
                         item.State.OriginZ,
-                        item.State.Seed))
+                        item.State.Seed,
+                        item.Surface))
                 {
                     // The renderer latches itself off on failure; there is no point
                     // keeping a queue for a surface that will never draw again.

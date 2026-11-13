@@ -32,6 +32,7 @@ namespace VisualTweaks
                 VefRepulsorShieldCompat.Apply(harmony);
                 VefShieldBubbleCompat.Apply(harmony);
                 VefHediffShieldCompat.Apply(harmony);
+                ShieldOverridePatches.Apply(harmony);
                 VacuumBreachPatches.Apply(harmony);
 
                 // The hex lattice is baked HERE, not on the first shield that gets

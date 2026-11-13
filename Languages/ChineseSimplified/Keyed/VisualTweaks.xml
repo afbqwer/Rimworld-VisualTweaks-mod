@@ -127,6 +127,22 @@
   <VisualTweaks_ShieldAlways_EnableTip>未选中时也让运作中的大型护盾淡淡显示。个人护盾是否显示仍由原版规则决定。</VisualTweaks_ShieldAlways_EnableTip>
   <VisualTweaks_Shield_PauseWhenPaused>暂停时停止护盾动画</VisualTweaks_Shield_PauseWhenPaused>
   <VisualTweaks_Shield_PauseWhenPausedTip>游戏暂停时冻结护盾表面的扫描、漂移，以及原版常显护盾的明暗呼吸；关闭后这些动画会继续播放。受击与破裂动画本来就随游戏时间暂停。</VisualTweaks_Shield_PauseWhenPausedTip>
+  <VisualTweaks_ShieldOverride_Enable>显示护盾覆写gizmo</VisualTweaks_ShieldOverride_Enable>
+  <VisualTweaks_ShieldOverride_EnableTip>开启后，每个拥有护盾的 Pawn 和建筑都会显示一个 gizmo，点击打开本 mod 护盾的样式设置窗口。窗口中的修改只影响该对象；仍选择“跟随全局”的项目会继续跟随本页设置。默认关闭。</VisualTweaks_ShieldOverride_EnableTip>
+  <VisualTweaks_ShieldOverride_GizmoLabel>护盾样式</VisualTweaks_ShieldOverride_GizmoLabel>
+  <VisualTweaks_ShieldOverride_GizmoTip>打开这个护盾的样式设置。只影响当前 Pawn 或建筑；仍选择“跟随全局”的项目继续使用护盾页签中的设置。</VisualTweaks_ShieldOverride_GizmoTip>
+  <VisualTweaks_ShieldOverride_UsingGlobal>此护盾使用全局护盾样式。</VisualTweaks_ShieldOverride_UsingGlobal>
+  <VisualTweaks_ShieldOverride_UsingLocal>此护盾使用独立样式；选择“跟随全局”的项目仍会跟随全局设置。</VisualTweaks_ShieldOverride_UsingLocal>
+  <VisualTweaks_ShieldOverride_ReplacementOff>该护盾类别当前未启用替换，修改要等护盾页签中重新开启后才会显示。</VisualTweaks_ShieldOverride_ReplacementOff>
+  <VisualTweaks_ShieldOverride_FollowGlobal>跟随全局</VisualTweaks_ShieldOverride_FollowGlobal>
+  <VisualTweaks_ShieldOverride_FollowGlobalTip>使用护盾页签中当前为这一项选择的设置。</VisualTweaks_ShieldOverride_FollowGlobalTip>
+  <VisualTweaks_ShieldOverride_Surface>表面样式</VisualTweaks_ShieldOverride_Surface>
+  <VisualTweaks_ShieldOverride_Impact>受击动画</VisualTweaks_ShieldOverride_Impact>
+  <VisualTweaks_ShieldOverride_PersonalHit>受击动画</VisualTweaks_ShieldOverride_PersonalHit>
+  <VisualTweaks_ShieldOverride_Break>破碎动画</VisualTweaks_ShieldOverride_Break>
+  <VisualTweaks_ShieldOverride_Restore>恢复动画</VisualTweaks_ShieldOverride_Restore>
+  <VisualTweaks_ShieldOverride_GroupReset>重置</VisualTweaks_ShieldOverride_GroupReset>
+  <VisualTweaks_ShieldOverride_ResetAll>清除覆写并跟随全局</VisualTweaks_ShieldOverride_ResetAll>
 
   <VisualTweaks_ShieldDome_Group>大型护盾</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldLarge_VanillaOnly>只替换原版护盾</VisualTweaks_ShieldLarge_VanillaOnly>

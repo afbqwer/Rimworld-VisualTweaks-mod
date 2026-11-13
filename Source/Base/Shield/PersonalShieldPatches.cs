@@ -429,17 +429,17 @@ namespace VisualTweaks
             // off, screenshot mode): the stock one-frame disappearance is the only
             // sensible answer when there is no custom surface. The per-style choice
             // can also be Vanilla, which means do not animate at all.
+            Pawn? pawn = comp.parent is Apparel apparel
+                ? apparel.Wearer
+                : comp.parent as Pawn;
             if (fatal
                 || !ShieldDomeBridge.ShouldReplace(comp)
-                || VisualTweaksSettings.CurrentShieldBreakStyle
+                || ShieldStyle.For(ShieldHexTarget.Personal, pawn).Break
                     == ShieldBreakStyle.Vanilla)
             {
                 return;
             }
 
-            Pawn? pawn = comp.parent is Apparel apparel
-                ? apparel.Wearer
-                : comp.parent as Pawn;
             if (pawn == null || !pawn.Spawned || pawn.Dead)
             {
                 return;

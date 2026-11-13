@@ -21,10 +21,10 @@ namespace VisualTweaks
     /// destroyed: that host never gets another PostDraw, so the map overlay draws the
     /// same break surface through <see cref="DrawDetachedBreak"/>.
     ///
-    /// One material, one draw for the dome plus one per live impact. Everything that
-    /// differs per draw (alpha, radius, colour, bearing) travels as a draw property;
-    /// only the look constants live on the material, so the number of shields changes
-    /// the number of draw calls and nothing else.
+    /// One material per surface, one draw for the dome plus one per live impact.
+    /// Everything that differs per draw (alpha, radius, colour, bearing) travels as
+    /// a draw property; only the look constants live on the material, so the number
+    /// of shields changes the number of draw calls and nothing else.
     ///
     /// No instancing. Vanilla already submits one quad per shield per frame and shields
     /// are counted in ones and twos per map; batching would cost a compute buffer, a
@@ -102,10 +102,10 @@ namespace VisualTweaks
         /// exactly on the gameplay radius. Shared by the live dome and the
         /// detached break so the two cannot drift apart on a future style.
         /// </summary>
-        private static float QuadMargin =>
-            VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
-                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.HexBubble
+        private static float QuadMargin(ShieldDomeStyle surface) =>
+            surface == ShieldDomeStyle.Vanilla
+                || surface == ShieldDomeStyle.Bubble
+                || surface == ShieldDomeStyle.HexBubble
                 ? VanillaQuadMargin
                 : 1f;
 
@@ -127,20 +127,6 @@ namespace VisualTweaks
         // and the engine copies the span into its arena during the DrawMesh call, so
         // one array can back every draw in the loop.
         private static readonly DrawProperty[] properties = new DrawProperty[4];
-
-        // The dome's own material. The belt has a second instance in
-        // PersonalShieldRenderer so each can bind its own hex atlas.
-        private static readonly ShieldDomeMaterial Surface =
-            new ShieldDomeMaterial(ShieldHexTarget.Large);
-
-        /// <summary>
-        /// True when the panel style is what the player actually sees: the style is
-        /// selected and this target's lattice texture exists. Both the style uniform
-        /// and the choice of hit reaction go through this, so the two can never
-        /// disagree — answering a hit with tiles while the dome draws the crisp style
-        /// would flash panels that are not on screen.
-        /// </summary>
-        internal static bool HexActive => Surface.HexActive;
 
         /// <summary>
         /// Returns false when nothing was drawn, so the caller can hand the frame back
@@ -173,7 +159,8 @@ namespace VisualTweaks
                 comp.Props.color,
                 alpha,
                 comp.Active,
-                Find.Selector.IsSelected(parent));
+                Find.Selector.IsSelected(parent),
+                ShieldStyle.For(ShieldHexTarget.Large, parent));
         }
 
         /// <summary>
@@ -191,7 +178,15 @@ namespace VisualTweaks
             Color color,
             bool present)
         {
-            return DrawCore(comp, host, radius, color, alpha, present, selected: false);
+            return DrawCore(
+                comp,
+                host,
+                radius,
+                color,
+                alpha,
+                present,
+                selected: false,
+                ShieldStyle.For(ShieldHexTarget.Large, host));
         }
 
         private static bool DrawCore(
@@ -201,7 +196,8 @@ namespace VisualTweaks
             Color baseColor,
             float alpha,
             bool present,
-            bool selected)
+            bool selected,
+            in ShieldStyle style)
         {
             if (!ShieldDomeBridge.ShaderReady)
             {
@@ -242,11 +238,12 @@ namespace VisualTweaks
             // custom break at all", which restores the one-frame disappearance;
             // Dissolve is the continuous tear; HexDissipate is the panel loss and
             // needs the baked lattice, so a missing texture falls back to the tear.
-            ShieldBreakStyle breakStyle = VisualTweaksSettings.CurrentShieldBreakStyle;
+            ShieldBreakStyle breakStyle = style.Break;
             bool customBreak = breakStyle != ShieldBreakStyle.Vanilla;
-            ShieldRestoreStyle restoreStyle = VisualTweaksSettings.largeShieldRestoreStyle;
+            ShieldRestoreStyle restoreStyle = style.Restore;
+            bool hexActive = style.HasLattice(ShieldHexTarget.Large);
             float dissolveMode = breakStyle
-                == ShieldBreakStyle.HexDissipate && HexActive
+                == ShieldBreakStyle.HexDissipate && hexActive
                 ? 5f
                 : 2f;
 
@@ -365,7 +362,7 @@ namespace VisualTweaks
             // same circle. The stock-like style is the exception — its soft rim is
             // supposed to fade through r == 1 the way vanilla's does, so it gets the
             // same 1.1601562 margin vanilla uses for Other/ForceField.
-            float quadMargin = QuadMargin;
+            float quadMargin = QuadMargin(style.Surface);
             Matrix4x4 matrix = default;
             matrix.SetTRS(
                 new Vector3(center.x, Altitude, center.z),
@@ -386,13 +383,15 @@ namespace VisualTweaks
                 return false;
             }
 
-            Material? mat = Surface.Ensure();
+            ShieldDomeMaterial surface =
+                ShieldMaterials.Get(ShieldHexTarget.Large, style.Surface);
+            Material? mat = surface.Ensure();
             if (mat == null)
             {
                 return false;
             }
 
-            Surface.ApplyLook();
+            surface.ApplyLook();
 
             // Vanilla paints a selected-but-inactive shield dark grey so "this is off"
             // is visible at a glance. A shield that is actively tearing itself apart is
@@ -403,7 +402,7 @@ namespace VisualTweaks
                 ? InactiveColor
                 : baseColor;
 
-            bool hexBubble = ShieldHexBubble.Active(ShieldHexTarget.Large);
+            bool hexBubble = style.IsHexBubble;
 
             // The net's hold is per shield and per frame, so it rides in
             // _Params4.z alongside the centre, which had two spare components.
@@ -446,9 +445,8 @@ namespace VisualTweaks
                     // its own choice in the settings. A hex wave selected while the map is
                     // unavailable falls back to the flare, matching the dome's own fallback
                     // to the crisp surface in that case.
-                    ShieldImpactStyle impactStyle =
-                        VisualTweaksSettings.CurrentShieldImpactStyle;
-                    if (impactStyle == ShieldImpactStyle.HexWave && !HexActive)
+                    ShieldImpactStyle impactStyle = style.Impact;
+                    if (impactStyle == ShieldImpactStyle.HexWave && !hexActive)
                     {
                         impactStyle = ShieldImpactStyle.Flare;
                     }
@@ -489,6 +487,7 @@ namespace VisualTweaks
                         dissolve.OriginX,
                         dissolve.OriginZ,
                         dissolve.Seed,
+                        hexBubble,
                         time);
                 }
                 else if (alpha > 0f)
@@ -580,14 +579,17 @@ namespace VisualTweaks
             float progress,
             float originX,
             float originZ,
-            float seed)
+            float seed,
+            ShieldDomeStyle surfaceStyle)
         {
             if (!ShieldDomeBridge.ShaderReady || !(radius > 0.01f))
             {
                 return false;
             }
 
-            Material? mat = Surface.Ensure();
+            ShieldDomeMaterial surface =
+                ShieldMaterials.Get(ShieldHexTarget.Large, surfaceStyle);
+            Material? mat = surface.Ensure();
             if (mat == null)
             {
                 return false;
@@ -595,12 +597,12 @@ namespace VisualTweaks
 
             try
             {
-                Surface.ApplyLook();
+                surface.ApplyLook();
 
                 // Same rule as the live dome: the stock-like profiles need vanilla's
                 // texture margin for their soft rim, the crisp and panel silhouettes
                 // sit exactly on the gameplay radius.
-                float quadMargin = QuadMargin;
+                float quadMargin = QuadMargin(surfaceStyle);
 
                 Matrix4x4 matrix = default;
                 matrix.SetTRS(
@@ -625,6 +627,7 @@ namespace VisualTweaks
                     originX,
                     originZ,
                     seed,
+                    surfaceStyle == ShieldDomeStyle.HexBubble,
                     ShieldAnimationClock.Time);
             }
             catch (Exception ex)
@@ -650,6 +653,7 @@ namespace VisualTweaks
             float originX,
             float originZ,
             float seed,
+            bool hexBubble,
             float time)
         {
             properties[0] = DrawProperty.Vector(
@@ -670,9 +674,7 @@ namespace VisualTweaks
             NVector4 breakCenter = new NVector4(
                 centerParam.X,
                 centerParam.Y,
-                ShieldHexBubble.Active(ShieldHexTarget.Large)
-                    ? ShieldHexBubble.BreakHold(progress)
-                    : 0f,
+                hexBubble ? ShieldHexBubble.BreakHold(progress) : 0f,
                 0f);
             properties[2] = DrawProperty.Vector(Params4Id, breakCenter);
             properties[3] = DrawProperty.Color(ColorId, tint);
