@@ -565,7 +565,7 @@ namespace VisualTweaks
         // the dome's, so both defaults sit above the dome's values.
         public const float MinPersonalShieldHexImpactStrength = 0f;
         public const float MaxPersonalShieldHexImpactStrength = 0.8f;
-        public static float personalShieldHexImpactStrength = 0.3f;
+        public static float personalShieldHexImpactStrength = 0.12f;
 
         public const float MinPersonalShieldHexImpactShare = 0.12f;
         public const float MaxPersonalShieldHexImpactShare = 0.6f;
@@ -578,8 +578,8 @@ namespace VisualTweaks
         // wedge, so it needed an internal x1.6 fudge), and the flare's "size" is an
         // angle, which is meaningless for a lattice wave.
         public const float MinShieldHexImpactStrength = 0f;
-        public const float MaxShieldHexImpactStrength = 0.8f;
-        public static float shieldHexImpactStrength = 0.25f;
+        public const float MaxShieldHexImpactStrength = 0.4f;
+        public static float shieldHexImpactStrength = 0.1f;
 
         // Share of the run from the impact to the far rim that the wave crosses. A
         // share and not a panel count, because a panel is 1/k of the dome: a fixed
@@ -1004,7 +1004,7 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref shieldHexImpactStrength,
                 "shieldHexImpactStrength",
-                0.25f);
+                0.1f);
             Scribe_Values.Look(
                 ref shieldHexImpactShare,
                 "shieldHexImpactShare",
@@ -1072,7 +1072,7 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref personalShieldHexImpactStrength,
                 "personalShieldHexImpactStrength",
-                0.3f);
+                0.12f);
             Scribe_Values.Look(
                 ref personalShieldHexImpactShare,
                 "personalShieldHexImpactShare",
