@@ -47,6 +47,7 @@ namespace VisualTweaks
         private static FieldInfo? graphic;
 
         private static bool fatal;
+        private static bool signalsBroken;
         private static bool patched;
 
         /// <summary>
@@ -57,21 +58,33 @@ namespace VisualTweaks
 
         internal static void Apply(Harmony harmony)
         {
-            compType = AccessTools.TypeByName(CompTypeName);
-            if (compType == null)
+            try
             {
-                // VEF absent is the normal case, not a warning.
-                return;
-            }
+                compType = AccessTools.TypeByName(CompTypeName);
+                if (compType == null)
+                {
+                    // VEF absent is the normal case, not a warning.
+                    return;
+                }
 
-            if (!BindMembers())
+                if (!BindMembers())
+                {
+                    compType = null;
+                    return;
+                }
+
+                PatchDrawAt(harmony);
+                PatchPreApplyDamage(harmony);
+            }
+            catch (Exception ex)
             {
+                // A framework with an unexpected shape must not abort the rest of
+                // the mod's startup; this family simply keeps the stock drawing.
                 compType = null;
-                return;
+                patched = false;
+                Log.Error("[Visual Tweaks] Hediff shield compat setup failed; stock"
+                    + " drawing kept: " + ex);
             }
-
-            PatchDrawAt(harmony);
-            PatchPreApplyDamage(harmony);
         }
 
         /// <summary>
@@ -242,19 +255,33 @@ namespace VisualTweaks
             out DamageSnapshot __state)
         {
             __state = default;
-            if (__instance == null || fatal || !ShieldDomeBridge.VefHediffActive)
+            if (__instance == null
+                || fatal
+                || signalsBroken
+                || !ShieldDomeBridge.VefHediffActive)
             {
                 return;
             }
 
-            if (!ShieldActive(__instance))
+            try
             {
-                return;
-            }
+                if (!ShieldActive(__instance))
+                {
+                    return;
+                }
 
-            __state.WasActive = true;
-            __state.EnergyBefore = ReadFloat(energy!, __instance);
-            __state.Angle = dinfo.Angle;
+                __state.WasActive = true;
+                __state.EnergyBefore = ReadFloat(energy!, __instance);
+                __state.Angle = dinfo.Angle;
+            }
+            catch (Exception ex)
+            {
+                signalsBroken = true;
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Hediff shield hit snapshot failed; hit and break"
+                        + " effects disabled for this session: " + ex,
+                    typeof(VefHediffShieldCompat).GetHashCode());
+            }
         }
 
         private static void PreApplyDamagePostfix(
@@ -265,6 +292,7 @@ namespace VisualTweaks
             if (!__state.WasActive
                 || __instance == null
                 || fatal
+                || signalsBroken
                 || !ShieldDomeBridge.VefHediffActive)
             {
                 return;
@@ -302,9 +330,12 @@ namespace VisualTweaks
             }
             catch (Exception ex)
             {
-                fatal = true;
-                Log.Error("[Visual Tweaks] Hediff shield hit bookkeeping failed, stock"
-                    + " drawing restored: " + ex);
+                // One ErrorOnce rather than one per hit; the dome keeps drawing.
+                signalsBroken = true;
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Hediff shield hit bookkeeping failed; hit and"
+                        + " break effects disabled for this session: " + ex,
+                    typeof(VefHediffShieldCompat).GetHashCode() ^ 0x3D1);
             }
         }
 

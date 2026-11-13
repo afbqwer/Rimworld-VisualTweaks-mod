@@ -50,7 +50,6 @@ namespace VisualTweaks
         private static PropertyInfo? shieldState;
         private static PropertyInfo? energy;
         private static PropertyInfo? pawnProperty;
-        private static PropertyInfo? props;
         private static MethodInfo? inCombat;
         private static FieldInfo? shieldColor;
         private static FieldInfo? minShieldSize;
@@ -62,7 +61,13 @@ namespace VisualTweaks
         private static FieldInfo? showOnNeutralInCombat;
 
         private static bool fatal;
+        private static bool signalsBroken;
+        private static bool inCombatBroken;
         private static bool patched;
+
+        // Reused across frames: MethodInfo.Invoke needs an object[] for the single
+        // Pawn argument, and this runs on the main thread only.
+        private static readonly object[] InCombatArgs = new object[1];
 
         /// <summary>
         /// True when VEF is loaded, the shield-bubble members were bound and at least
@@ -73,26 +78,42 @@ namespace VisualTweaks
 
         internal static void Apply(Harmony harmony)
         {
-            compType = AccessTools.TypeByName(CompTypeName);
-            if (compType == null)
+            try
             {
-                // VEF absent is the normal case, not a warning.
-                return;
-            }
+                compType = AccessTools.TypeByName(CompTypeName);
+                if (compType == null)
+                {
+                    // VEF absent is the normal case, not a warning.
+                    return;
+                }
 
-            if (!BindMembers())
+                if (!BindMembers())
+                {
+                    compType = null;
+                    return;
+                }
+
+                PatchDrawEntry(
+                    harmony,
+                    "PostDraw",
+                    nameof(PostDrawPrefix),
+                    "built-in shield bubble");
+                PatchDrawEntry(
+                    harmony,
+                    "CompDrawWornExtras",
+                    nameof(CompDrawWornExtrasPrefix),
+                    "worn shield bubble");
+                PatchAbsorbDamage(harmony);
+            }
+            catch (Exception ex)
             {
+                // A framework with an unexpected shape must not abort the rest of
+                // the mod's startup; this family simply keeps the stock drawing.
                 compType = null;
-                return;
+                patched = false;
+                Log.Error("[Visual Tweaks] Bubble shield compat setup failed; stock"
+                    + " drawing kept: " + ex);
             }
-
-            PatchDrawEntry(harmony, "PostDraw", nameof(PostDrawPrefix), "built-in shield bubble");
-            PatchDrawEntry(
-                harmony,
-                "CompDrawWornExtras",
-                nameof(CompDrawWornExtrasPrefix),
-                "worn shield bubble");
-            PatchAbsorbDamage(harmony);
         }
 
         /// <summary>
@@ -118,7 +139,6 @@ namespace VisualTweaks
             shieldState = AccessTools.Property(type, "ShieldState");
             energy = AccessTools.Property(type, "Energy");
             pawnProperty = AccessTools.Property(type, "Pawn");
-            props = AccessTools.Property(type, "Props");
             inCombat = AccessTools.Method(type, "InCombat", new[] { typeof(Pawn) });
             shieldColor = AccessTools.Field(propsType, "shieldColor");
             minShieldSize = AccessTools.Field(propsType, "minShieldSize");
@@ -133,7 +153,6 @@ namespace VisualTweaks
             bool complete = shieldState != null
                 && energy != null
                 && pawnProperty != null
-                && props != null
                 && inCombat != null
                 && shieldColor != null
                 && minShieldSize != null
@@ -161,7 +180,8 @@ namespace VisualTweaks
                 || showAlways!.FieldType != typeof(bool)
                 || showWhenDrafted!.FieldType != typeof(bool)
                 || showOnHostiles!.FieldType != typeof(bool)
-                || showOnNeutralInCombat!.FieldType != typeof(bool))
+                || showOnNeutralInCombat!.FieldType != typeof(bool)
+                || inCombat!.ReturnType != typeof(bool))
             {
                 Log.Warning("[Visual Tweaks] VEF CompShieldBubble members have"
                     + " unexpected types; bubble shields keep the stock drawing.");
@@ -276,19 +296,33 @@ namespace VisualTweaks
             out DamageSnapshot __state)
         {
             __state = default;
-            if (__instance == null || fatal || !ShieldDomeBridge.VefBubbleActive)
+            if (__instance == null
+                || fatal
+                || signalsBroken
+                || !ShieldDomeBridge.VefBubbleActive)
             {
                 return;
             }
 
-            if (ReadState(__instance) != ShieldState.Active)
+            try
             {
-                return;
-            }
+                if (ReadState(__instance) != ShieldState.Active)
+                {
+                    return;
+                }
 
-            __state.WasActive = true;
-            __state.EnergyBefore = ReadFloat(energy!, __instance);
-            __state.Angle = dinfo.Angle;
+                __state.WasActive = true;
+                __state.EnergyBefore = ReadFloat(energy!, __instance);
+                __state.Angle = dinfo.Angle;
+            }
+            catch (Exception ex)
+            {
+                signalsBroken = true;
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Bubble hit snapshot failed; hit and break"
+                        + " effects disabled for this session: " + ex,
+                    typeof(VefShieldBubbleCompat).GetHashCode());
+            }
         }
 
         private static void AbsorbingDamagePostfix(
@@ -299,6 +333,7 @@ namespace VisualTweaks
             if (!__state.WasActive
                 || __instance == null
                 || fatal
+                || signalsBroken
                 || !ShieldDomeBridge.VefBubbleActive)
             {
                 return;
@@ -337,9 +372,12 @@ namespace VisualTweaks
             }
             catch (Exception ex)
             {
-                fatal = true;
-                Log.Error("[Visual Tweaks] Bubble hit bookkeeping failed, stock"
-                    + " drawing restored: " + ex);
+                // One ErrorOnce rather than one per hit; the dome keeps drawing.
+                signalsBroken = true;
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Bubble hit bookkeeping failed; hit and break"
+                        + " effects disabled for this session: " + ex,
+                    typeof(VefShieldBubbleCompat).GetHashCode() ^ 0x2B9);
             }
         }
 
@@ -394,7 +432,7 @@ namespace VisualTweaks
                     return true;
                 }
 
-                object? propsObject = props!.GetValue(comp);
+                object? propsObject = comp.props;
                 if (propsObject == null || !IsStockBubble(propsObject))
                 {
                     return true;
@@ -476,14 +514,31 @@ namespace VisualTweaks
             // pawn whose def only enables the neutral rule is not shown there. Falling
             // through to it here without that check would paint a bubble VEF hides.
             if (GenHostility.HostileTo(pawn, Faction.OfPlayer)
+                || inCombatBroken
                 || !ReadBool(showOnNeutralInCombat!, propsObject)
                 || inCombat == null)
             {
                 return false;
             }
 
-            return inCombat.Invoke(comp, new object[] { pawn }) is bool fighting
-                && fighting;
+            // A failure here only loses the neutral-in-combat arm of the visibility
+            // rule; it must not disable the whole bubble replacement. One log line,
+            // then the branch stays dark for the session.
+            try
+            {
+                InCombatArgs[0] = pawn;
+                return inCombat.Invoke(comp, InCombatArgs) is bool fighting
+                    && fighting;
+            }
+            catch (Exception ex)
+            {
+                inCombatBroken = true;
+                Log.ErrorOnce(
+                    "[Visual Tweaks] VEF bubble InCombat check failed; neutral pawns"
+                        + " keep their bubbles hidden: " + ex,
+                    typeof(VefShieldBubbleCompat).GetHashCode() ^ 0x71C);
+                return false;
+            }
         }
 
         /// <summary>

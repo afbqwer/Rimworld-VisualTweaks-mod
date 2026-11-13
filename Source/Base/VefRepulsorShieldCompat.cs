@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using RimWorld;
 using UnityEngine;
@@ -51,14 +53,20 @@ namespace VisualTweaks
         private static PropertyInfo? energy;
         private static PropertyInfo? maxEnergy;
         private static PropertyInfo? indestructible;
-        private static PropertyInfo? props;
         private static FieldInfo? activeField;
         private static FieldInfo? shieldColour;
         private static FieldInfo? healthColorPoints;
         private static FieldInfo? healthPercent;
         private static FieldInfo? healthColor;
 
+        private static readonly ConditionalWeakTable<object, ColourCurve> ColourCurves =
+            new ConditionalWeakTable<object, ColourCurve>();
+
+        private static readonly ConditionalWeakTable<object, ColourCurve>.CreateValueCallback
+            CreateCurve = CreateColourCurve;
+
         private static bool fatal;
+        private static bool signalsBroken;
         private static bool patched;
 
         /// <summary>
@@ -71,22 +79,34 @@ namespace VisualTweaks
 
         internal static void Apply(Harmony harmony)
         {
-            compType = AccessTools.TypeByName(CompTypeName);
-            if (compType == null)
+            try
             {
-                // VEF absent is the normal case, not a warning.
-                return;
-            }
+                compType = AccessTools.TypeByName(CompTypeName);
+                if (compType == null)
+                {
+                    // VEF absent is the normal case, not a warning.
+                    return;
+                }
 
-            if (!BindMembers())
+                if (!BindMembers())
+                {
+                    compType = null;
+                    return;
+                }
+
+                PatchPostDraw(harmony);
+                PatchAbsorbDamage(harmony);
+                PatchEnergyDepleted(harmony);
+            }
+            catch (Exception ex)
             {
+                // A framework with an unexpected shape must not abort the rest of
+                // the mod's startup; this family simply keeps the stock drawing.
                 compType = null;
-                return;
+                patched = false;
+                Log.Error("[Visual Tweaks] Repulsor compat setup failed; stock drawing"
+                    + " kept: " + ex);
             }
-
-            PatchPostDraw(harmony);
-            PatchAbsorbDamage(harmony);
-            PatchEnergyDepleted(harmony);
         }
 
         /// <summary>
@@ -116,7 +136,6 @@ namespace VisualTweaks
             energy = AccessTools.Property(type, "Energy");
             maxEnergy = AccessTools.Property(type, "MaxEnergy");
             indestructible = AccessTools.Property(type, "Indestructible");
-            props = AccessTools.Property(type, "Props");
             activeField = AccessTools.Field(type, "active");
             shieldColour = AccessTools.Field(propsType, "shieldColour");
             healthColorPoints = AccessTools.Field(propsType, "healthColorPoints");
@@ -127,7 +146,6 @@ namespace VisualTweaks
                 && energy != null
                 && maxEnergy != null
                 && indestructible != null
-                && props != null
                 && activeField != null
                 && shieldColour != null
                 && healthColorPoints != null
@@ -355,7 +373,7 @@ namespace VisualTweaks
             // or one that does not use charge at all.
             present = isActive && (energyNow > 0f || isIndestructible);
 
-            object? propsObject = props!.GetValue(comp);
+            object? propsObject = comp.props;
             if (propsObject == null)
             {
                 return false;
@@ -367,7 +385,7 @@ namespace VisualTweaks
 
             Color healthColour = HealthColour(
                 shieldColourValue,
-                healthColorPoints!.GetValue(propsObject),
+                ColourCurves.GetValue(propsObject, CreateCurve),
                 isIndestructible,
                 energyNow,
                 ReadFloat(maxEnergy!, comp));
@@ -392,83 +410,151 @@ namespace VisualTweaks
         /// health is the upper end, the last point below it is the lower end, and a
         /// missing upper end means "interpolate to the shield colour".
         ///
-        /// The point type is <c>VEF.Apparels.HealthColorPoint</c>, so the list arrives
-        /// as a plain <see cref="IEnumerable"/> and its two fields are read by
-        /// reflection. Copying the type into this assembly is not an option: the whole
-        /// file exists to keep VEF out of the compile references.
+        /// The points themselves are parsed once by <see cref="ColourCurve"/>; the
+        /// point type is <c>VEF.Apparels.HealthColorPoint</c>, so its two fields are
+        /// read by reflection, which is exactly the per-frame cost the cache removes.
         /// </summary>
         private static Color HealthColour(
             Color shieldColourValue,
-            object? pointsObject,
+            ColourCurve curve,
             bool isIndestructible,
             float energyNow,
             float maxEnergyNow)
         {
-            if (isIndestructible
-                || pointsObject is not IEnumerable points
-                || maxEnergyNow <= 0f)
+            ColourCurve.Point[] points = curve.Points;
+            if (isIndestructible || points.Length == 0 || maxEnergyNow <= 0f)
             {
                 return shieldColourValue;
             }
 
             float healthPercentValue = Mathf.Clamp01(energyNow / maxEnergyNow);
 
-            object? upper = null;
-            object? lower = null;
-            float upperPercent = 0f;
-            float lowerPercent = 0f;
-
-            foreach (object? point in points)
+            int upper = -1;
+            int lower = -1;
+            for (int i = 0; i < points.Length; i++)
             {
-                if (point == null)
+                float percent = points[i].Percent;
+                if (percent >= healthPercentValue && upper < 0)
                 {
-                    continue;
+                    upper = i;
                 }
 
-                float pointPercent = healthPercent!.GetValue(point) is float value
-                    ? value
-                    : 0f;
-
-                if (pointPercent >= healthPercentValue && upper == null)
+                if (percent < healthPercentValue)
                 {
-                    upper = point;
-                    upperPercent = pointPercent;
-                }
-
-                if (pointPercent < healthPercentValue)
-                {
-                    lower = point;
-                    lowerPercent = pointPercent;
+                    lower = i;
                 }
             }
 
-            if (upper == null)
+            if (upper < 0)
             {
-                if (lower == null)
+                if (lower < 0)
                 {
                     return shieldColourValue;
                 }
 
                 return Color.Lerp(
-                    PointColour(lower, shieldColourValue),
+                    points[lower].Colour,
                     shieldColourValue,
-                    Mathf.InverseLerp(lowerPercent, 1f, healthPercentValue));
+                    Mathf.InverseLerp(
+                        points[lower].Percent,
+                        1f,
+                        healthPercentValue));
             }
 
-            if (lower == null)
+            if (lower < 0)
             {
-                return PointColour(upper, shieldColourValue);
+                return points[upper].Colour;
             }
 
             return Color.Lerp(
-                PointColour(lower, shieldColourValue),
-                PointColour(upper, shieldColourValue),
-                Mathf.InverseLerp(lowerPercent, upperPercent, healthPercentValue));
+                points[lower].Colour,
+                points[upper].Colour,
+                Mathf.InverseLerp(
+                    points[lower].Percent,
+                    points[upper].Percent,
+                    healthPercentValue));
         }
 
-        private static Color PointColour(object point, Color fallback)
+        private static ColourCurve CreateColourCurve(object propsObject)
         {
-            return healthColor!.GetValue(point) is Color value ? value : fallback;
+            try
+            {
+                return new ColourCurve(propsObject);
+            }
+            catch (Exception ex)
+            {
+                // A malformed def must not cost the dome: fall back to its solid
+                // shield colour. Returning here also caches the empty curve for this
+                // props instance, so the failure is not retried every frame.
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Repulsor health colour curve failed; the dome"
+                        + " uses its solid shield colour: " + ex,
+                    typeof(VefRepulsorShieldCompat).GetHashCode() ^ 0x51);
+                return ColourCurve.Empty;
+            }
+        }
+
+        /// <summary>
+        /// The def's health colour points, parsed once per properties instance.
+        ///
+        /// The curve is static per def, and reading every point through reflection on
+        /// every frame was the one per-frame cost with no reason to exist: the values
+        /// cannot change while the game is running. The cache is keyed by the props
+        /// object, so two defs with different ramps never share an entry, and a
+        /// ConditionalWeakTable keeps it from outliving the defs.
+        /// </summary>
+        private sealed class ColourCurve
+        {
+            internal readonly struct Point
+            {
+                internal readonly float Percent;
+                internal readonly Color Colour;
+
+                internal Point(float percent, Color colour)
+                {
+                    Percent = percent;
+                    Colour = colour;
+                }
+            }
+
+            internal static readonly ColourCurve Empty = new ColourCurve();
+
+            internal readonly Point[] Points;
+
+            private ColourCurve()
+            {
+                Points = Array.Empty<Point>();
+            }
+
+            internal ColourCurve(object propsObject)
+            {
+                if (healthColorPoints!.GetValue(propsObject) is not IEnumerable source)
+                {
+                    Points = Array.Empty<Point>();
+                    return;
+                }
+
+                List<Point> parsed = new List<Point>();
+                foreach (object? item in source)
+                {
+                    if (item == null)
+                    {
+                        continue;
+                    }
+
+                    float percent = healthPercent!.GetValue(item) is float value
+                        ? value
+                        : 0f;
+                    Color colour = healthColor!.GetValue(item) is Color c
+                        ? c
+                        : Color.white;
+                    parsed.Add(new Point(percent, colour));
+                }
+
+                Points = parsed.Count == 0
+                    ? Array.Empty<Point>()
+                    : parsed.ToArray();
+            }
         }
 
         private static float ReadFloat(PropertyInfo property, object instance)
@@ -505,6 +591,7 @@ namespace VisualTweaks
             // player can keep the hit ripple while the repulsor keeps its stock
             // surface, or replace the surface without the ripple.
             if (fatal
+                || signalsBroken
                 || __instance == null
                 || __instance.parent == null
                 || __instance.parent is Apparel)
@@ -512,59 +599,86 @@ namespace VisualTweaks
                 return;
             }
 
-            if (ShieldDomeBridge.RepulsorActive)
+            // This runs inside VEF's projectile tick. One bad read must not take the
+            // interception down with it; unlike the draw path, the failure only
+            // disables this file's hit bookkeeping, never the drawing.
+            try
             {
-                ShieldImpactLog.Notify(__instance, angle, amount);
+                if (ShieldDomeBridge.RepulsorActive)
+                {
+                    ShieldImpactLog.Notify(__instance, angle, amount);
 
-                // A fatal shot depletes the energy before this postfix runs, so the
-                // dissolve already exists and only its origin is missing. This hands
-                // it the fatal bearing while the start tick still matches; a no-op
-                // otherwise.
-                ShieldDissolveLog.RefreshOrigin(
-                    __instance,
-                    angle,
-                    Find.TickManager?.TicksGame ?? -1);
+                    // A fatal shot depletes the energy before this postfix runs, so
+                    // the dissolve already exists and only its origin is missing. This
+                    // hands it the fatal bearing while the start tick still matches; a
+                    // no-op otherwise.
+                    ShieldDissolveLog.RefreshOrigin(
+                        __instance,
+                        angle,
+                        Find.TickManager?.TicksGame ?? -1);
+                }
+
+                // The repulsor's own hit effect says nothing about where the shot came
+                // from on the surface, so the same bearing is turned into a rim point
+                // for the refraction ripple. VEF's angle points from the projectile
+                // towards the shield, so the impact sits opposite the centre.
+                Map? map = __instance.parent.Map;
+                if (map == null || !ShieldRippleLayer.Active)
+                {
+                    return;
+                }
+
+                float radius = ReadFloat(shieldRadius!, __instance);
+                if (radius <= 0.01f)
+                {
+                    return;
+                }
+
+                Vector3 center = __instance.parent.DrawPos;
+                Vector3 toward = Vector3Utility.FromAngleFlat(angle);
+
+                map.GetComponent<OverlayMapComponent>()?.NotifyShieldHit(
+                    __instance.parent,
+                    radius,
+                    new Vector3(
+                        center.x - toward.x * radius,
+                        0f,
+                        center.z - toward.z * radius),
+                    amount);
             }
-
-            // The repulsor's own hit effect says nothing about where the shot came
-            // from on the surface, so the same bearing is turned into a rim point for
-            // the refraction ripple. VEF's angle points from the projectile towards
-            // the shield, so the impact sits on the opposite side of the centre.
-            Map? map = __instance.parent.Map;
-            if (map == null || !ShieldRippleLayer.Active)
+            catch (Exception ex)
             {
-                return;
+                // One ErrorOnce rather than one per hit; the dome keeps drawing.
+                signalsBroken = true;
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Repulsor hit bookkeeping failed; hit and break"
+                        + " effects disabled for this session: " + ex,
+                    typeof(VefRepulsorShieldCompat).GetHashCode());
             }
-
-            float radius = ReadFloat(shieldRadius!, __instance);
-            if (radius <= 0.01f)
-            {
-                return;
-            }
-
-            Vector3 center = __instance.parent.DrawPos;
-            Vector3 toward = Vector3Utility.FromAngleFlat(angle);
-
-            map.GetComponent<OverlayMapComponent>()?.NotifyShieldHit(
-                __instance.parent,
-                radius,
-                new Vector3(
-                    center.x - toward.x * radius,
-                    0f,
-                    center.z - toward.z * radius),
-                amount);
         }
 
         private static void EnergyDepletedPostfix(ThingComp __instance)
         {
-            if (!ShouldRecord(__instance)
+            if (signalsBroken
+                || !ShouldRecord(__instance)
                 || VisualTweaksSettings.CurrentShieldBreakStyle
                     == ShieldBreakStyle.Vanilla)
             {
                 return;
             }
 
-            ShieldDissolveLog.Begin(__instance);
+            try
+            {
+                ShieldDissolveLog.Begin(__instance);
+            }
+            catch (Exception ex)
+            {
+                signalsBroken = true;
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Repulsor break bookkeeping failed; break"
+                        + " animations disabled for this session: " + ex,
+                    typeof(VefRepulsorShieldCompat).GetHashCode() ^ 0x5A17);
+            }
         }
     }
 }
