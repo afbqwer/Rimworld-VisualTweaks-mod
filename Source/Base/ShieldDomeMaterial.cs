@@ -193,9 +193,6 @@ namespace VisualTweaks
             float centerClear = personal
                 ? VisualTweaksSettings.personalShieldCenterClear
                 : VisualTweaksSettings.largeShieldCenterClear;
-            float centerKeep = personal
-                ? VisualTweaksSettings.personalShieldCenterKeep
-                : VisualTweaksSettings.largeShieldCenterKeep;
 
             // The spherical lattice is baked once per target and shared by every
             // shield of that target. Bind is cheap to call every frame: it only
@@ -280,7 +277,7 @@ namespace VisualTweaks
             // whether or not the current surface reads it. Both families therefore
             // keep their own clear radius, because a 1.2-cell belt and a 25-cell
             // dome need very different amounts of clearance.
-            Vector4 aperture9 = new Vector4(centerClear, centerKeep, 0f, 0f);
+            Vector4 aperture9 = new Vector4(centerClear, 0f, 0f, 0f);
 
             if (width == appliedRidgeWidth
                 && brightness == appliedRidgeBrightness
@@ -334,9 +331,9 @@ namespace VisualTweaks
             mat.SetVector(Params7Id, scan7);
             mat.SetVector(Params8Id, scan8);
 
-            // _Params9 = (clear radius as a share of R, alpha kept at the centre).
-            // 0 in .x is the off switch: the shader's CenterAperture returns 1
-            // immediately, so the two lattice styles behave exactly as before.
+            // _Params9 = (clear radius as a share of R, 0, 0, 0). 0 is the off
+            // switch: the shader's CenterAperture returns 1 immediately, so the
+            // two lattice styles behave exactly as before.
             mat.SetVector(Params9Id, aperture9);
         }
 

@@ -964,6 +964,15 @@ namespace VisualTweaks
                 DrawRidgeSliders(listing, false);
             }
 
+            // Shared by both lattice styles, so it follows their whole block
+            // rather than splitting the line / density / bake sequence apart.
+            if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex
+                || VisualTweaksSettings.shieldDomeStyle
+                    == ShieldDomeStyle.HexBubble)
+            {
+                DrawHexCenterAperture(listing, false);
+            }
+
             SettingsLayout.SubHeader(
                 listing,
                 "VisualTweaks_ShieldDome_ImpactGroup".Translate());
@@ -1050,6 +1059,13 @@ namespace VisualTweaks
                 == ShieldDomeStyle.Crisp)
             {
                 DrawRidgeSliders(listing, true);
+            }
+
+            if (VisualTweaksSettings.personalShieldDomeStyle == ShieldDomeStyle.Hex
+                || VisualTweaksSettings.personalShieldDomeStyle
+                    == ShieldDomeStyle.HexBubble)
+            {
+                DrawHexCenterAperture(listing, true);
             }
 
             // With the pulse off, HexBubble replaces the belt's opacity with one
@@ -1294,7 +1310,6 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldDome_HexBubbleNote".Translate());
 
             DrawHexLineSlider(listing, personal);
-            DrawHexCenterAperture(listing, personal);
             DrawHexDensity(listing, personal);
         }
 
@@ -1327,7 +1342,6 @@ namespace VisualTweaks
             }
 
             DrawHexLineSlider(listing, personal);
-            DrawHexCenterAperture(listing, personal);
         }
 
         /// <summary>
@@ -1364,11 +1378,11 @@ namespace VisualTweaks
         /// <summary>
         /// The centre aperture shared by the panel shell and the hex bubble. A
         /// shield is most in the way where a real glass dome is clearest — dead
-        /// centre, facing the viewer — so the static surface fades toward the
-        /// middle while the rim, the scan band and every hit/break effect stay
-        /// untouched. Both values are per family: a 1.2-cell belt is centred on
-        /// the pawn it protects and needs a different amount of clearance than a
-        /// 25-cell projector dome.
+        /// centre, facing the viewer — so the static surface fades to zero at the
+        /// centre and climbs back to full over this radius, while the rim, the
+        /// scan band and every hit/break effect stay untouched. Per family: a
+        /// 1.2-cell belt is centred on the pawn it protects and needs a different
+        /// amount of clearance than a 25-cell projector dome.
         /// </summary>
         private static void DrawHexCenterAperture(
             Listing_Standard listing,
@@ -1388,14 +1402,6 @@ namespace VisualTweaks
                         VisualTweaksSettings.MinShieldCenterClear,
                         VisualTweaksSettings.MaxShieldCenterClear,
                         "VisualTweaks_ShieldDome_HexCenterClearTip".Translate());
-                VisualTweaksSettings.personalShieldCenterKeep =
-                    SettingsLayout.Slider(
-                        listing,
-                        "VisualTweaks_ShieldDome_HexCenterKeep".Translate(),
-                        VisualTweaksSettings.personalShieldCenterKeep,
-                        VisualTweaksSettings.MinShieldCenterKeep,
-                        VisualTweaksSettings.MaxShieldCenterKeep,
-                        "VisualTweaks_ShieldDome_HexCenterKeepTip".Translate());
                 return;
             }
 
@@ -1407,14 +1413,6 @@ namespace VisualTweaks
                     VisualTweaksSettings.MinShieldCenterClear,
                     VisualTweaksSettings.MaxShieldCenterClear,
                     "VisualTweaks_ShieldDome_HexCenterClearTip".Translate());
-            VisualTweaksSettings.largeShieldCenterKeep =
-                SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_HexCenterKeep".Translate(),
-                    VisualTweaksSettings.largeShieldCenterKeep,
-                    VisualTweaksSettings.MinShieldCenterKeep,
-                    VisualTweaksSettings.MaxShieldCenterKeep,
-                    "VisualTweaks_ShieldDome_HexCenterKeepTip".Translate());
         }
 
         /// <summary>

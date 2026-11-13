@@ -166,9 +166,7 @@
   <VisualTweaks_ShieldDome_HexLineTip>面板之间亮线的强度，线宽不随缩放变化。</VisualTweaks_ShieldDome_HexLineTip>
   <VisualTweaks_ShieldDome_HexCenterGroup>中心透明</VisualTweaks_ShieldDome_HexCenterGroup>
   <VisualTweaks_ShieldDome_HexCenterClear>透明半径</VisualTweaks_ShieldDome_HexCenterClear>
-  <VisualTweaks_ShieldDome_HexCenterClearTip>从圆心到该半径（占护盾半径的比例）逐渐恢复到完整亮度，让下方的 Pawn 与建筑透出来。0 = 关闭。脊线、扫描带、受击与破裂不受影响。</VisualTweaks_ShieldDome_HexCenterClearTip>
-  <VisualTweaks_ShieldDome_HexCenterKeep>中心残留</VisualTweaks_ShieldDome_HexCenterKeep>
-  <VisualTweaks_ShieldDome_HexCenterKeepTip>圆心处保留的表面亮度比例。0 = 完全透明；默认留一层很淡的格网，避免看起来像挖了一个洞。</VisualTweaks_ShieldDome_HexCenterKeepTip>
+  <VisualTweaks_ShieldDome_HexCenterClearTip>从圆心到该半径（占护盾半径的比例）逐渐恢复到完整亮度，让下方的 Pawn 与建筑透出来。0 = 关闭；1 = 渐变一直延伸到边缘。只影响静态表面和格网；脊线、扫描带、受击与破裂不受影响。</VisualTweaks_ShieldDome_HexCenterClearTip>
   <VisualTweaks_ShieldDome_HexDensity>格子密度</VisualTweaks_ShieldDome_HexDensity>
   <VisualTweaks_ShieldDome_HexDensityTip>整球面板数随 k 增加：2≈42，5≈252，12≈1442。拖动只改草稿，按下方按钮烘焙后生效。</VisualTweaks_ShieldDome_HexDensityTip>
   <VisualTweaks_ShieldDome_HexBake>应用并烘焙</VisualTweaks_ShieldDome_HexBake>

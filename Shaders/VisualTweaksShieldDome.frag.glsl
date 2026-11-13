@@ -160,7 +160,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
     vec4 _Params6; // @default = vec4(0.0, 0.22, 0.75, 9.0)    // style (0 crisp, 1 hex, 2 stock dome, 3 stock belt, 4 hex bubble), hex face, hex line, SDF gradient (1/eRef)
     vec4 _Params7; // @default = vec4(1.0, 2.4, 0.20, 0.12)    // HexBubble: scan dir (+1 down / -1 up), period (s), feather, net baseline
     vec4 _Params8; // @default = vec4(1.0, 0.06, 0.0, 0.0)     // HexBubble: stripe count, band half width, leading edge (fixed 0), reserved
-    vec4 _Params9; // @default = vec4(0.60, 0.12, 0.0, 0.0)    // lattice styles: clear radius (share of R), alpha kept at the centre
+    vec4 _Params9; // @default = vec4(0.50, 0.0, 0.0, 0.0)     // lattice styles: clear radius (share of R); 0 disables it
     vec4 _Color;   // @color @default = vec4(1.0, 1.0, 1.0, 1.0)
 } u;
 
@@ -318,11 +318,16 @@ vec2 HexSurface(vec2 p, float aa, float t)
 //
 // It is a pure alpha weight, because the surface is drawn additively
 // (SrcAlpha * src + dst): scaling the alpha of the static material down to zero
-// adds no light at all, so whatever is underneath shows through completely. It
-// must NOT touch the ridge, core or the r == 1 silhouette, which is why it
-// reaches 1.0 well before the rim (clearEnd is clamped below that); and it is
-// measured as a share of the radius, never in pixels, so a belt and a 25-cell
-// dome carry the same shape at every zoom.
+// adds no light at all, so whatever is underneath shows through completely. The
+// clear radius alone controls the shape: the alpha at the exact centre is always
+// zero, and a wider radius simply reaches full brightness later.
+//
+// The ridge and core are never scaled, whatever the radius: they are the
+// silhouette, and on a small belt at low zoom the ridge's inner shoulder reaches
+// far enough inward that a final alpha multiply at r == 1 would soften the edge.
+// Style 1 therefore apertures its fill terms individually rather than `sum`.
+// Style 4 can scale the whole bubble because its rim is a narrow gaussian whose
+// peak sits at r == 1, where the aperture is already 1.
 //
 // Only the *material* is apertured. Hit reactions and break fronts are events:
 // they stay at full strength wherever they land, including the centre. The one
@@ -332,20 +337,13 @@ vec2 HexSurface(vec2 p, float aa, float t)
 // pawn at all times.
 float CenterAperture(float r)
 {
-    // The ceiling is well below the ridge: the aperture must be at full strength
-    // before the rim band starts, or a small belt at low zoom would lose part of
-    // its silhouette. The CPU clamps the slider to the same value; this guard
-    // keeps a stale or hand-edited uniform from breaking the edge contract.
-    float end = clamp(u._Params9.x, 0.0, 0.75);
+    float end = clamp(u._Params9.x, 0.0, 1.0);
     if (end <= 0.001)
     {
         return 1.0;
     }
 
-    // A floor, not a hole by default: a small residue keeps the surface reading
-    // as glass rather than as a ring with the middle punched out.
-    return mix(clamp(u._Params9.y, 0.0, 1.0), 1.0,
-               smoothstep(0.0, end, r));
+    return smoothstep(0.0, end, r);
 }
 
 // ---- the two stock-like surfaces -----------------------------------------
@@ -607,24 +605,28 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
         bodyTerm = u._Params2.w * body;
     }
 
-    float sum = ridgeTerm + coreTerm + glowTerm + bodyTerm;
-
-    // The panel shell is the other lattice surface. Its ridge and core live at
-    // r == 1, where the aperture is already 1, so the silhouette is untouched;
-    // what loses weight in the middle is the panel fill and the cell lines,
-    // which are the parts that cover a pawn. Crisp keeps its full interior.
+    // The panel shell is the other lattice surface. Only its static fill is
+    // apertured; ridge and core are left exactly as they were, because they ARE
+    // the silhouette. Scaling the final sum instead would soften the ridge's
+    // inner shoulder on a small belt once clearRadius approaches 1. Crisp keeps
+    // its full interior.
     float aperture = (u._Params6.x > 0.5 && u._Params6.x < 1.5)
         ? CenterAperture(r)
         : 1.0;
+    float glowA = glowTerm * aperture;
+    float bodyA = bodyTerm * aperture;
+    float hexLineA = hexLine * aperture;
+
+    float sum = ridgeTerm + coreTerm + glowA + bodyA;
 
     vec3 halo = u._Color.rgb;
     vec3 coreTint = mix(halo, vec3(1.0), 0.65);
     vec3 lineTint = mix(halo, vec3(1.0), 0.85);
-    vec3 tint = (halo * (ridgeTerm + glowTerm + max(bodyTerm - hexLine, 0.0))
-            + coreTint * coreTerm + lineTint * hexLine)
+    vec3 tint = (halo * (ridgeTerm + glowA + max(bodyA - hexLineA, 0.0))
+            + coreTint * coreTerm + lineTint * hexLineA)
         / max(sum, 1e-4);
 
-    return vec4(tint, sum * drift * aperture);
+    return vec4(tint, sum * drift);
 }
 
 // Where a break animation is allowed to paint, as opposed to where the idle dome
