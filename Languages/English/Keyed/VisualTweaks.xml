@@ -114,14 +114,14 @@
   <VisualTweaks_ShieldLarge_EnableTip>Redraws projector domes with a shader; turn it off to restore the stock drawing for large shields.</VisualTweaks_ShieldLarge_EnableTip>
   <VisualTweaks_ShieldPersonal_Enable>Replace personal shields</VisualTweaks_ShieldPersonal_Enable>
   <VisualTweaks_ShieldPersonal_EnableTip>Redraws personal shield belts with a shader; turn it off to restore the stock drawing for belts.</VisualTweaks_ShieldPersonal_EnableTip>
-  <VisualTweaks_ShieldRepulsor_Enable>Replace VFES repulsors</VisualTweaks_ShieldRepulsor_Enable>
-  <VisualTweaks_ShieldRepulsor_EnableTip>Redraws the repulsors from Vanilla Furniture Expanded - Security. Their shield comes from the Vanilla Expanded Framework (VEF's shield field), so it is a separate switch; the surface and hit/break choices are the large-shield ones below. Hidden when VEF is not loaded.</VisualTweaks_ShieldRepulsor_EnableTip>
+  <VisualTweaks_ShieldRepulsor_Enable>Replace VEF Field Shield</VisualTweaks_ShieldRepulsor_Enable>
+  <VisualTweaks_ShieldRepulsor_EnableTip>Redraws the VEF Field Shield, using the large-shield settings below for their look. Hidden when the required mods are not loaded.</VisualTweaks_ShieldRepulsor_EnableTip>
   <VisualTweaks_ShieldRepulsor_Opacity>Repulsor opacity</VisualTweaks_ShieldRepulsor_Opacity>
-  <VisualTweaks_ShieldRepulsor_OpacityTip>Multiplies the repulsor's health-based opacity. VEF's value is authored for an additive glow, so the same alpha reads more solid on an alpha-blended dome; 1.0 is exactly the stock alpha.</VisualTweaks_ShieldRepulsor_OpacityTip>
+  <VisualTweaks_ShieldRepulsor_OpacityTip>Overall opacity of repulsor shields. 1.0 is the default; lower values are more see-through.</VisualTweaks_ShieldRepulsor_OpacityTip>
   <VisualTweaks_ShieldBubble_Enable>Replace VEF bubble shields</VisualTweaks_ShieldBubble_Enable>
-  <VisualTweaks_ShieldBubble_EnableTip>Redraws VEF's pawn shield bubbles (warcasket armour, creature shields, ...) with the personal-shield surface below. Only bubbles using the stock texture are replaced; a def with its own bubble art keeps it. Hidden when VEF is not loaded.</VisualTweaks_ShieldBubble_EnableTip>
+  <VisualTweaks_ShieldBubble_EnableTip>Redraws VEF's pawn shield bubbles (warcasket armour, creature shields, ...) using the personal-shield settings below. Hidden when VEF is not loaded.</VisualTweaks_ShieldBubble_EnableTip>
   <VisualTweaks_ShieldHediff_Enable>Replace VEF hediff shields</VisualTweaks_ShieldHediff_Enable>
-  <VisualTweaks_ShieldHediff_EnableTip>Redraws shields granted by VEF hediffs (Vanilla Psycasts Expanded's fire shield, ability and creature shields, ...) with the personal-shield surface below. The def's size and colour still drive the dome; its texture is replaced. Hidden when VEF is not loaded.</VisualTweaks_ShieldHediff_EnableTip>
+  <VisualTweaks_ShieldHediff_EnableTip>Redraws shields granted by VEF hediffs or abilities (such as Vanilla Psycasts Expanded's fire shield) using the personal-shield settings below. Hidden when VEF is not loaded.</VisualTweaks_ShieldHediff_EnableTip>
   <VisualTweaks_ShieldDome_OffNote>All shield types use the stock drawing; style settings are inactive.</VisualTweaks_ShieldDome_OffNote>
   <VisualTweaks_ShieldAlways_Enable>Always show large shields</VisualTweaks_ShieldAlways_Enable>
   <VisualTweaks_ShieldAlways_EnableTip>Keeps active large shields faintly visible when not selected. Personal belts still follow vanilla's visibility rules.</VisualTweaks_ShieldAlways_EnableTip>
