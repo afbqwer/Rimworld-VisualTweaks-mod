@@ -38,6 +38,11 @@ namespace VisualTweaks
     /// That animation cannot be driven by <c>GetCurrentAlpha()</c>: it collapses to
     /// zero the moment the shield stops being Active, which is precisely when a
     /// breaking shield needs to be brightest. See <see cref="ShieldDissolveLog"/>.
+    ///
+    /// Host destruction is the fifth break path, but it cannot use PostDraw: the
+    /// building is gone from the dynamic draw list before the next frame. It starts
+    /// the same dissolve and hands it to the map's overlay stack instead; see
+    /// <see cref="ShieldBreakLayer"/>.
     /// </summary>
     internal static class ShieldDomePatches
     {
@@ -63,6 +68,7 @@ namespace VisualTweaks
             PatchPostDraw(harmony);
             PatchCheckIntercept(harmony);
             PatchShutdowns(harmony);
+            PatchDestroy(harmony);
             PatchHitDust(harmony);
         }
 
@@ -97,6 +103,150 @@ namespace VisualTweaks
                 nameof(ActivePrefix), nameof(ActivePostfix), "mech lord shutdown");
             TryPatch(harmony, nameof(CompProjectileInterceptor.Deactivate),
                 nameof(ActivePrefix), nameof(ActivePostfix), "gravship deactivation");
+        }
+
+        /// <summary>
+        /// Every def that can carry an interceptor shield. Resolved once from the def
+        /// database: Thing.Destroy runs for every destroyed thing in the game and
+        /// projectiles alone are destroyed constantly, so scanning comps on each call
+        /// would be wasted work.
+        /// </summary>
+        private static readonly HashSet<ThingDef> ShieldDefs = new HashSet<ThingDef>();
+
+        /// <summary>
+        /// Direct destruction is the one break path with no draw left behind it: the
+        /// building leaves the dynamic draw list inside Thing.Destroy, so neither
+        /// PostDraw nor the dissolve read in the renderer will run again. The prefix
+        /// captures the state while the host is still spawned and hands it to the
+        /// overlay, which owns the animation from then on.
+        ///
+        /// Patching Thing.Destroy rather than Building.Destroy catches every host that
+        /// can carry the comp — buildings, gravships and any modded non-building host —
+        /// through the method every subclass calls. The def gate keeps the common case
+        /// (a projectile, a chunk, a corpse) down to one hash lookup.
+        /// </summary>
+        private static void PatchDestroy(Harmony harmony)
+        {
+            foreach (ThingDef def in DefDatabase<ThingDef>.AllDefs)
+            {
+                List<CompProperties>? comps = def.comps;
+                if (comps == null)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < comps.Count; i++)
+                {
+                    if (comps[i] is CompProperties_ProjectileInterceptor)
+                    {
+                        ShieldDefs.Add(def);
+                        break;
+                    }
+                }
+            }
+
+            MethodInfo? target = AccessTools.Method(
+                typeof(Thing),
+                nameof(Thing.Destroy),
+                new[] { typeof(DestroyMode) });
+            MethodInfo? prefix = AccessTools.Method(
+                typeof(ShieldDomePatches),
+                nameof(DestroyPrefix));
+
+            if (target == null || prefix == null)
+            {
+                Log.Warning("[Visual Tweaks] Cannot patch Thing.Destroy;"
+                    + " destroyed shield buildings will not break.");
+                return;
+            }
+
+            try
+            {
+                harmony.Patch(target, prefix: new HarmonyMethod(prefix));
+                VisualTweaksLog.Info("Patched Thing.Destroy (destroyed shield break; "
+                    + ShieldDefs.Count + " shield def(s)).");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[Visual Tweaks] Failed to patch Thing.Destroy: " + ex);
+            }
+        }
+
+        /// <summary>
+        /// Captured before base.Destroy despawns the host: <c>Active</c> is false once
+        /// <c>parent.Spawned</c> is cleared, and this is also the last point at which
+        /// the building still has a draw position.
+        ///
+        /// A break may already be in flight — a lord shutdown triggered earlier in
+        /// Building.Destroy, or the shot that killed the shield a moment before the
+        /// building — so an existing live state is handed over unchanged rather than
+        /// restarted here.
+        /// </summary>
+        private static void DestroyPrefix(Thing __instance)
+        {
+            if (fatal
+                || !(__instance is ThingWithComps host)
+                || host.def == null
+                || !ShieldDefs.Contains(host.def)
+                || !host.Spawned)
+            {
+                return;
+            }
+
+            CompProjectileInterceptor? comp = host.GetComp<CompProjectileInterceptor>();
+            if (comp == null || !ShieldDomeBridge.ShouldReplace(comp))
+            {
+                return;
+            }
+
+            ShieldBreakStyle breakStyle = VisualTweaksSettings.CurrentShieldBreakStyle;
+            if (breakStyle == ShieldBreakStyle.Vanilla)
+            {
+                return;
+            }
+
+            ShieldDissolveLog.State? state = ShieldDissolveLog.Progress(comp, out _);
+            if (state == null)
+            {
+                // A surface can also be on screen while Active is false: a shield that
+                // is recharging after a hit keeps a faint recently-intercepted alpha,
+                // and Props.minAlpha can keep one visible permanently. Use vanilla's own
+                // visibility answer, the same one the draw path trusts, so destroying
+                // something the player can see never pops it out of existence.
+                Func<CompProjectileInterceptor, float>? alphaOfLocal = alphaOf;
+                bool visible = comp.Active
+                    || (alphaOfLocal != null && alphaOfLocal(comp) > 0f);
+                if (!visible)
+                {
+                    return;
+                }
+
+                state = ShieldDissolveLog.Begin(comp);
+            }
+
+            if (state == null)
+            {
+                return;
+            }
+
+            Map? map = host.Map;
+            OverlayMapComponent? overlay = map?.GetComponent<OverlayMapComponent>();
+            if (overlay == null)
+            {
+                return;
+            }
+
+            float mode = breakStyle == ShieldBreakStyle.HexDissipate
+                && ShieldDomeRenderer.HexActive
+                ? 5f
+                : 2f;
+
+            overlay.NotifyShieldDestroyed(
+                state,
+                host.DrawPos,
+                comp.Props.radius,
+                comp.Props.color,
+                mode);
         }
 
         /// <summary>

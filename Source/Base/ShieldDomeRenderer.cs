@@ -17,7 +17,9 @@ namespace VisualTweaks
     /// the shield's own position. That is deliberate: it inherits vanilla's visibility
     /// gating (spawned, dynamic-draw list, altitude layer) instead of rebuilding it, and
     /// it keeps the shield's place in the transparent queue without a second
-    /// registration path to keep in sync.
+    /// registration path to keep in sync. The one exception is a shield whose host was
+    /// destroyed: that host never gets another PostDraw, so the map overlay draws the
+    /// same break surface through <see cref="DrawDetachedBreak"/>.
     ///
     /// One material, one draw for the dome plus one per live impact. Everything that
     /// differs per draw (alpha, radius, colour, bearing) travels as a draw property;
@@ -401,32 +403,18 @@ namespace VisualTweaks
                     // clock: _Params3 switches meaning from an impact's direction to
                     // the break's origin / progress / seed, so no extra uniform is
                     // needed for the choice between them.
-                    properties[0] = DrawProperty.Vector(
-                        ParamsId,
-                        new NVector4(
-                            dissolveMode,
-                            VisualTweaksSettings.largeShieldDissolveBrightness,
-                            time,
-                            radius));
-                    properties[1] = DrawProperty.Vector(
-                        Params3Id,
-                        new NVector4(
-                            dissolve.OriginX,
-                            dissolve.OriginZ,
-                            dissolveProgress,
-                            dissolve.Seed));
-                    properties[2] = DrawProperty.Vector(Params4Id, centerParam);
-                    properties[3] = DrawProperty.Color(ColorId, tint);
-
-                    Graphics.DrawMesh(
-                        MeshPool.plane10,
-                        matrix,
+                    drew = DrawBreak(
                         mat,
-                        0,
-                        null,
-                        0,
-                        new DrawPropertyBlock(properties));
-                    drew = true;
+                        matrix,
+                        tint,
+                        centerParam,
+                        radius,
+                        dissolveMode,
+                        dissolveProgress,
+                        dissolve.OriginX,
+                        dissolve.OriginZ,
+                        dissolve.Seed,
+                        time);
                 }
                 else if (alpha > 0f)
                 {
@@ -460,6 +448,124 @@ namespace VisualTweaks
             }
 
             return drew;
+        }
+
+        /// <summary>
+        /// Draws a break whose host no longer exists, from the map overlay pass.
+        ///
+        /// A destroyed building has already been deregistered from dynamic drawing by
+        /// the time the next frame is built, so its PostDraw — and with it the normal
+        /// dissolve path above — is gone. The surface, the matrix and the uniforms are
+        /// the same as an ordinary break; only the caller and the source of the clock
+        /// differ. The layer owns the clock and passes progress in.
+        /// </summary>
+        internal static bool DrawDetachedBreak(
+            Vector3 center,
+            float radius,
+            Color color,
+            float mode,
+            float progress,
+            float originX,
+            float originZ,
+            float seed)
+        {
+            if (!ShieldDomeBridge.ShaderReady || !(radius > 0.01f))
+            {
+                return false;
+            }
+
+            Material? mat = Surface.Ensure();
+            if (mat == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                Surface.ApplyLook();
+
+                // Same rule as the live dome: the stock-like profiles need vanilla's
+                // texture margin for their soft rim, the crisp and panel silhouettes
+                // sit exactly on the gameplay radius.
+                float quadMargin =
+                    VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
+                        || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
+                        ? VanillaQuadMargin
+                        : 1f;
+
+                Matrix4x4 matrix = default;
+                matrix.SetTRS(
+                    new Vector3(center.x, Altitude, center.z),
+                    Quaternion.identity,
+                    new Vector3(
+                        radius * 2f * quadMargin,
+                        1f,
+                        radius * 2f * quadMargin));
+
+                NVector4 tint = new NVector4(color.r, color.g, color.b, 1f);
+                NVector4 centerParam = new NVector4(center.x, center.z, 0f, 0f);
+
+                return DrawBreak(
+                    mat,
+                    matrix,
+                    tint,
+                    centerParam,
+                    radius,
+                    mode,
+                    progress,
+                    originX,
+                    originZ,
+                    seed,
+                    Time.realtimeSinceStartup);
+            }
+            catch (Exception ex)
+            {
+                ShieldDomeBridge.DisableRuntime(ex.ToString());
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// The one break draw, shared by a live shield and a destroyed one. Both modes
+        /// read the same uniforms: _Params3 carries an impact direction in the normal
+        /// surface modes and the break's origin / progress / seed in modes 2 and 5.
+        /// </summary>
+        private static bool DrawBreak(
+            Material material,
+            in Matrix4x4 matrix,
+            in NVector4 tint,
+            in NVector4 centerParam,
+            float radius,
+            float mode,
+            float progress,
+            float originX,
+            float originZ,
+            float seed,
+            float time)
+        {
+            properties[0] = DrawProperty.Vector(
+                ParamsId,
+                new NVector4(
+                    mode,
+                    VisualTweaksSettings.largeShieldDissolveBrightness,
+                    time,
+                    radius));
+            properties[1] = DrawProperty.Vector(
+                Params3Id,
+                new NVector4(originX, originZ, progress, seed));
+            properties[2] = DrawProperty.Vector(Params4Id, centerParam);
+            properties[3] = DrawProperty.Color(ColorId, tint);
+
+            Graphics.DrawMesh(
+                MeshPool.plane10,
+                matrix,
+                material,
+                0,
+                null,
+                0,
+                new DrawPropertyBlock(properties));
+
+            return true;
         }
 
         /// <summary>

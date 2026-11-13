@@ -26,6 +26,7 @@ namespace VisualTweaks
         private readonly HeatHazeLayer heatHaze;
         private readonly ExplosionRippleLayer explosions;
         private readonly ShieldRippleLayer shieldRipples;
+        private readonly ShieldBreakLayer shieldBreaks;
         private readonly VacuumLeakLayer vacuumLeak;
 
         // Structural events that refresh the port table early. Doors go through the
@@ -55,6 +56,7 @@ namespace VisualTweaks
             heatHaze = new HeatHazeLayer();
             explosions = new ExplosionRippleLayer();
             shieldRipples = new ShieldRippleLayer();
+            shieldBreaks = new ShieldBreakLayer();
             vacuumLeak = new VacuumLeakLayer();
 
             structureChangedHandler = vacuumLeak.MarkStructureDirty;
@@ -151,6 +153,22 @@ namespace VisualTweaks
             shieldRipples.Spawn(host, shieldRadius, hitPos, damage);
         }
 
+        /// <summary>
+        /// Called by the destruction patch before the host leaves the map. The comp's
+        /// PostDraw is about to stop existing, so the break has to be drawn from here.
+        /// The state is shared with the live dissolve path, which lets a break that was
+        /// already in flight continue without a second animation.
+        /// </summary>
+        internal void NotifyShieldDestroyed(
+            ShieldDissolveLog.State state,
+            Vector3 center,
+            float radius,
+            Color color,
+            float mode)
+        {
+            shieldBreaks.Spawn(state, center, radius, color, mode);
+        }
+
         public override void MapComponentDraw()
         {
             // Begin at the very top of the overlay stack: an early return here means no
@@ -214,6 +232,10 @@ namespace VisualTweaks
 
             EnsureLeakEventSubscriptions();
             DrawLayer(vacuumLeak, in frame);
+
+            // A destroyed shield's break is the dome surface itself, so it draws before
+            // the ripples that may still be fading on top of it.
+            DrawLayer(shieldBreaks, in frame);
 
             // Shield ripples share the shockwave render queue (3178). Submitting them
             // first lets a blast that lands in the same frame draw over them, which is
@@ -286,6 +308,7 @@ namespace VisualTweaks
             coldMist.Dispose();
             heatHaze.Dispose();
             shieldRipples.Dispose();
+            shieldBreaks.Dispose();
             explosions.Dispose();
             vacuumLeak.Dispose();
             wind?.Dispose();

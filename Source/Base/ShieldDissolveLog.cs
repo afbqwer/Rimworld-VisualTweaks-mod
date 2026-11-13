@@ -19,10 +19,15 @@ namespace VisualTweaks
     /// activation — in other words it flips to false after almost every ordinary
     /// interception. Watching it would fire a "break" animation on every bullet.
     /// The only honest signals are the four methods that actually end a shield,
-    /// patched in ShieldDomePatches.
+    /// patched in ShieldDomePatches, plus the destruction of the host building.
+    /// Destruction has no PostDraw left to draw through, so that path hands this same
+    /// state to the map overlay instead of starting a separate animation; see
+    /// <see cref="ShieldBreakLayer"/>.
     ///
-    /// Keyed by the comp through a ConditionalWeakTable, like the impact log, so a
-    /// destroyed generator takes its state with it. Not scribed: a dissolve that
+    /// Keyed by the comp through a ConditionalWeakTable, like the impact log. A
+    /// destroyed generator's state is handed to the overlay queue before the comp goes
+    /// away, so that one animation can outlive the thing; once the queue drops it, the
+    /// weak-table entry follows. Not scribed: a dissolve that
     /// survived a save/load would need its start tick re-based against a clock that
     /// may have advanced by tens of thousands of ticks, for at most 1.5 seconds of
     /// an animation nobody is watching. Empty after load is correct.
@@ -58,16 +63,18 @@ namespace VisualTweaks
             States = new ConditionalWeakTable<ThingComp, State>();
 
         /// <summary>
-        /// Starts (or restarts) a dissolve. Called from the four shutdown entry points,
-        /// and only when the custom dome is actually installed.
+        /// Starts (or restarts) a dissolve. Called from the four shutdown entry points
+        /// and from host destruction, and only when the custom dome is actually
+        /// installed. Returns the new state so the destruction path can hand it to the
+        /// overlay draw queue; the ordinary shutdown paths ignore the result.
         /// </summary>
-        internal static void Begin(ThingComp comp)
+        internal static State? Begin(ThingComp comp)
         {
             TickManager? tickManager = Find.TickManager;
             ThingWithComps? parent = comp.parent;
             if (tickManager == null || parent == null)
             {
-                return;
+                return null;
             }
 
             int now = tickManager.TicksGame;
@@ -116,6 +123,7 @@ namespace VisualTweaks
             int hash = Gen.HashCombineInt(parent.thingIDNumber, now);
             state.Seed = (hash & 0xFFFF) / 65535f * 4f;
             state.SawInactive = false;
+            return state;
         }
 
         /// <summary>
