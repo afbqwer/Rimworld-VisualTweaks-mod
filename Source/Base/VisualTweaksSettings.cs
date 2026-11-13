@@ -9,7 +9,17 @@ namespace VisualTweaks
         Crisp = 0,
         Hex = 1,
         Vanilla = 2,
-        Bubble = 3
+        Bubble = 3,
+
+        /// <summary>
+        /// The ShieldBubble surface with a transparent spherical hex lattice over
+        /// it. The lattice is revealed by a feathered horizontal scan band instead
+        /// of pulsing, and goes fully opaque for the whole hit / break animation.
+        /// Deliberately 4 (past Bubble) rather than squeezed between existing
+        /// values: saved settings store the enum by value, so inserting in the
+        /// middle would silently change every existing player's chosen style.
+        /// </summary>
+        HexBubble = 4
     }
 
     /// <summary>How a shield answers an intercepted hit.</summary>
@@ -293,7 +303,11 @@ namespace VisualTweaks
                     : largeHexShieldBreakStyle;
             }
 
+            // HexBubble breaks with the continuous tear, not the panel-loss
+            // dissolve: its net is a layer on a bubble surface, so losing whole
+            // panels would tear the wrong thing.
             bool stockLike = style == ShieldDomeStyle.Vanilla
+                || style == ShieldDomeStyle.HexBubble
                 || (target == ShieldHexTarget.Large && style == ShieldDomeStyle.Bubble);
             if (stockLike)
             {
@@ -322,7 +336,8 @@ namespace VisualTweaks
         public static ShieldImpactStyle CurrentShieldImpactStyle =>
             shieldDomeStyle == ShieldDomeStyle.Hex ? hexShieldImpactStyle
             : (shieldDomeStyle == ShieldDomeStyle.Vanilla
-                || shieldDomeStyle == ShieldDomeStyle.Bubble)
+                || shieldDomeStyle == ShieldDomeStyle.Bubble
+                || shieldDomeStyle == ShieldDomeStyle.HexBubble)
                 ? vanillaShieldImpactStyle
                 : crispShieldImpactStyle;
 
@@ -418,6 +433,41 @@ namespace VisualTweaks
         // bought nothing but another thing to keep in sync.
         public static float personalShieldHexDensity = 4f;
         public static int personalShieldHexDensityApplied = 4;
+
+        // ---- Hex bubble: the scan band --------------------------------------
+        //
+        // The lattice is never lit per cell. One continuous mask — a function of
+        // p.y and time only — modulates the whole net layer, so there is no
+        // per-panel state to keep and no extra draw call. Band width (0.06) and
+        // the leading-edge highlight (0) are fixed after the preview was tuned;
+        // everything worth tuning is exposed here. Shared by both shield
+        // families: a scan is a look, not a per-shield state.
+        public const float MinHexBubbleScanPeriod = 0.6f;
+        public const float MaxHexBubbleScanPeriod = 6f;
+        public static float hexBubbleScanPeriod = 2.4f;
+
+        /// <summary>True = top to bottom, false = bottom to top.</summary>
+        public static bool hexBubbleScanDown = true;
+
+        public const float MinHexBubbleFeather = 0.02f;
+        public const float MaxHexBubbleFeather = 0.5f;
+        public static float hexBubbleFeather = 0.20f;
+
+        public const int MinHexBubbleStripes = 1;
+        public const int MaxHexBubbleStripes = 3;
+        public static int hexBubbleStripes = 1;
+
+        public const float MinHexBubbleBaseline = 0f;
+        public const float MaxHexBubbleBaseline = 0.6f;
+        public static float hexBubbleBaseline = 0.12f;
+
+        /// <summary>
+        /// Off by default. On keeps vanilla's GetCurrentAlpha() sin pulse; off
+        /// uses one fixed, lower alpha (ShieldHexBubble.SteadyAlpha), so a
+        /// non-pulsing bubble does not read brighter than the pulsing one's
+        /// average. See CompProjectileInterceptor.GetCurrentAlpha_Selected.
+        /// </summary>
+        public static bool hexBubblePulse = false;
 
         // Overall drawing opacity for belts. An interceptor dome's alpha comes from
         // GetCurrentAlpha(), which for a selected shield pulses between 0.2 and 0.62
@@ -928,6 +978,15 @@ namespace VisualTweaks
                 "personalShieldHexDensityApplied",
                 4);
             Scribe_Values.Look(
+                ref hexBubbleScanPeriod,
+                "hexBubbleScanPeriod",
+                2.4f);
+            Scribe_Values.Look(ref hexBubbleScanDown, "hexBubbleScanDown", true);
+            Scribe_Values.Look(ref hexBubbleFeather, "hexBubbleFeather", 0.20f);
+            Scribe_Values.Look(ref hexBubbleStripes, "hexBubbleStripes", 1);
+            Scribe_Values.Look(ref hexBubbleBaseline, "hexBubbleBaseline", 0.12f);
+            Scribe_Values.Look(ref hexBubblePulse, "hexBubblePulse", false);
+            Scribe_Values.Look(
                 ref personalShieldOpacity,
                 "personalShieldOpacity",
                 0.2f);
@@ -1150,6 +1209,22 @@ namespace VisualTweaks
                 personalShieldHexDensityApplied,
                 (int)MinShieldHexDensity,
                 (int)MaxShieldHexDensity);
+            hexBubbleScanPeriod = Mathf.Clamp(
+                hexBubbleScanPeriod,
+                MinHexBubbleScanPeriod,
+                MaxHexBubbleScanPeriod);
+            hexBubbleFeather = Mathf.Clamp(
+                hexBubbleFeather,
+                MinHexBubbleFeather,
+                MaxHexBubbleFeather);
+            hexBubbleStripes = Mathf.Clamp(
+                hexBubbleStripes,
+                MinHexBubbleStripes,
+                MaxHexBubbleStripes);
+            hexBubbleBaseline = Mathf.Clamp(
+                hexBubbleBaseline,
+                MinHexBubbleBaseline,
+                MaxHexBubbleBaseline);
             personalShieldOpacity = Mathf.Clamp(
                 personalShieldOpacity,
                 MinPersonalShieldOpacity,

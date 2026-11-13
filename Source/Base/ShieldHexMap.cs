@@ -247,7 +247,8 @@ namespace VisualTweaks
 
         /// <summary>
         /// True when this family would actually sample a texture: either its chosen
-        /// surface is the hex shell, or a belt's chosen hit effect is the lattice
+        /// surface is the hex shell or the hex bubble (whose transparent net uses
+        /// the same lattice), or a belt's chosen hit effect is the lattice
         /// wave, and the custom drawing that samples it is on, and the shader
         /// compiled. Baking otherwise costs MiB and a fraction of a second for an
         /// image nothing reads. The two families are independent — a belt can use the
@@ -255,6 +256,8 @@ namespace VisualTweaks
         /// </summary>
         private static bool CanBeDrawn(ShieldHexTarget target) =>
             (VisualTweaksSettings.ShieldDomeStyleFor(target) == ShieldDomeStyle.Hex
+                || VisualTweaksSettings.ShieldDomeStyleFor(target)
+                    == ShieldDomeStyle.HexBubble
                 || (target == ShieldHexTarget.Personal
                     && VisualTweaksSettings.personalShieldHitStyle
                         == PersonalShieldHitStyle.HexWave))

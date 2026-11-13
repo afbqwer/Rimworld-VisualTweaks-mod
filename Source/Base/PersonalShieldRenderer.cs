@@ -357,7 +357,9 @@ namespace VisualTweaks
             // past the rim, so it gets vanilla's own ForceField margin for that tail.
             float quadMargin =
                 VisualTweaksSettings.personalShieldDomeStyle
-                    == ShieldDomeStyle.Vanilla
+                        == ShieldDomeStyle.Vanilla
+                    || VisualTweaksSettings.personalShieldDomeStyle
+                        == ShieldDomeStyle.HexBubble
                     ? ShieldDomeRenderer.VanillaQuadMargin
                     : 1f;
 
@@ -377,7 +379,32 @@ namespace VisualTweaks
                 baseColor.g,
                 baseColor.b,
                 1f);
-            NVector4 centerParam = new NVector4(center.x, center.z, 0f, 0f);
+            bool hexBubble = ShieldHexBubble.Active(ShieldHexTarget.Personal);
+
+            // The belt's hit clock is its own jitter duration (vanilla's 8 ticks),
+            // shared with the brighten / hex-spread quads. The net hold rides in
+            // _Params4.z so no extra uniform or draw call is needed.
+            float hitHold = 0f;
+            if (hexBubble
+                && PersonalShieldHitLog.TryGet(comp, out int hitTick, out _))
+            {
+                TickManager? tickManager = Find.TickManager;
+                if (tickManager != null)
+                {
+                    int hitDuration = Mathf.Max(
+                        1,
+                        Mathf.RoundToInt(
+                            VisualTweaksSettings.personalShieldJitterTicks));
+                    int hitAge = tickManager.TicksGame - hitTick;
+                    if (hitAge >= 0 && hitAge < hitDuration)
+                    {
+                        hitHold = ShieldHexBubble.HitHold(
+                            (float)hitAge / hitDuration);
+                    }
+                }
+            }
+
+            NVector4 centerParam = new NVector4(center.x, center.z, hitHold, 0f);
             float time = Time.realtimeSinceStartup;
 
             if (breaking && dissolve != null)
@@ -398,7 +425,15 @@ namespace VisualTweaks
                         dissolve.OriginZ,
                         dissolveProgress,
                         dissolve.Seed));
-                properties[2] = DrawProperty.Vector(Params4Id, centerParam);
+
+                // The break owns the frame: fade the net in, then keep it fully
+                // visible until the surface is gone. Same curve as the dome.
+                NVector4 breakCenter = new NVector4(
+                    centerParam.X,
+                    centerParam.Y,
+                    hexBubble ? ShieldHexBubble.BreakHold(dissolveProgress) : 0f,
+                    0f);
+                properties[2] = DrawProperty.Vector(Params4Id, breakCenter);
                 properties[3] = DrawProperty.Color(ColorId, tint);
 
                 Graphics.DrawMesh(
@@ -437,6 +472,17 @@ namespace VisualTweaks
                 VisualTweaksSettings.personalShieldOpacity,
                 VisualTweaksSettings.MinPersonalShieldOpacity,
                 VisualTweaksSettings.MaxPersonalShieldOpacity);
+            if (hexBubble)
+            {
+                // A belt has no vanilla pulse of its own, so "pulse on" adds a
+                // relative one; "pulse off" uses the same fixed, lower alpha as
+                // the projector dome, with no sin term at all.
+                alpha = ShieldHexBubble.Alpha(
+                    alpha,
+                    time,
+                    VisualTweaksSettings.hexBubblePulse,
+                    rawAlphaPulses: false);
+            }
 
             properties[0] = DrawProperty.Vector(
                 ParamsId,

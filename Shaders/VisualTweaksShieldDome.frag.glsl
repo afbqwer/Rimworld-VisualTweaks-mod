@@ -1,10 +1,10 @@
 #version 450
 
-// Projectile-interceptor shield, in three surface types: crisp ring, hexagonal
-// panel shell, and stock-like. Stock-like has two profiles, because vanilla's
-// projector dome and personal belt use different textures; a dome can choose
-// either (the belt's bubble is offered as a fourth style). See the two stock-like
-// surfaces section below.
+// Projectile-interceptor shield, in five surface types: crisp ring, hexagonal
+// panel shell, stock-like (two profiles, because vanilla's projector dome and
+// personal belt use different textures), and the hex bubble — a ShieldBubble
+// surface under a transparent spherical lattice revealed by a scan band. See
+// the two stock-like surfaces and the hex bubble surface sections below.
 //
 // This replaces CompProjectileInterceptor.PostDraw, which paints Other/ForceField
 // through ShaderDatabase.MoteGlow: a soft radial gradient texture, so the rim is a
@@ -150,9 +150,11 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
                    //                                          // stock hit: dir x/z, cos(half angle), unused
                    //                                          // dissolve: break origin x/z, progress, seed
                    //                                          // hex hit: dir x/z, progress, reach share
-    vec4 _Params4; // @default = vec4(0.0, 0.0, 0.0, 0.0)      // centre x/z in world cells, unused
+    vec4 _Params4; // @default = vec4(0.0, 0.0, 0.0, 0.0)      // centre x/z in world cells, HexBubble net hold, unused
     vec4 _Params5; // @default = vec4(2.8, 1.2, 5.0, 0.3)      // ridge half px, core sigma px, glow exponent, drift
-    vec4 _Params6; // @default = vec4(0.0, 0.22, 0.75, 9.0)    // style (0 crisp, 1 hex, 2 stock dome, 3 stock belt), hex face, hex line, SDF gradient floor (1.8*k)
+    vec4 _Params6; // @default = vec4(0.0, 0.22, 0.75, 9.0)    // style (0 crisp, 1 hex, 2 stock dome, 3 stock belt, 4 hex bubble), hex face, hex line, SDF gradient (1/eRef)
+    vec4 _Params7; // @default = vec4(1.0, 2.4, 0.20, 0.12)    // HexBubble: scan dir (+1 down / -1 up), period (s), feather, net baseline
+    vec4 _Params8; // @default = vec4(1.0, 0.06, 0.0, 0.0)     // HexBubble: stripe count, band half width, leading edge (fixed 0), reserved
     vec4 _Color;   // @color @default = vec4(1.0, 1.0, 1.0, 1.0)
 } u;
 
@@ -405,12 +407,105 @@ vec4 VanillaDomeColor(float r)
     return vec4(u._Color.rgb, rim + haze);
 }
 
+// ---- the hex bubble surface ----------------------------------------------
+//
+// A ShieldBubble profile plus a transparent spherical hex net. The net is not
+// lit cell by cell: ONE continuous mask, a function of p.y and time, scales the
+// whole layer. Nothing here knows how many cells there are, so the cost is one
+// texture sample and a few smoothsteps regardless of lattice density. That is
+// the whole reason this style is cheap next to the per-panel hit / break modes.
+//
+// The band is deliberately narrow (0.06 half width) with a much wider feather
+// (0.20 by default): a fine bright line dragging a long gradient, not a solid
+// stripe. Extra stripes repeat the band at equal spacing along the sweep and
+// take the max, so adding a stripe never changes the shape of one band.
+float HexBubbleScanMask(float py, float t)
+{
+    float halfW = u._Params8.y;
+    float feather = max(u._Params7.z, 0.005);
+    float dir = u._Params7.x >= 0.0 ? 1.0 : -1.0;
+    float stripes = clamp(floor(u._Params8.x + 0.5), 1.0, 3.0);
+    float period = max(u._Params7.y, 0.05);
+
+    float lo = -1.0 - halfW - feather;
+    float span = 2.0 + 2.0 * (halfW + feather);
+
+    // mod() rather than fract(t / period): realtimeSinceStartup grows without
+    // bound, and dividing first throws away most of the float32 mantissa after
+    // a long session, which would freeze the scan. Taking the remainder first
+    // keeps the phase inside 0..period at any uptime.
+    float phase = mod(t, period) / period;
+    float head = lo + (dir > 0.0 ? phase : 1.0 - phase) * span;
+
+    float best = 0.0;
+    for (int i = 0; i < 3; i++)
+    {
+        if (float(i) < stripes)
+        {
+            float c = lo + mod(head - dir * float(i) * span / stripes - lo, span);
+            best = max(best,
+                1.0 - smoothstep(halfW, halfW + feather, abs(py - c)));
+        }
+    }
+
+    // Leading-edge strength was tuned to zero in the preview. Keeping a gaussian
+    // per stripe would cost work for a term that is always off.
+    return best;
+}
+
+// (tint.rgb, unmultiplied alpha), the same contract as DomeColor. The net only
+// exists on the intact surface (mode 0) and the two break surfaces (2, 5).
+// Hit reactions are separate additive quads; letting them draw the net again
+// would double its brightness inside the lit sector.
+vec4 HexBubbleDomeColor(float r, vec2 p, float aa, float t)
+{
+    vec4 bubble = StockBubbleDomeColor(r);
+    float mode = u._Params.x;
+    bool netVisible = mode < 0.5
+        || (mode > 1.5 && mode < 2.5)
+        || (mode > 4.5 && mode < 5.5);
+    if (!netVisible || r >= 1.0)
+    {
+        return bubble;
+    }
+
+    // A fixed light (t = 0) so the sampled lattice cannot introduce any motion:
+    // the only animation on this surface is the scan band. Only .y — the SDF
+    // line — is used; .x is the per-panel shade a transparent net has no use for.
+    float net = u._Params6.z * HexSurface(p, aa, 0.0).y;
+
+    float mask = u._Params7.w
+        + (1.0 - u._Params7.w) * HexBubbleScanMask(p.y, t);
+
+    // _Params4.z is the per-draw hold, computed on the CPU from hit / break
+    // progress. 1 forces the whole net opaque for that animation, with a short
+    // fade at each end so the switch is never a hard cut.
+    mask = mix(mask, 1.0, clamp(u._Params4.z, 0.0, 1.0));
+
+    // Clip the net at r == 1. The bubble's soft edge runs out to 1.16R, and a
+    // lattice painted into that margin reads as a shield larger than it is.
+    float netA = net * mask * (1.0 - smoothstep(1.0 - 2.0 * aa, 1.0, r));
+
+    float sum = bubble.a + netA;
+    vec3 halo = u._Color.rgb;
+    vec3 lineTint = mix(halo, vec3(1.0), 0.85);
+    vec3 tint = (halo * bubble.a + lineTint * netA) / max(sum, 1e-4);
+    return vec4(tint, sum);
+}
+
 // The intact dome, as (tint.rgb, unmultiplied alpha). Shared by mode 0 and mode 2
 // so a dissolving shield is literally the same surface with pieces removed, not a
 // second effect that happens to look similar. The style switch lives here for the
 // same reason: breaking a panel shell tears the same panels it was showing.
 vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
 {
+    // Style 4 has to be answered before the generic stock-like test: 4 > 1.5
+    // would otherwise fall into VanillaDomeColor and lose the net entirely.
+    if (u._Params6.x > 3.5)
+    {
+        return HexBubbleDomeColor(r, p, aa, t);
+    }
+
     // The stock-like surface shares none of the ridge/core/glow machinery below
     // and must not compute a derivative-based width, so it answers first.
     if (u._Params6.x > 1.5)
@@ -477,6 +572,15 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
 // the stock-like styles lose only the long outer tail.
 float BreakEdge(float r, float edge)
 {
+    // The hex bubble is tighter than the other stock-like surfaces. Its idle
+    // haze reaches 1.16R, and at 1.05R the white-hot tear front still reads as
+    // an arc floating a little outside the bubble's bright rim. 1.0R keeps the
+    // break visibly inside the intact silhouette.
+    if (u._Params6.x > 3.5)
+    {
+        return 1.0 - smoothstep(0.985, 1.015, r);
+    }
+
     if (u._Params6.x > 1.5)
     {
         return 1.0 - smoothstep(1.0, 1.05, r);

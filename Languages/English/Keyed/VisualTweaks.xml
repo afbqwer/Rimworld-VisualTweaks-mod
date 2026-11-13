@@ -142,6 +142,23 @@
   <VisualTweaks_ShieldDome_StyleVanillaTip>Imitates the stock textures: a narrow rim for domes, a soft bubble for belts.</VisualTweaks_ShieldDome_StyleVanillaTip>
   <VisualTweaks_ShieldDome_StyleBubble>Shield bubble</VisualTweaks_ShieldDome_StyleBubble>
   <VisualTweaks_ShieldDome_StyleBubbleTip>Uses the personal shield's soft bubble on a large shield.</VisualTweaks_ShieldDome_StyleBubbleTip>
+  <VisualTweaks_ShieldDome_StyleHexBubble>Hex bubble</VisualTweaks_ShieldDome_StyleHexBubble>
+  <VisualTweaks_ShieldDome_StyleHexBubbleTip>A shield bubble under a transparent hex net. It does not pulse: a feathered scan band reveals the net, and the whole net stays opaque for the hit and break animations.</VisualTweaks_ShieldDome_StyleHexBubbleTip>
+  <VisualTweaks_ShieldDome_HexBubbleGroup>Hex bubble - scan</VisualTweaks_ShieldDome_HexBubbleGroup>
+  <VisualTweaks_ShieldDome_HexBubbleScanPeriod>Scan period</VisualTweaks_ShieldDome_HexBubbleScanPeriod>
+  <VisualTweaks_ShieldDome_HexBubbleScanPeriodTip>Seconds for one scan stripe to cross the shield. Shared by large shields and belts.</VisualTweaks_ShieldDome_HexBubbleScanPeriodTip>
+  <VisualTweaks_ShieldDome_HexBubbleScanDirection>Scan direction</VisualTweaks_ShieldDome_HexBubbleScanDirection>
+  <VisualTweaks_ShieldDome_HexBubbleDirDown>Top to bottom</VisualTweaks_ShieldDome_HexBubbleDirDown>
+  <VisualTweaks_ShieldDome_HexBubbleDirUp>Bottom to top</VisualTweaks_ShieldDome_HexBubbleDirUp>
+  <VisualTweaks_ShieldDome_HexBubbleFeather>Feather width</VisualTweaks_ShieldDome_HexBubbleFeather>
+  <VisualTweaks_ShieldDome_HexBubbleFeatherTip>Soft transition on both edges of the scan band. Band width is fixed at 0.06 and the leading-edge highlight at 0.</VisualTweaks_ShieldDome_HexBubbleFeatherTip>
+  <VisualTweaks_ShieldDome_HexBubbleStripes>Stripe count</VisualTweaks_ShieldDome_HexBubbleStripes>
+  <VisualTweaks_ShieldDome_HexBubbleStripesTip>Number of horizontal stripes sweeping at once, evenly spaced along the scan path.</VisualTweaks_ShieldDome_HexBubbleStripesTip>
+  <VisualTweaks_ShieldDome_HexBubbleBaseline>Net floor</VisualTweaks_ShieldDome_HexBubbleBaseline>
+  <VisualTweaks_ShieldDome_HexBubbleBaselineTip>Residual net visibility outside the scan band. 0 = the net is only visible where the band has passed.</VisualTweaks_ShieldDome_HexBubbleBaselineTip>
+  <VisualTweaks_ShieldDome_HexBubblePulse>Enable vanilla pulse</VisualTweaks_ShieldDome_HexBubblePulse>
+  <VisualTweaks_ShieldDome_HexBubblePulseTip>On keeps vanilla's periodic brightness pulse. Off uses one fixed, lower opacity whose average brightness matches the pulsing original, so the shield stops flickering. Shared by both shield families.</VisualTweaks_ShieldDome_HexBubblePulseTip>
+  <VisualTweaks_ShieldDome_HexBubbleNote>Hex bubble reuses the line brightness, lattice density and bake controls below. Panel brightness has no effect on it (the net is transparent). The whole net stays opaque through hit and break, for exactly those animations' duration.</VisualTweaks_ShieldDome_HexBubbleNote>
   <VisualTweaks_ShieldDome_VanillaNote>Vanilla-style and bubble styles use fixed proportions, with no outline sliders.</VisualTweaks_ShieldDome_VanillaNote>
   <VisualTweaks_ShieldDome_HexFace>Panel brightness</VisualTweaks_ShieldDome_HexFace>
   <VisualTweaks_ShieldDome_HexFaceTip>Fill brightness of each panel; too high drowns the cell lines.</VisualTweaks_ShieldDome_HexFaceTip>

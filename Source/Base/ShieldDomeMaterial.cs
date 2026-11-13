@@ -58,6 +58,8 @@ namespace VisualTweaks
         private static readonly int Params2Id = Shader.PropertyToID("_Params2");
         private static readonly int Params5Id = Shader.PropertyToID("_Params5");
         private static readonly int Params6Id = Shader.PropertyToID("_Params6");
+        private static readonly int Params7Id = Shader.PropertyToID("_Params7");
+        private static readonly int Params8Id = Shader.PropertyToID("_Params8");
 
         private readonly ShieldHexTarget target;
 
@@ -72,6 +74,8 @@ namespace VisualTweaks
         private float appliedHexFace = float.NaN;
         private float appliedHexLine = float.NaN;
         private int appliedHexDensity = -1;
+        private Vector4 appliedScan7 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
+        private Vector4 appliedScan8 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
 
         internal ShieldDomeMaterial(ShieldHexTarget target)
         {
@@ -187,8 +191,11 @@ namespace VisualTweaks
             // shader's gradient constant has to describe the texture that actually
             // exists, not the one being previewed in a UI.
             int density = ShieldHexMap.AppliedSubdivisions(target);
+            ShieldDomeStyle chosen = VisualTweaksSettings.ShieldDomeStyleFor(target);
+            bool hexBubble = chosen == ShieldDomeStyle.HexBubble;
             bool wantHex =
-                VisualTweaksSettings.ShieldDomeStyleFor(target) == ShieldDomeStyle.Hex
+                chosen == ShieldDomeStyle.Hex
+                || hexBubble
                 || (target == ShieldHexTarget.Personal
                     && VisualTweaksSettings.personalShieldHitStyle
                         == PersonalShieldHitStyle.HexWave);
@@ -204,8 +211,10 @@ namespace VisualTweaks
             //
             // Stock-like is 2 for the ForceField profile and 3 for the ShieldBubble
             // profile. A belt's regular Vanilla choice is the bubble; a dome can pick
-            // either profile. Hex still falls back to crisp when its atlas failed.
-            ShieldDomeStyle chosen = VisualTweaksSettings.ShieldDomeStyleFor(target);
+            // either profile. HexBubble is 4. Hex falls back to crisp when its atlas
+            // failed, and HexBubble falls back to the plain bubble for the same
+            // reason: with a black atlas every texel reads as a cell wall and the
+            // whole disc would light up as one solid net.
             float style;
             if (chosen == ShieldDomeStyle.Vanilla)
             {
@@ -215,17 +224,45 @@ namespace VisualTweaks
             {
                 style = 3f;
             }
+            else if (hexBubble)
+            {
+                style = ShieldHexMap.Available(target) ? 4f : 3f;
+            }
             else
             {
                 style = HexActive ? 1f : 0f;
             }
 
+            // The hex face/line values are shared with the panel-shell style, but
+            // a transparent net has no panels: it needs no face term and a
+            // stronger line for the same drawn weight. The gain lives here, not
+            // in the settings, so both styles keep one saved slider.
+            float faceValue = hexBubble ? 0f : face;
+            float lineValue = hexBubble
+                ? Mathf.Min(
+                    line * ShieldHexBubble.LineGain,
+                    VisualTweaksSettings.MaxShieldHexLine)
+                : line;
+
+            Vector4 scan7 = new Vector4(
+                VisualTweaksSettings.hexBubbleScanDown ? 1f : -1f,
+                VisualTweaksSettings.hexBubbleScanPeriod,
+                VisualTweaksSettings.hexBubbleFeather,
+                VisualTweaksSettings.hexBubbleBaseline);
+            Vector4 scan8 = new Vector4(
+                VisualTweaksSettings.hexBubbleStripes,
+                ShieldHexBubble.BandHalfWidth,
+                ShieldHexBubble.LeadStrength,
+                0f);
+
             if (width == appliedRidgeWidth
                 && brightness == appliedRidgeBrightness
                 && style == appliedDomeStyle
-                && face == appliedHexFace
-                && line == appliedHexLine
-                && density == appliedHexDensity)
+                && faceValue == appliedHexFace
+                && lineValue == appliedHexLine
+                && density == appliedHexDensity
+                && scan7 == appliedScan7
+                && scan8 == appliedScan8)
             {
                 return;
             }
@@ -233,9 +270,11 @@ namespace VisualTweaks
             appliedRidgeWidth = width;
             appliedRidgeBrightness = brightness;
             appliedDomeStyle = style;
-            appliedHexFace = face;
-            appliedHexLine = line;
+            appliedHexFace = faceValue;
+            appliedHexLine = lineValue;
             appliedHexDensity = density;
+            appliedScan7 = scan7;
+            appliedScan8 = scan8;
 
             // _Params2 = (ridge, core, glow, body) weights.
             mat.SetVector(
@@ -255,9 +294,16 @@ namespace VisualTweaks
                 Params6Id,
                 new Vector4(
                     style,
-                    face,
-                    line,
+                    faceValue,
+                    lineValue,
                     density / ShieldHexMap.ERefPerSubdivision));
+
+            // Material-level scan settings. The phase itself is derived in the
+            // shader from _Params.z (seconds), so switching a shield to this
+            // style costs no per-frame CPU work. _Params4.z, the per-draw hold,
+            // is the only value that changes every frame.
+            mat.SetVector(Params7Id, scan7);
+            mat.SetVector(Params8Id, scan8);
         }
 
         private void Invalidate()
@@ -268,6 +314,8 @@ namespace VisualTweaks
             appliedHexFace = float.NaN;
             appliedHexLine = float.NaN;
             appliedHexDensity = -1;
+            appliedScan7 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
+            appliedScan8 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
         }
     }
 }

@@ -142,6 +142,23 @@
   <VisualTweaks_ShieldDome_StyleVanillaTip>模仿原版材质：穹顶窄边宽晕，腰带柔和气泡。</VisualTweaks_ShieldDome_StyleVanillaTip>
   <VisualTweaks_ShieldDome_StyleBubble>护盾泡泡</VisualTweaks_ShieldDome_StyleBubble>
   <VisualTweaks_ShieldDome_StyleBubbleTip>将个人护盾的柔和气泡套用到大型护盾。</VisualTweaks_ShieldDome_StyleBubbleTip>
+  <VisualTweaks_ShieldDome_StyleHexBubble>六边泡泡</VisualTweaks_ShieldDome_StyleHexBubble>
+  <VisualTweaks_ShieldDome_StyleHexBubbleTip>护盾泡泡 + 透明六边形网。常态不闪动，由一条带柔和过渡的扫描条纹让网显现；受击与破裂期间整张网保持不透明。</VisualTweaks_ShieldDome_StyleHexBubbleTip>
+  <VisualTweaks_ShieldDome_HexBubbleGroup>六边形泡泡 · 扫描</VisualTweaks_ShieldDome_HexBubbleGroup>
+  <VisualTweaks_ShieldDome_HexBubbleScanPeriod>扫描周期</VisualTweaks_ShieldDome_HexBubbleScanPeriod>
+  <VisualTweaks_ShieldDome_HexBubbleScanPeriodTip>扫描条纹扫过一遍所需的时间（秒）。大型护盾与个人护盾共用。</VisualTweaks_ShieldDome_HexBubbleScanPeriodTip>
+  <VisualTweaks_ShieldDome_HexBubbleScanDirection>扫描方向</VisualTweaks_ShieldDome_HexBubbleScanDirection>
+  <VisualTweaks_ShieldDome_HexBubbleDirDown>上 → 下</VisualTweaks_ShieldDome_HexBubbleDirDown>
+  <VisualTweaks_ShieldDome_HexBubbleDirUp>下 → 上</VisualTweaks_ShieldDome_HexBubbleDirUp>
+  <VisualTweaks_ShieldDome_HexBubbleFeather>过渡宽度</VisualTweaks_ShieldDome_HexBubbleFeather>
+  <VisualTweaks_ShieldDome_HexBubbleFeatherTip>扫描带两侧的柔化宽度。带宽固定 0.06、扫描亮边固定 0，只有过渡可调。</VisualTweaks_ShieldDome_HexBubbleFeatherTip>
+  <VisualTweaks_ShieldDome_HexBubbleStripes>条纹数</VisualTweaks_ShieldDome_HexBubbleStripes>
+  <VisualTweaks_ShieldDome_HexBubbleStripesTip>同时扫过的水平条纹数量，沿扫描路径等间距分布。</VisualTweaks_ShieldDome_HexBubbleStripesTip>
+  <VisualTweaks_ShieldDome_HexBubbleBaseline>网底</VisualTweaks_ShieldDome_HexBubbleBaseline>
+  <VisualTweaks_ShieldDome_HexBubbleBaselineTip>扫描带之外六边形网的残留可见度。0 = 只有被扫过的地方才看得到网。</VisualTweaks_ShieldDome_HexBubbleBaselineTip>
+  <VisualTweaks_ShieldDome_HexBubblePulse>开启原版脉动</VisualTweaks_ShieldDome_HexBubblePulse>
+  <VisualTweaks_ShieldDome_HexBubblePulseTip>开启则沿用原版护盾亮度的周期性脉动；关闭则改为固定且更低的不透明度，整体亮度接近原版脉动的平均值，护盾不再闪动。两种护盾共用。</VisualTweaks_ShieldDome_HexBubblePulseTip>
+  <VisualTweaks_ShieldDome_HexBubbleNote>六边形泡泡复用下方的格线亮度、格子密度与烘焙按钮；格面亮度对它无效（网是透明的）。受击与破裂时整张网保持不透明，时长跟随对应的动画。</VisualTweaks_ShieldDome_HexBubbleNote>
   <VisualTweaks_ShieldDome_VanillaNote>类原版与护盾泡泡使用固定比例，没有轮廓滑条。</VisualTweaks_ShieldDome_VanillaNote>
   <VisualTweaks_ShieldDome_HexFace>格面亮度</VisualTweaks_ShieldDome_HexFace>
   <VisualTweaks_ShieldDome_HexFaceTip>每格面板的填充亮度；调太高会盖住格线。</VisualTweaks_ShieldDome_HexFaceTip>

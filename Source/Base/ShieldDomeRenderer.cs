@@ -95,6 +95,20 @@ namespace VisualTweaks
         /// </summary>
         internal const float VanillaQuadMargin = 1.1601562f;
 
+        /// <summary>
+        /// Vanilla's texture margin belongs to every surface whose soft rim runs
+        /// past r == 1: the two stock-like profiles and the hex bubble, which is
+        /// a bubble surface with a net clipped inside it. Crisp and panel sit
+        /// exactly on the gameplay radius. Shared by the live dome and the
+        /// detached break so the two cannot drift apart on a future style.
+        /// </summary>
+        private static float QuadMargin =>
+            VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
+                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
+                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.HexBubble
+                ? VanillaQuadMargin
+                : 1f;
+
         // Vanilla's ForceFieldCone is a fixed-width sector: only its alpha fades,
         // its angular extent does not follow damage. The brighten reaction keeps
         // that fixed width (the stock value is 30 degrees, adjustable in settings).
@@ -351,11 +365,7 @@ namespace VisualTweaks
             // same circle. The stock-like style is the exception — its soft rim is
             // supposed to fade through r == 1 the way vanilla's does, so it gets the
             // same 1.1601562 margin vanilla uses for Other/ForceField.
-            float quadMargin =
-                VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
-                    ? VanillaQuadMargin
-                    : 1f;
+            float quadMargin = QuadMargin;
             Matrix4x4 matrix = default;
             matrix.SetTRS(
                 new Vector3(center.x, Altitude, center.z),
@@ -393,9 +403,28 @@ namespace VisualTweaks
                 ? InactiveColor
                 : baseColor;
 
+            bool hexBubble = ShieldHexBubble.Active(ShieldHexTarget.Large);
+
+            // The net's hold is per shield and per frame, so it rides in
+            // _Params4.z alongside the centre, which had two spare components.
+            // Break draws overwrite it with their own hold inside DrawBreak.
+            float hitHold = hexBubble ? CurrentHitHold(comp) : 0f;
+
             NVector4 tint = new NVector4(color.r, color.g, color.b, 1f);
-            NVector4 centerParam = new NVector4(center.x, center.z, 0f, 0f);
+            NVector4 centerParam = new NVector4(center.x, center.z, hitHold, 0f);
             float time = Time.realtimeSinceStartup;
+
+            // Pulse off replaces vanilla's GetCurrentAlpha() entirely: one fixed,
+            // lower value, with no sin term left anywhere in the surface. Pulse on
+            // keeps vanilla's own pulsing alpha as-is.
+            float drawnAlpha = hexBubble
+                ? ShieldHexBubble.Alpha(
+                    alpha,
+                    time,
+                    VisualTweaksSettings.hexBubblePulse,
+                    rawAlphaPulses: true)
+                : alpha;
+
             bool drew = false;
             bool restoring = dissolve == null && restoreProgress >= 0f;
 
@@ -468,7 +497,7 @@ namespace VisualTweaks
                         ParamsId,
                         new NVector4(
                             0f,
-                            alpha * restoreAlpha,
+                            drawnAlpha * restoreAlpha,
                             time,
                             drawnRadius));
                     properties[1] = DrawProperty.Vector(Params4Id, centerParam);
@@ -494,6 +523,44 @@ namespace VisualTweaks
             }
 
             return drew;
+        }
+
+        /// <summary>
+        /// The HexBubble net hold for this dome's live hits. Several impacts can
+        /// overlap; the strongest wins, so a second shot during an existing
+        /// reaction keeps the net opaque instead of dropping it mid-animation.
+        /// Progress is measured on the same tick clock as the flare / brighten
+        /// quads, so the hold always ends with the hit animation it belongs to.
+        /// </summary>
+        private static float CurrentHitHold(ThingComp comp)
+        {
+            var impacts = ShieldImpactLog.Peek(comp);
+            if (impacts == null)
+            {
+                return 0f;
+            }
+
+            TickManager? tickManager = Find.TickManager;
+            if (tickManager == null)
+            {
+                return 0f;
+            }
+
+            int now = tickManager.TicksGame;
+            int lifetime = ShieldImpactLog.LifetimeTicks;
+            float hold = 0f;
+            for (int i = 0; i < impacts.Count; i++)
+            {
+                int age = now - impacts[i].Tick;
+                if (age < 0 || age >= lifetime)
+                {
+                    continue;
+                }
+
+                hold = Mathf.Max(hold, ShieldHexBubble.HitHold((float)age / lifetime));
+            }
+
+            return hold;
         }
 
         /// <summary>
@@ -533,11 +600,7 @@ namespace VisualTweaks
                 // Same rule as the live dome: the stock-like profiles need vanilla's
                 // texture margin for their soft rim, the crisp and panel silhouettes
                 // sit exactly on the gameplay radius.
-                float quadMargin =
-                    VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                        || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
-                        ? VanillaQuadMargin
-                        : 1f;
+                float quadMargin = QuadMargin;
 
                 Matrix4x4 matrix = default;
                 matrix.SetTRS(
@@ -599,7 +662,19 @@ namespace VisualTweaks
             properties[1] = DrawProperty.Vector(
                 Params3Id,
                 new NVector4(originX, originZ, progress, seed));
-            properties[2] = DrawProperty.Vector(Params4Id, centerParam);
+
+            // A break owns the frame: the net fades in over the first quarter of
+            // the tear and then stays fully visible until the surface is gone.
+            // Overwriting the centre's spare z keeps every break path — the live
+            // dome and the detached break — on exactly the same clock.
+            NVector4 breakCenter = new NVector4(
+                centerParam.X,
+                centerParam.Y,
+                ShieldHexBubble.Active(ShieldHexTarget.Large)
+                    ? ShieldHexBubble.BreakHold(progress)
+                    : 0f,
+                0f);
+            properties[2] = DrawProperty.Vector(Params4Id, breakCenter);
             properties[3] = DrawProperty.Color(ColorId, tint);
 
             Graphics.DrawMesh(

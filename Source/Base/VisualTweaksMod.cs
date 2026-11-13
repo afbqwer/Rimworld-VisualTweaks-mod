@@ -361,14 +361,16 @@ namespace VisualTweaks
         // Display order of the shield surface styles. Same reason as StyleOrder
         // above: the radio row is indexed by position, not by the setting value.
         //
-        // A belt's Vanilla choice already is the ShieldBubble profile, so the belt
-        // has three options. The dome adds that bubble as a fourth, next to its own
-        // ForceField stock-like style.
+        // A belt's Vanilla choice already is the ShieldBubble profile, so it has
+        // no separate Bubble row. HexBubble is offered to both families and sits
+        // next to Hex because the two share the baked lattice. The dome adds its
+        // standalone Bubble as a last, fifth option.
         private static readonly ShieldDomeStyle[] PersonalShieldStyleOrder =
         {
             ShieldDomeStyle.Vanilla,
             ShieldDomeStyle.Crisp,
-            ShieldDomeStyle.Hex
+            ShieldDomeStyle.Hex,
+            ShieldDomeStyle.HexBubble
         };
 
         private static readonly ShieldDomeStyle[] LargeShieldStyleOrder =
@@ -376,6 +378,7 @@ namespace VisualTweaks
             ShieldDomeStyle.Vanilla,
             ShieldDomeStyle.Crisp,
             ShieldDomeStyle.Hex,
+            ShieldDomeStyle.HexBubble,
             ShieldDomeStyle.Bubble
         };
 
@@ -393,13 +396,15 @@ namespace VisualTweaks
                     "VisualTweaks_ShieldDome_StyleVanilla".Translate(),
                     "VisualTweaks_ShieldDome_StyleCrisp".Translate(),
                     "VisualTweaks_ShieldDome_Hex".Translate(),
+                    "VisualTweaks_ShieldDome_StyleHexBubble".Translate(),
                     "VisualTweaks_ShieldDome_StyleBubble".Translate()
                 }
                 : new string[]
                 {
                     "VisualTweaks_ShieldDome_StyleVanilla".Translate(),
                     "VisualTweaks_ShieldDome_StyleCrisp".Translate(),
-                    "VisualTweaks_ShieldDome_Hex".Translate()
+                    "VisualTweaks_ShieldDome_Hex".Translate(),
+                    "VisualTweaks_ShieldDome_StyleHexBubble".Translate()
                 };
         }
 
@@ -411,13 +416,15 @@ namespace VisualTweaks
                     "VisualTweaks_ShieldDome_StyleVanillaTip".Translate(),
                     "VisualTweaks_ShieldDome_StyleCrispTip".Translate(),
                     "VisualTweaks_ShieldDome_HexTip".Translate(),
+                    "VisualTweaks_ShieldDome_StyleHexBubbleTip".Translate(),
                     "VisualTweaks_ShieldDome_StyleBubbleTip".Translate()
                 }
                 : new string[]
                 {
                     "VisualTweaks_ShieldDome_StyleVanillaTip".Translate(),
                     "VisualTweaks_ShieldDome_StyleCrispTip".Translate(),
-                    "VisualTweaks_ShieldDome_HexTip".Translate()
+                    "VisualTweaks_ShieldDome_HexTip".Translate(),
+                    "VisualTweaks_ShieldDome_StyleHexBubbleTip".Translate()
                 };
         }
 
@@ -940,6 +947,11 @@ namespace VisualTweaks
                 DrawHexPanelSliders(listing, false);
                 DrawHexDensity(listing, false);
             }
+            else if (VisualTweaksSettings.shieldDomeStyle
+                == ShieldDomeStyle.HexBubble)
+            {
+                DrawHexBubbleSettings(listing, false);
+            }
             else if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
                 || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
             {
@@ -1030,18 +1042,30 @@ namespace VisualTweaks
                 DrawHexDensity(listing, true);
             }
             else if (VisualTweaksSettings.personalShieldDomeStyle
+                == ShieldDomeStyle.HexBubble)
+            {
+                DrawHexBubbleSettings(listing, true);
+            }
+            else if (VisualTweaksSettings.personalShieldDomeStyle
                 == ShieldDomeStyle.Crisp)
             {
                 DrawRidgeSliders(listing, true);
             }
 
-            VisualTweaksSettings.personalShieldOpacity = SettingsLayout.Slider(
-                listing,
-                "VisualTweaks_ShieldDome_PersonalOpacity".Translate(),
-                VisualTweaksSettings.personalShieldOpacity,
-                VisualTweaksSettings.MinPersonalShieldOpacity,
-                VisualTweaksSettings.MaxPersonalShieldOpacity,
-                "VisualTweaks_ShieldDome_PersonalOpacityTip".Translate());
+            // With the pulse off, HexBubble replaces the belt's opacity with one
+            // fixed value, so this slider would be a control that does nothing.
+            if (VisualTweaksSettings.personalShieldDomeStyle
+                    != ShieldDomeStyle.HexBubble
+                || VisualTweaksSettings.hexBubblePulse)
+            {
+                VisualTweaksSettings.personalShieldOpacity = SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_PersonalOpacity".Translate(),
+                    VisualTweaksSettings.personalShieldOpacity,
+                    VisualTweaksSettings.MinPersonalShieldOpacity,
+                    VisualTweaksSettings.MaxPersonalShieldOpacity,
+                    "VisualTweaks_ShieldDome_PersonalOpacityTip".Translate());
+            }
 
             SettingsLayout.SubHeader(
                 listing,
@@ -1198,7 +1222,82 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldDome_RidgeBrightnessTip".Translate());
         }
 
-        /// <summary>Panel and line brightness for one shield family.</summary>
+        /// <summary>
+        /// The hex bubble's own controls. It reuses the lattice settings that
+        /// actually apply to a transparent net — line brightness, density and the
+        /// bake button — but not the panel-brightness slider: there are no panels.
+        /// Both shield families edit the same scan values; a scan is a look, not
+        /// per-shield state.
+        /// </summary>
+        private static void DrawHexBubbleSettings(
+            Listing_Standard listing,
+            bool personal)
+        {
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldDome_HexBubbleGroup".Translate());
+
+            VisualTweaksSettings.hexBubbleScanPeriod = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_HexBubbleScanPeriod".Translate(),
+                VisualTweaksSettings.hexBubbleScanPeriod,
+                VisualTweaksSettings.MinHexBubbleScanPeriod,
+                VisualTweaksSettings.MaxHexBubbleScanPeriod,
+                "VisualTweaks_ShieldDome_HexBubbleScanPeriodTip".Translate(),
+                step: 0.1f);
+
+            listing.Label(
+                "VisualTweaks_ShieldDome_HexBubbleScanDirection".Translate());
+            int direction = SettingsLayout.RadioRow(
+                listing,
+                new string[]
+                {
+                    "VisualTweaks_ShieldDome_HexBubbleDirDown".Translate(),
+                    "VisualTweaks_ShieldDome_HexBubbleDirUp".Translate()
+                },
+                VisualTweaksSettings.hexBubbleScanDown ? 0 : 1);
+            VisualTweaksSettings.hexBubbleScanDown = direction == 0;
+
+            VisualTweaksSettings.hexBubbleFeather = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_HexBubbleFeather".Translate(),
+                VisualTweaksSettings.hexBubbleFeather,
+                VisualTweaksSettings.MinHexBubbleFeather,
+                VisualTweaksSettings.MaxHexBubbleFeather,
+                "VisualTweaks_ShieldDome_HexBubbleFeatherTip".Translate());
+
+            VisualTweaksSettings.hexBubbleStripes = Mathf.RoundToInt(
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexBubbleStripes".Translate(),
+                    VisualTweaksSettings.hexBubbleStripes,
+                    VisualTweaksSettings.MinHexBubbleStripes,
+                    VisualTweaksSettings.MaxHexBubbleStripes,
+                    "VisualTweaks_ShieldDome_HexBubbleStripesTip".Translate(),
+                    step: 1f));
+
+            VisualTweaksSettings.hexBubbleBaseline = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_ShieldDome_HexBubbleBaseline".Translate(),
+                VisualTweaksSettings.hexBubbleBaseline,
+                VisualTweaksSettings.MinHexBubbleBaseline,
+                VisualTweaksSettings.MaxHexBubbleBaseline,
+                "VisualTweaks_ShieldDome_HexBubbleBaselineTip".Translate());
+
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_HexBubblePulse".Translate(),
+                ref VisualTweaksSettings.hexBubblePulse,
+                "VisualTweaks_ShieldDome_HexBubblePulseTip".Translate());
+
+            SettingsLayout.Note(
+                listing,
+                "VisualTweaks_ShieldDome_HexBubbleNote".Translate());
+
+            DrawHexLineSlider(listing, personal);
+            DrawHexDensity(listing, personal);
+        }
+
+        /// <summary>Panel and line brightness for the panel-shell surface.</summary>
         private static void DrawHexPanelSliders(
             Listing_Standard listing,
             bool personal)
@@ -1213,6 +1312,32 @@ namespace VisualTweaks
                         VisualTweaksSettings.MinShieldHexFace,
                         VisualTweaksSettings.MaxShieldHexFace,
                         "VisualTweaks_ShieldDome_HexFaceTip".Translate());
+            }
+            else
+            {
+                VisualTweaksSettings.largeShieldHexFaceStrength =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_HexFace".Translate(),
+                        VisualTweaksSettings.largeShieldHexFaceStrength,
+                        VisualTweaksSettings.MinShieldHexFace,
+                        VisualTweaksSettings.MaxShieldHexFace,
+                        "VisualTweaks_ShieldDome_HexFaceTip".Translate());
+            }
+
+            DrawHexLineSlider(listing, personal);
+        }
+
+        /// <summary>
+        /// Line brightness only. One saved value and one slider for both the
+        /// panel shell and the hex bubble's transparent net.
+        /// </summary>
+        private static void DrawHexLineSlider(
+            Listing_Standard listing,
+            bool personal)
+        {
+            if (personal)
+            {
                 VisualTweaksSettings.personalShieldHexLineStrength =
                     SettingsLayout.Slider(
                         listing,
@@ -1224,14 +1349,6 @@ namespace VisualTweaks
                 return;
             }
 
-            VisualTweaksSettings.largeShieldHexFaceStrength =
-                SettingsLayout.Slider(
-                    listing,
-                    "VisualTweaks_ShieldDome_HexFace".Translate(),
-                    VisualTweaksSettings.largeShieldHexFaceStrength,
-                    VisualTweaksSettings.MinShieldHexFace,
-                    VisualTweaksSettings.MaxShieldHexFace,
-                    "VisualTweaks_ShieldDome_HexFaceTip".Translate());
             VisualTweaksSettings.largeShieldHexLineStrength =
                 SettingsLayout.Slider(
                     listing,
@@ -1327,10 +1444,14 @@ namespace VisualTweaks
             ShieldImpactStyle[] order = hexSurface
                 ? HexImpactOrder
                 : StandardImpactOrder;
+            // HexBubble shares the stock-like impact choice (sector brighten by
+            // default), so the radio must read — and write — that same field.
             ShieldImpactStyle current = hexSurface
                 ? VisualTweaksSettings.hexShieldImpactStyle
                 : (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
+                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
+                    || VisualTweaksSettings.shieldDomeStyle
+                        == ShieldDomeStyle.HexBubble)
                     ? VisualTweaksSettings.vanillaShieldImpactStyle
                     : VisualTweaksSettings.crispShieldImpactStyle;
 
@@ -1348,7 +1469,9 @@ namespace VisualTweaks
                     VisualTweaksSettings.hexShieldImpactStyle = value;
                 }
                 else if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
+                    || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
+                    || VisualTweaksSettings.shieldDomeStyle
+                        == ShieldDomeStyle.HexBubble)
                 {
                     VisualTweaksSettings.vanillaShieldImpactStyle = value;
                 }
@@ -1512,7 +1635,9 @@ namespace VisualTweaks
                     VisualTweaksSettings.personalHexShieldBreakStyle = value;
                 }
                 else if (VisualTweaksSettings.personalShieldDomeStyle
-                    == ShieldDomeStyle.Vanilla)
+                        == ShieldDomeStyle.Vanilla
+                    || VisualTweaksSettings.personalShieldDomeStyle
+                        == ShieldDomeStyle.HexBubble)
                 {
                     VisualTweaksSettings.personalVanillaShieldBreakStyle = value;
                 }
@@ -1529,7 +1654,9 @@ namespace VisualTweaks
                 VisualTweaksSettings.largeHexShieldBreakStyle = value;
             }
             else if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Vanilla
-                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble)
+                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Bubble
+                || VisualTweaksSettings.shieldDomeStyle
+                    == ShieldDomeStyle.HexBubble)
             {
                 VisualTweaksSettings.largeVanillaShieldBreakStyle = value;
             }
@@ -1836,7 +1963,10 @@ namespace VisualTweaks
         private static void BakeHexIfNewlyDrawn()
         {
             if (VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.Hex
+                || VisualTweaksSettings.shieldDomeStyle == ShieldDomeStyle.HexBubble
                 || VisualTweaksSettings.personalShieldDomeStyle == ShieldDomeStyle.Hex
+                || VisualTweaksSettings.personalShieldDomeStyle
+                    == ShieldDomeStyle.HexBubble
                 || VisualTweaksSettings.personalShieldHitStyle
                     == PersonalShieldHitStyle.HexWave)
             {
