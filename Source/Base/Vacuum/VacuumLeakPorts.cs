@@ -63,16 +63,25 @@ namespace VisualTweaks
     /// The scan is driven by the map's building lister, not by the floor:
     /// <see cref="ListerBuildings.allBuildingsColonist"/> plus
     /// <see cref="ListerBuildings.allBuildingsNonColonist"/> is every spawned Building
-    /// except natural rock, and natural rock is the one kind that can never be a port
-    /// (its def is airtight with alwaysExchangeVacuum off, so ExchangeVacuum is false —
-    /// the same reason ListerBuildings.Add skips it). So the two lists are exactly the
-    /// candidate set, with no probe list of our own to keep in sync and no extra patch.
+    /// except natural rock. Those lists are a SUPERSET of the candidate set, not the
+    /// set itself: vanilla only treats the building in a room border cell's edificeGrid
+    /// slot as a vacuum port (VacuumComponent.MergeRoomsIntoGroups,
+    /// VacuumUtility.EverInVacuum / IsRoomAirtight). Non-edifice attachments hung on
+    /// a wall (isEdifice=false + canPlaceOverWall, e.g. VTE_WallMountedCooler) are in
+    /// the lister but not in the edifice grid — the airtight wall they hang on is. Such
+    /// an attachment can report ExchangeVacuum == true and sit between two rooms with
+    /// different vacuum while vanilla never exchanges air through it; counting it as
+    /// a port draws a full-strength stream that never decays, because that pressure
+    /// difference never closes. Both entry points therefore validate against
+    /// GetEdifice(map), so the full scan and the per-cell update agree on what a port
+    /// is, with no probe list of our own to keep in sync and no extra patch.
     ///
     /// Why not walk rooms and their BorderCellsCardinal, the way vanilla's
     /// MergeRoomsIntoGroups does: that costs O(total floor area) per scan — five region
     /// lookups per cell through a three-level yield chain — while a port can only exist
-    /// where a building stands. Cost is now O(buildings), which is roughly an order of
-    /// magnitude smaller on a developed map and grows slower as a colony spreads out.
+    /// where a building stands. Filtering the lister by IsEdifice() keeps the scan
+    /// O(buildings), which is roughly an order of magnitude smaller on a developed
+    /// map and grows slower as a colony spreads out.
     ///
     /// Intensity = (1 - vWet) * (vDry - vWet): the pressure difference drives the flow,
     /// the remaining air on the wet side gates it. The wet side is inferred per gap as
@@ -274,15 +283,25 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// One lister entry. The passability test is the cheapest useful filter in the
-        /// whole path and it is also exact: a building pawns can walk over does not
-        /// split the region grid, so it can never sit between two different rooms — it
-        /// is always part of whichever room surrounds it. That removes most furniture
-        /// before a single region lookup happens.
+        /// One lister entry. Two cheap filters before any region lookup:
+        ///
+        /// - Standable: a building pawns can walk over does not split the region grid,
+        ///   so it can never sit between two different rooms. Removes most furniture.
+        /// - Non-edifice: vanilla's vacuum graph only ever asks cell.GetEdifice(map) on
+        ///   room border cells. Wall-mounted attachments with isEdifice=false +
+        ///   canPlaceOverWall (e.g. VTE_WallMountedCooler / VTE_WallMountedVent) are
+        ///   NOT in the edifice grid; the airtight wall behind them is. They can report
+        ///   ExchangeVacuum == true on their own def and still sit between two rooms
+        ///   whose vacuum differs, yet vanilla never opens a channel through them.
+        ///   Treating them as ports draws a stream that never decays.
+        ///
+        /// Doors, vents, coolers and vac barriers are all edifices, so this filter only
+        /// drops decorations and wall/floor attachments, never a real channel.
         /// </summary>
         private void Consider(Map map, Building building)
         {
-            if (building.def.passability == Traversability.Standable)
+            if (building.def.passability == Traversability.Standable
+                || !building.def.IsEdifice())
             {
                 return;
             }
@@ -312,7 +331,10 @@ namespace VisualTweaks
 
         /// <summary>
         /// Decide whether this edifice is a leak, and register it if so. True when a
-        /// port now exists for it.
+        /// port now exists for it. Only the building registered in the cell's
+        /// edificeGrid slot qualifies — the same authority vanilla uses — so the full
+        /// scan (which walks the building lister) and the per-cell update (which walks
+        /// GetEdifice) cannot disagree about what a port is.
         ///
         /// The wet side is inferred rather than handed in: of the rooms the building
         /// touches, the lowest-vacuum one is losing air and the highest one is where it
@@ -322,6 +344,15 @@ namespace VisualTweaks
         private bool TryClaimBuilding(Map map, Building edifice)
         {
             if (!edifice.ExchangeVacuum)
+            {
+                return false;
+            }
+
+            // EdificeGrid.Register covers the whole OccupiedRect, so a multi-cell
+            // door still resolves to itself here. A non-edifice wall attachment never
+            // does: its cell belongs to the wall. This guard is cheap and keeps any
+            // future caller from reintroducing the lister-only interpretation.
+            if (edifice != edifice.Position.GetEdifice(map))
             {
                 return false;
             }
