@@ -19,6 +19,20 @@ namespace VisualTweaks
     /// This sets the same flag for every def with a projectile interceptor, which is
     /// the engine's own mechanism rather than a new culling rule.
     ///
+    /// VEF's <c>CompProperties_ShieldField</c> (the VFES repulsors and any other
+    /// building shield built on it) has exactly the same geometry: the billboard is
+    /// drawn from the parent's PostDraw and its radius dwarfs the footprint. The VFES
+    /// defs happen to set drawOffscreen themselves, but the flag is added for any
+    /// building def carrying the props so another mod's shield field is covered too.
+    /// Only buildings are marked: an apparel's comps are drawn through the wearer and
+    /// a pawn's through the pawn, so a def-level drawOffscreen there would make the
+    /// pawn itself draw off screen instead of fixing anything.
+    ///
+    /// VEF's bubbles (<c>CompShieldBubble</c>) and hediff shields
+    /// (<c>HediffComp_Shield</c>) need no entry here. Both are centred on a pawn and
+    /// are drawn as part of that pawn's draw, so the pawn's own cull is the correct
+    /// bound — exactly as it is for vanilla shield belts.
+    ///
     /// Deliberately done once at startup from the def database, not lazily on first
     /// draw: a shield that is being culled never reaches a draw method, so a lazy fix
     /// could not fix the very case it exists for. There is no per-frame cost and no
@@ -37,6 +51,11 @@ namespace VisualTweaks
         /// <summary>Returns the number of defs that needed the flag.</summary>
         internal static int Apply()
         {
+            // Resolved once: VEF may be absent, in which case only the vanilla
+            // interceptor defs are touched.
+            System.Type? shieldFieldProps = GenTypes.GetTypeInAnyAssembly(
+                "VEF.Apparels.CompProperties_ShieldField");
+
             int changed = 0;
 
             foreach (ThingDef def in DefDatabase<ThingDef>.AllDefs)
@@ -57,7 +76,10 @@ namespace VisualTweaks
                     // `is` so modded subclasses (e.g. a custom gravship shield's
                     // props class) are picked up too. Only the props matter here;
                     // compClass does not change the drawn radius.
-                    if (comps[i] is CompProperties_ProjectileInterceptor)
+                    if (comps[i] is CompProperties_ProjectileInterceptor
+                        || (shieldFieldProps != null
+                            && def.category == ThingCategory.Building
+                            && shieldFieldProps.IsInstanceOfType(comps[i])))
                     {
                         def.drawOffscreen = true;
                         changed++;
