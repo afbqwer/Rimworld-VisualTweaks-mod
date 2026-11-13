@@ -414,7 +414,14 @@ namespace VisualTweaks
             float hitHold = hexBubble ? CurrentHitHold(comp) : 0f;
 
             NVector4 tint = new NVector4(color.r, color.g, color.b, 1f);
-            NVector4 centerParam = new NVector4(center.x, center.z, hitHold, 0f);
+            // _Params4.w is free; it carries the per-object hex color flags so a
+            // material shared by shields with different overrides can still draw
+            // different line / face colors.
+            NVector4 centerParam = new NVector4(
+                center.x,
+                center.z,
+                hitHold,
+                style.HexColorFlags);
             float time = ShieldAnimationClock.Time;
 
             // Pulse off replaces vanilla's GetCurrentAlpha() entirely: one fixed,
@@ -584,7 +591,8 @@ namespace VisualTweaks
             float originX,
             float originZ,
             float seed,
-            ShieldDomeStyle surfaceStyle)
+            ShieldDomeStyle surfaceStyle,
+            float colorFlags)
         {
             if (!ShieldDomeBridge.ShaderReady || !(radius > 0.01f))
             {
@@ -618,7 +626,11 @@ namespace VisualTweaks
                         radius * 2f * quadMargin));
 
                 NVector4 tint = new NVector4(color.r, color.g, color.b, 1f);
-                NVector4 centerParam = new NVector4(center.x, center.z, 0f, 0f);
+                NVector4 centerParam = new NVector4(
+                    center.x,
+                    center.z,
+                    0f,
+                    colorFlags);
 
                 return DrawBreak(
                     mat,
@@ -679,7 +691,7 @@ namespace VisualTweaks
                 centerParam.X,
                 centerParam.Y,
                 hexBubble ? ShieldHexBubble.BreakHold(progress) : 0f,
-                0f);
+                centerParam.W);
             properties[2] = DrawProperty.Vector(Params4Id, breakCenter);
             properties[3] = DrawProperty.Color(ColorId, tint);
 

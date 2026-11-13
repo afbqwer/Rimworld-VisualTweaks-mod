@@ -155,7 +155,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
                    //                                          // stock hit: dir x/z, cos(half angle), unused
                    //                                          // dissolve: break origin x/z, progress, seed
                    //                                          // hex hit: dir x/z, progress, reach share
-    vec4 _Params4; // @default = vec4(0.0, 0.0, 0.0, 0.0)      // centre x/z in world cells, HexBubble net hold, unused
+    vec4 _Params4; // @default = vec4(0.0, 0.0, 0.0, 0.0)      // centre x/z in world cells, HexBubble net hold, hex color flags
     vec4 _Params5; // @default = vec4(2.8, 1.2, 5.0, 0.3)      // ridge half px, core sigma px, glow exponent, drift
     vec4 _Params6; // @default = vec4(0.0, 0.22, 0.75, 9.0)    // style (0 crisp, 1 hex, 2 stock dome, 3 stock belt, 4 hex bubble), hex face, hex line, SDF gradient (1/eRef)
     vec4 _Params7; // @default = vec4(1.0, 2.4, 0.20, 0.12)    // HexBubble: scan dir (+1 down / -1 up), period (s), feather, net baseline
@@ -169,6 +169,19 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
 //       twelve five-sided cells are just what a spherical lattice produces and are
 //       deliberately not drawn any differently from the hexagons.
 layout(set = 2, binding = 1) uniform sampler2D _HexMap; // @default = black
+
+// Per-draw hex color switches, carried in the free _Params4.w component.
+// bit 0: lattice lines take the shield's _Color instead of trending to white.
+// bit 1: lit panels in the hit wave / panel-loss break take _Color.
+float HexLineFollowsColor()
+{
+    return mod(u._Params4.w, 2.0);
+}
+
+float HexFacesFollowColor()
+{
+    return step(1.5, u._Params4.w);
+}
 
 // Where to read the baked lattice for a disc position p.
 //
@@ -542,7 +555,10 @@ vec4 HexBubbleDomeColor(float r, vec2 p, float aa, float t)
 
     float sum = bubble.a + netA;
     vec3 halo = u._Color.rgb;
-    vec3 lineTint = mix(halo, vec3(1.0), 0.85);
+    vec3 lineTint = mix(
+        halo,
+        vec3(1.0),
+        0.85 * (1.0 - HexLineFollowsColor()));
     vec3 tint = (halo * bubble.a + lineTint * netA) / max(sum, 1e-4);
     return vec4(tint, sum);
 }
@@ -621,7 +637,10 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
 
     vec3 halo = u._Color.rgb;
     vec3 coreTint = mix(halo, vec3(1.0), 0.65);
-    vec3 lineTint = mix(halo, vec3(1.0), 0.85);
+    vec3 lineTint = mix(
+        halo,
+        vec3(1.0),
+        0.85 * (1.0 - HexLineFollowsColor()));
     vec3 tint = (halo * (ridgeTerm + glowA + max(bodyA - hexLineA, 0.0))
             + coreTint * coreTerm + lineTint * hexLineA)
         / max(sum, 1e-4);
@@ -931,7 +950,10 @@ void main()
         // flash is visibly made of tiles.
         float panel = 0.6 + 0.4 * smoothstep(0.0, 0.25, e);
 
-        vec3 hot = mix(u._Color.rgb, vec3(1.0), 0.9);
+        vec3 hot = mix(
+            u._Color.rgb,
+            vec3(1.0),
+            0.9 * (1.0 - HexFacesFollowColor()));
         // The hex bubble's idle soft edge reaches 1.16R, but a lattice flash
         // must not paint outside the shield it belongs to. Every other style
         // keeps its own edge untouched.
@@ -1062,7 +1084,10 @@ void main()
         float surge = 1.0 + 0.55 * exp(-progress * 9.0);
         float endFade = 1.0 - smoothstep(0.85, 1.0, progress);
 
-        vec3 hot = mix(u._Color.rgb, vec3(1.0), 0.88);
+        vec3 hot = mix(
+            u._Color.rgb,
+            vec3(1.0),
+            0.88 * (1.0 - HexFacesFollowColor()));
         float total = baseA + frontA;
         vec3 tint = (dome.rgb * baseA + hot * frontA) / max(total, 1e-4);
 

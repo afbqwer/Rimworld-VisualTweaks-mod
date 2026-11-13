@@ -249,7 +249,8 @@ namespace VisualTweaks
                 style.Tint ?? comp.Props.color,
                 mode,
                 style.Surface,
-                breakStyle);
+                breakStyle,
+                style.HexColorFlags);
         }
 
         /// <summary>

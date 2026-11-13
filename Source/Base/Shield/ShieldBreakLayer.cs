@@ -36,6 +36,7 @@ namespace VisualTweaks
             public float Mode;
             public ShieldDomeStyle Surface;
             public ShieldBreakStyle BreakStyle;
+            public float ColorFlags;
             public ShieldDissolveLog.State State = null!;
         }
 
@@ -53,7 +54,8 @@ namespace VisualTweaks
             Color color,
             float mode,
             ShieldDomeStyle surface,
-            ShieldBreakStyle breakStyle)
+            ShieldBreakStyle breakStyle,
+            float colorFlags)
         {
             if (state == null)
             {
@@ -73,6 +75,7 @@ namespace VisualTweaks
                 Mode = mode,
                 Surface = surface,
                 BreakStyle = breakStyle,
+                ColorFlags = colorFlags,
                 State = state,
             });
         }
@@ -126,7 +129,8 @@ namespace VisualTweaks
                         item.State.OriginX,
                         item.State.OriginZ,
                         item.State.Seed,
-                        item.Surface))
+                        item.Surface,
+                        item.ColorFlags))
                 {
                     // The renderer latches itself off on failure; there is no point
                     // keeping a queue for a surface that will never draw again.

@@ -398,6 +398,14 @@ namespace VisualTweaks
         public static float largeShieldHexLineStrength = 0.25f;
         public static float personalShieldHexLineStrength = 0.25f;
 
+        // The lattice's own line and the lit panels in the hit / panel-loss
+        // animations used to trend toward white. Both switches make them take the
+        // shield's def color instead. They are shared by both lattice surfaces and
+        // both shield families, and default on: a tinted shield should read as
+        // tinted everywhere, not only in its fill.
+        public static bool hexLineFollowsShieldColor = true;
+        public static bool hexImpactFacesFollowShieldColor = true;
+
         // ---- The two lattice styles: centre aperture ------------------------
         //
         // The panel shell and the hex bubble both sit over whatever they protect,
@@ -977,6 +985,14 @@ namespace VisualTweaks
                 ref personalShieldHexLineStrength,
                 "personalShieldHexLineStrength",
                 0.25f);
+            Scribe_Values.Look(
+                ref hexLineFollowsShieldColor,
+                "hexLineFollowsShieldColor",
+                true);
+            Scribe_Values.Look(
+                ref hexImpactFacesFollowShieldColor,
+                "hexImpactFacesFollowShieldColor",
+                true);
             Scribe_Values.Look(
                 ref largeShieldCenterClear,
                 "largeShieldCenterClear",

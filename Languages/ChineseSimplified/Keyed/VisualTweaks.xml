@@ -141,6 +141,17 @@
   <VisualTweaks_ShieldOverride_Count>已覆写护盾数：{0}</VisualTweaks_ShieldOverride_Count>
   <VisualTweaks_ShieldOverride_ClearAll>清除所有覆写</VisualTweaks_ShieldOverride_ClearAll>
   <VisualTweaks_ShieldOverride_ClearAllConfirm>清除所有护盾的独立样式、颜色和透明度覆写？此操作无法撤销。</VisualTweaks_ShieldOverride_ClearAllConfirm>
+  <VisualTweaks_ShieldHexColor_Group>六边形护盾颜色</VisualTweaks_ShieldHexColor_Group>
+  <VisualTweaks_ShieldHexColor_LineFollows>格线跟随护盾颜色</VisualTweaks_ShieldHexColor_LineFollows>
+  <VisualTweaks_ShieldHexColor_LineFollowsTip>开启：格线使用护盾自身的颜色，不再偏向白色高光。关闭：保留原本接近白色的格线。仅对六边形和六边形气泡表面生效。</VisualTweaks_ShieldHexColor_LineFollowsTip>
+  <VisualTweaks_ShieldHexColor_FacesFollow>受击/破碎格面跟随护盾颜色</VisualTweaks_ShieldHexColor_FacesFollow>
+  <VisualTweaks_ShieldHexColor_FacesFollowTip>开启：六边形受击波点亮的格面，以及碎格破碎中正在消失的格面，使用护盾自身颜色。关闭：保留接近白色的闪光。仅对六边形和六边形气泡表面生效。</VisualTweaks_ShieldHexColor_FacesFollowTip>
+  <VisualTweaks_ShieldHexColor_Note>两种护盾共用。单个护盾的样式窗口可以覆写这两个开关。</VisualTweaks_ShieldHexColor_Note>
+  <VisualTweaks_ShieldOverride_HexColorGroup>六边形颜色</VisualTweaks_ShieldOverride_HexColorGroup>
+  <VisualTweaks_ShieldOverride_LineFollows>格线跟随护盾颜色</VisualTweaks_ShieldOverride_LineFollows>
+  <VisualTweaks_ShieldOverride_FacesFollow>受击/破碎格面跟随护盾颜色</VisualTweaks_ShieldOverride_FacesFollow>
+  <VisualTweaks_ShieldOverride_TriOn>开启</VisualTweaks_ShieldOverride_TriOn>
+  <VisualTweaks_ShieldOverride_TriOff>关闭</VisualTweaks_ShieldOverride_TriOff>
   <VisualTweaks_ShieldOverride_OpacityGroup>透明度</VisualTweaks_ShieldOverride_OpacityGroup>
   <VisualTweaks_ShieldOverride_Opacity>透明度倍率</VisualTweaks_ShieldOverride_Opacity>
   <VisualTweaks_ShieldOverride_OpacityTip>在当前护盾透明度的基础上乘以该倍率（包含全局透明度设置）。1.00 表示不变，越低越淡，越高越明显；只影响护盾表面，不影响受击闪光和破碎亮度。</VisualTweaks_ShieldOverride_OpacityTip>

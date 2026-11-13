@@ -51,6 +51,12 @@ namespace VisualTweaks
         /// </summary>
         public float OpacityMultiplier = 1f;
 
+        public bool OverrideHexLineColor;
+        public bool HexLineFollowsShield = true;
+
+        public bool OverrideHexFaceColor;
+        public bool HexFacesFollowShield = true;
+
         internal bool IsEmpty =>
             !OverrideSurface
             && !OverrideImpact
@@ -58,6 +64,8 @@ namespace VisualTweaks
             && !OverrideRestore
             && !OverridePersonalHit
             && !OverrideColor
+            && !OverrideHexLineColor
+            && !OverrideHexFaceColor
             && Mathf.Abs(OpacityMultiplier - 1f) <= 0.0001f;
 
         public void ExposeData()
@@ -89,6 +97,22 @@ namespace VisualTweaks
                 ref OpacityMultiplier,
                 "opacityMultiplier",
                 1f);
+            Scribe_Values.Look(
+                ref OverrideHexLineColor,
+                "overrideHexLineColor",
+                false);
+            Scribe_Values.Look(
+                ref HexLineFollowsShield,
+                "hexLineFollowsShield",
+                true);
+            Scribe_Values.Look(
+                ref OverrideHexFaceColor,
+                "overrideHexFaceColor",
+                false);
+            Scribe_Values.Look(
+                ref HexFacesFollowShield,
+                "hexFacesFollowShield",
+                true);
             if (float.IsNaN(OpacityMultiplier))
             {
                 OpacityMultiplier = 1f;
@@ -109,6 +133,10 @@ namespace VisualTweaks
             OverridePersonalHit = false;
             OverrideColor = false;
             OpacityMultiplier = 1f;
+            OverrideHexLineColor = false;
+            HexLineFollowsShield = true;
+            OverrideHexFaceColor = false;
+            HexFacesFollowShield = true;
         }
     }
 

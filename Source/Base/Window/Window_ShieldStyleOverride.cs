@@ -110,6 +110,11 @@ namespace VisualTweaks
                 ShieldStyle effective = ShieldStyle.For(target, thing);
                 NormalizeImpactAndBreak(entry, effective);
 
+                if (ShieldStyle.IsHexSurface(effective.Surface))
+                {
+                    DrawHexColorRows(listing, entry);
+                }
+
                 if (target == ShieldHexTarget.Large)
                 {
                     DrawLargeImpactRow(listing, entry, effective);
@@ -264,6 +269,63 @@ namespace VisualTweaks
                 VisualTweaksSettings.MinShieldOpacityMultiplier,
                 VisualTweaksSettings.MaxShieldOpacityMultiplier,
                 "VisualTweaks_ShieldOverride_OpacityTip".Translate());
+        }
+
+        private static void DrawHexColorRows(
+            Listing_Standard listing,
+            ShieldStyleOverride entry)
+        {
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldOverride_HexColorGroup".Translate());
+            DrawTriStateRow(
+                listing,
+                "VisualTweaks_ShieldOverride_LineFollows".Translate(),
+                ref entry.OverrideHexLineColor,
+                ref entry.HexLineFollowsShield);
+            DrawTriStateRow(
+                listing,
+                "VisualTweaks_ShieldOverride_FacesFollow".Translate(),
+                ref entry.OverrideHexFaceColor,
+                ref entry.HexFacesFollowShield);
+        }
+
+        /// <summary>
+        /// A boolean with an explicit "follow global" state. A plain checkbox
+        /// would silently turn every unset shield into an override the first time
+        /// the global setting moved.
+        /// </summary>
+        private static void DrawTriStateRow(
+            Listing_Standard listing,
+            string label,
+            ref bool overridden,
+            ref bool value)
+        {
+            string[] labels =
+            {
+                "VisualTweaks_ShieldOverride_FollowGlobal".Translate(),
+                "VisualTweaks_ShieldOverride_TriOn".Translate(),
+                "VisualTweaks_ShieldOverride_TriOff".Translate(),
+            };
+            string[] tips =
+            {
+                "VisualTweaks_ShieldOverride_FollowGlobalTip".Translate(),
+                string.Empty,
+                string.Empty,
+            };
+            int selected = !overridden ? 0 : (value ? 1 : 2);
+
+            listing.Label(label);
+            int picked = SettingsLayout.RadioRow(listing, labels, selected, tips);
+            if (picked == 0)
+            {
+                overridden = false;
+            }
+            else if (picked > 0)
+            {
+                overridden = true;
+                value = picked == 1;
+            }
         }
 
         /// <summary>The def's own color, used as the picker's starting point.</summary>

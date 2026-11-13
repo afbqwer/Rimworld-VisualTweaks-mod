@@ -422,7 +422,12 @@ namespace VisualTweaks
                 }
             }
 
-            NVector4 centerParam = new NVector4(center.x, center.z, hitHold, 0f);
+            // _Params4.w carries the per-object hex color flags; see the dome renderer.
+            NVector4 centerParam = new NVector4(
+                center.x,
+                center.z,
+                hitHold,
+                style.HexColorFlags);
             float time = ShieldAnimationClock.Time;
 
             if (breaking && dissolve != null)
@@ -450,7 +455,7 @@ namespace VisualTweaks
                     centerParam.X,
                     centerParam.Y,
                     hexBubble ? ShieldHexBubble.BreakHold(dissolveProgress) : 0f,
-                    0f);
+                    centerParam.W);
                 properties[2] = DrawProperty.Vector(Params4Id, breakCenter);
                 properties[3] = DrawProperty.Color(ColorId, tint);
 

@@ -166,7 +166,8 @@ namespace VisualTweaks
             Color color,
             float mode,
             ShieldDomeStyle surface,
-            ShieldBreakStyle breakStyle)
+            ShieldBreakStyle breakStyle,
+            float colorFlags)
         {
             shieldBreaks.Spawn(
                 state,
@@ -175,7 +176,8 @@ namespace VisualTweaks
                 color,
                 mode,
                 surface,
-                breakStyle);
+                breakStyle,
+                colorFlags);
         }
 
         public override void MapComponentDraw()

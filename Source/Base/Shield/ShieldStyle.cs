@@ -31,6 +31,9 @@ namespace VisualTweaks
         /// </summary>
         internal readonly float OpacityMultiplier;
 
+        internal readonly bool HexLineFollowsColor;
+        internal readonly bool HexFacesFollowColor;
+
         private ShieldStyle(
             ShieldDomeStyle surface,
             ShieldImpactStyle impact,
@@ -38,7 +41,9 @@ namespace VisualTweaks
             ShieldRestoreStyle restore,
             PersonalShieldHitStyle personalHit,
             Color? tint,
-            float opacityMultiplier)
+            float opacityMultiplier,
+            bool hexLineFollowsColor,
+            bool hexFacesFollowColor)
         {
             Surface = surface;
             Impact = impact;
@@ -47,6 +52,8 @@ namespace VisualTweaks
             PersonalHit = personalHit;
             Tint = tint;
             OpacityMultiplier = opacityMultiplier;
+            HexLineFollowsColor = hexLineFollowsColor;
+            HexFacesFollowColor = hexFacesFollowColor;
         }
 
         /// <summary>True for either spherical lattice surface.</summary>
@@ -56,6 +63,15 @@ namespace VisualTweaks
 
         /// <summary>True when the transparent net is drawn over a bubble surface.</summary>
         internal bool IsHexBubble => Surface == ShieldDomeStyle.HexBubble;
+
+        /// <summary>
+        /// Per-draw bit flags read by the shader from _Params4.w: bit 0 makes the
+        /// lattice lines take the shield color, bit 1 does the same for the lit
+        /// panels in the hit / panel-loss animations.
+        /// </summary>
+        internal float HexColorFlags =>
+            (HexLineFollowsColor ? 1f : 0f)
+            + (HexFacesFollowColor ? 2f : 0f);
 
         /// <summary>True for the two profiles that need vanilla's texture margin.</summary>
         internal bool IsStockLike =>
@@ -162,6 +178,13 @@ namespace VisualTweaks
                 VisualTweaksSettings.MinShieldOpacityMultiplier,
                 VisualTweaksSettings.MaxShieldOpacityMultiplier);
 
+            bool lineFollows = selection != null && selection.OverrideHexLineColor
+                ? selection.HexLineFollowsShield
+                : VisualTweaksSettings.hexLineFollowsShieldColor;
+            bool facesFollow = selection != null && selection.OverrideHexFaceColor
+                ? selection.HexFacesFollowShield
+                : VisualTweaksSettings.hexImpactFacesFollowShieldColor;
+
             return new ShieldStyle(
                 surface,
                 impact,
@@ -169,7 +192,9 @@ namespace VisualTweaks
                 restore,
                 personalHit,
                 tint,
-                opacityMultiplier);
+                opacityMultiplier,
+                lineFollows,
+                facesFollow);
         }
 
         /// <summary>

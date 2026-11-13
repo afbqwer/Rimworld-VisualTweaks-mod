@@ -875,6 +875,15 @@ namespace VisualTweaks
                 DrawPersonalSection(listing);
             }
 
+            if (VisualTweaksSettings.replaceLargeShields
+                || VisualTweaksSettings.replacePersonalShields
+                || repulsorDrawing
+                || bubbleDrawing
+                || hediffDrawing)
+            {
+                DrawHexColorSection(listing);
+            }
+
             if (!VisualTweaksSettings.replaceLargeShields
                 && !VisualTweaksSettings.replacePersonalShields
                 && !repulsorDrawing
@@ -887,6 +896,28 @@ namespace VisualTweaks
             }
 
             SettingsLayout.Finish(listing);
+        }
+
+        /// <summary>
+        /// Shared by both lattice surfaces. The per-shield window can override
+        /// either switch for one object.
+        /// </summary>
+        private static void DrawHexColorSection(Listing_Standard listing)
+        {
+            SettingsLayout.Header(
+                listing,
+                "VisualTweaks_ShieldHexColor_Group".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldHexColor_LineFollows".Translate(),
+                ref VisualTweaksSettings.hexLineFollowsShieldColor,
+                "VisualTweaks_ShieldHexColor_LineFollowsTip".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldHexColor_FacesFollow".Translate(),
+                ref VisualTweaksSettings.hexImpactFacesFollowShieldColor,
+                "VisualTweaks_ShieldHexColor_FacesFollowTip".Translate());
+            SettingsLayout.Note(
+                listing,
+                "VisualTweaks_ShieldHexColor_Note".Translate());
         }
 
         /// <summary>

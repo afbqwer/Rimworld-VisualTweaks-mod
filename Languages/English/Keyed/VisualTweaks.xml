@@ -141,6 +141,17 @@
   <VisualTweaks_ShieldOverride_Count>Overridden shields: {0}</VisualTweaks_ShieldOverride_Count>
   <VisualTweaks_ShieldOverride_ClearAll>Clear all overrides</VisualTweaks_ShieldOverride_ClearAll>
   <VisualTweaks_ShieldOverride_ClearAllConfirm>Clear every per-shield style, color and opacity override? This cannot be undone.</VisualTweaks_ShieldOverride_ClearAllConfirm>
+  <VisualTweaks_ShieldHexColor_Group>Hex shield color</VisualTweaks_ShieldHexColor_Group>
+  <VisualTweaks_ShieldHexColor_LineFollows>Grid lines follow shield color</VisualTweaks_ShieldHexColor_LineFollows>
+  <VisualTweaks_ShieldHexColor_LineFollowsTip>On: the cell lines take the shield's own tint instead of the near-white highlight. Off: keep the original near-white lines. Applies to the hexagonal and hex bubble surfaces.</VisualTweaks_ShieldHexColor_LineFollowsTip>
+  <VisualTweaks_ShieldHexColor_FacesFollow>Hit/break cells follow shield color</VisualTweaks_ShieldHexColor_FacesFollow>
+  <VisualTweaks_ShieldHexColor_FacesFollowTip>On: lit panels in the hex hit wave and dying panels in the panel-loss break take the shield's own tint. Off: keep the near-white flash. Applies to the hexagonal and hex bubble surfaces.</VisualTweaks_ShieldHexColor_FacesFollowTip>
+  <VisualTweaks_ShieldHexColor_Note>Shared by both shield families. The per-shield style window can override either switch for one object.</VisualTweaks_ShieldHexColor_Note>
+  <VisualTweaks_ShieldOverride_HexColorGroup>Hex color</VisualTweaks_ShieldOverride_HexColorGroup>
+  <VisualTweaks_ShieldOverride_LineFollows>Grid lines follow shield color</VisualTweaks_ShieldOverride_LineFollows>
+  <VisualTweaks_ShieldOverride_FacesFollow>Hit/break cells follow shield color</VisualTweaks_ShieldOverride_FacesFollow>
+  <VisualTweaks_ShieldOverride_TriOn>On</VisualTweaks_ShieldOverride_TriOn>
+  <VisualTweaks_ShieldOverride_TriOff>Off</VisualTweaks_ShieldOverride_TriOff>
   <VisualTweaks_ShieldOverride_OpacityGroup>Opacity</VisualTweaks_ShieldOverride_OpacityGroup>
   <VisualTweaks_ShieldOverride_Opacity>Opacity multiplier</VisualTweaks_ShieldOverride_Opacity>
   <VisualTweaks_ShieldOverride_OpacityTip>Multiplies this shield's current opacity, including the global opacity setting. 1.00 leaves it unchanged; lower is fainter, higher is stronger. It affects only the surface, not hit flashes or break brightness.</VisualTweaks_ShieldOverride_OpacityTip>
