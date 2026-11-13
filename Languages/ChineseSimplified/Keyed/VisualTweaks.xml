@@ -120,6 +120,8 @@
   <VisualTweaks_ShieldRepulsor_OpacityTip>在斥力器随能量变化的不透明度上再乘一个倍率。VEF 的数值是按叠加发光材质调的，同样的 alpha 放到透明混合的穹顶上会显得更实；1.0 即原版 alpha。</VisualTweaks_ShieldRepulsor_OpacityTip>
   <VisualTweaks_ShieldBubble_Enable>替换 VEF 气泡护盾</VisualTweaks_ShieldBubble_Enable>
   <VisualTweaks_ShieldBubble_EnableTip>用着色器重画 VEF 的单位气泡护盾（战争棺材护甲、生物护盾等），外观沿用下方的个人护盾设置。只替换使用原版气泡贴图的护盾；def 自定义了贴图的保持原样。未安装 VEF 时不显示。</VisualTweaks_ShieldBubble_EnableTip>
+  <VisualTweaks_ShieldHediff_Enable>替换 VEF 状态护盾</VisualTweaks_ShieldHediff_Enable>
+  <VisualTweaks_ShieldHediff_EnableTip>用着色器重画由 VEF 健康状态/能力授予的护盾（如 Vanilla Psycasts Expanded 的火焰护盾、能力与生物护盾等），外观沿用下方的个人护盾设置。尺寸与颜色仍取自 def，贴图会被替换。未安装 VEF 时不显示。</VisualTweaks_ShieldHediff_EnableTip>
   <VisualTweaks_ShieldDome_OffNote>所有护盾都已恢复原版绘制，样式设置暂不生效。</VisualTweaks_ShieldDome_OffNote>
   <VisualTweaks_ShieldAlways_Enable>总是显示大型护盾</VisualTweaks_ShieldAlways_Enable>
   <VisualTweaks_ShieldAlways_EnableTip>未选中时也让运作中的大型护盾淡淡显示。个人护盾是否显示仍由原版规则决定。</VisualTweaks_ShieldAlways_EnableTip>

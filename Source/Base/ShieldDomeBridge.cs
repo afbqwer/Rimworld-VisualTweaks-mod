@@ -76,6 +76,18 @@ namespace VisualTweaks
             && !ScreenshotModeGate.Active;
 
         /// <summary>
+        /// VEF's hediff-granted shield. It is drawn from Pawn.DrawAt rather than a
+        /// comp's own PostDraw, but it is a personal shield: it follows the personal
+        /// family's surface, opacity, hit and break choices.
+        /// </summary>
+        internal static bool VefHediffActive =>
+            initialized
+            && shaderReady
+            && !runtimeDisabled
+            && VisualTweaksSettings.replaceVefHediffShields
+            && !ScreenshotModeGate.Active;
+
+        /// <summary>
         /// True when this particular interceptor should be drawn by the mod. The
         /// vanilla-only switch compares the runtime type exactly, so modded subclasses
         /// keep their own drawing. Vanilla's own CompGravshipShieldGenerator is the one

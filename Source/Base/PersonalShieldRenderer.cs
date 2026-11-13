@@ -10,8 +10,9 @@ namespace VisualTweaks
 {
     /// <summary>
     /// Draws the custom dome for personal shields: vanilla shield belts
-    /// (<c>CompShield.Draw()</c>) and VEF's pawn shield bubbles
-    /// (<c>CompShieldBubble</c>).
+    /// (<c>CompShield.Draw()</c>), VEF's pawn shield bubbles
+    /// (<c>CompShieldBubble</c>) and VEF's hediff-granted shields
+    /// (<c>HediffComp_Shield</c>).
     ///
     /// What is ported from <see cref="ShieldDomeRenderer"/> is the same three surface
     /// types, the same ridge and face/line weights, a material built from the same
@@ -124,7 +125,7 @@ namespace VisualTweaks
                 comp.Props.maxDrawSize,
                 comp.Energy);
 
-            return DrawCore(comp, pawn, size, active, visible, Color.white);
+            return DrawCore(comp, pawn.Drawer.DrawPos, size, active, visible, Color.white);
         }
 
         /// <summary>
@@ -152,12 +153,28 @@ namespace VisualTweaks
                 return false;
             }
 
-            return DrawCore(comp, pawn, drawnSize, active, visible, color);
+            return DrawCore(comp, pawn.Drawer.DrawPos, drawnSize, active, visible, color);
+        }
+
+        /// <summary>
+        /// The VEF hediff-shield adapter. Its comp is not a ThingComp and it is drawn
+        /// from <c>Pawn.DrawAt</c>, so the caller supplies the exact draw position and
+        /// the def's own graphic offset instead of a pawn whose Drawer is consulted.
+        /// </summary>
+        internal static bool Draw(
+            object comp,
+            Vector3 center,
+            float drawnSize,
+            bool active,
+            bool visible,
+            Color color)
+        {
+            return DrawCore(comp, center, drawnSize, active, visible, color);
         }
 
         private static bool DrawCore(
-            ThingComp comp,
-            Pawn pawn,
+            object comp,
+            Vector3 baseCenter,
             float drawnSize,
             bool active,
             bool visible,
@@ -236,7 +253,7 @@ namespace VisualTweaks
             float size = drawnSize - jitterShrink;
             float radius = Mathf.Max(size * 0.5f, 0.05f);
 
-            Vector3 center = pawn.Drawer.DrawPos + jitterOffset;
+            Vector3 center = baseCenter + jitterOffset;
 
             // Crisp and panel silhouettes sit exactly on r == 1, so their quad is
             // exactly the diameter. The stock-like style's soft tail is meant to fade
@@ -341,7 +358,7 @@ namespace VisualTweaks
         /// one clock so the player tunes a single duration.
         /// </summary>
         private static bool DrawImpact(
-            ThingComp comp,
+            object comp,
             Material material,
             Matrix4x4 matrix,
             NVector4 tint,
@@ -458,7 +475,7 @@ namespace VisualTweaks
         /// the stock bubble rather than an intuitively reversed one.
         /// </summary>
         private static bool TryGetJitter(
-            ThingComp comp,
+            object comp,
             out Vector3 offset,
             out float shrink)
         {

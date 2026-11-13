@@ -793,27 +793,41 @@ namespace VisualTweaks
                     "VisualTweaks_ShieldBubble_EnableTip".Translate());
             }
 
+            // The hediff-granted family is drawn from Pawn.DrawAt instead of a comp's
+            // PostDraw, so it is its own switch even though it shares the personal look.
+            if (VefHediffShieldCompat.Available)
+            {
+                listing.CheckboxLabeled(
+                    "VisualTweaks_ShieldHediff_Enable".Translate(),
+                    ref VisualTweaksSettings.replaceVefHediffShields,
+                    "VisualTweaks_ShieldHediff_EnableTip".Translate());
+            }
+
             listing.CheckboxLabeled(
                 "VisualTweaks_ShieldAlways_Enable".Translate(),
                 ref VisualTweaksSettings.alwaysShowShields,
                 "VisualTweaks_ShieldAlways_EnableTip".Translate());
 
             // Each family owns its surface, style and break choices. Turning one off
-            // hides only that section and leaves the other drawing untouched. The two
-            // VEF families share the matching vanilla section — repulsors follow the
-            // large-shield controls, bubbles follow the personal ones — so those
-            // sections stay visible while either member of the pair is drawing.
+            // hides only that section and leaves the other drawing untouched. The
+            // three VEF families share the matching vanilla section — repulsors follow
+            // the large-shield controls, bubbles and hediff shields the personal ones —
+            // so those sections stay visible while any member of the pair is drawing.
             bool repulsorDrawing = VefRepulsorShieldCompat.Available
                 && VisualTweaksSettings.replaceRepulsorShields;
             bool bubbleDrawing = VefShieldBubbleCompat.Available
                 && VisualTweaksSettings.replaceVefShieldBubbles;
+            bool hediffDrawing = VefHediffShieldCompat.Available
+                && VisualTweaksSettings.replaceVefHediffShields;
 
             if (VisualTweaksSettings.replaceLargeShields || repulsorDrawing)
             {
                 DrawDomeSection(listing);
             }
 
-            if (VisualTweaksSettings.replacePersonalShields || bubbleDrawing)
+            if (VisualTweaksSettings.replacePersonalShields
+                || bubbleDrawing
+                || hediffDrawing)
             {
                 DrawPersonalSection(listing);
             }
@@ -821,7 +835,8 @@ namespace VisualTweaks
             if (!VisualTweaksSettings.replaceLargeShields
                 && !VisualTweaksSettings.replacePersonalShields
                 && !repulsorDrawing
-                && !bubbleDrawing)
+                && !bubbleDrawing
+                && !hediffDrawing)
             {
                 SettingsLayout.Note(
                     listing,

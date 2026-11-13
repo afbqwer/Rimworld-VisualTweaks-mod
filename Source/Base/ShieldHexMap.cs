@@ -262,6 +262,8 @@ namespace VisualTweaks
                 ? VisualTweaksSettings.replacePersonalShields
                     || (VefShieldBubbleCompat.Available
                         && VisualTweaksSettings.replaceVefShieldBubbles)
+                    || (VefHediffShieldCompat.Available
+                        && VisualTweaksSettings.replaceVefHediffShields)
                 : VisualTweaksSettings.replaceLargeShields
                     || (VefRepulsorShieldCompat.Available
                         && VisualTweaksSettings.replaceRepulsorShields))

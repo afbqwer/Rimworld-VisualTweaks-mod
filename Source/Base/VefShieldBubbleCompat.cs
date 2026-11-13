@@ -316,6 +316,7 @@ namespace VisualTweaks
                     {
                         PersonalShieldDissolveLog.Begin(
                             __instance,
+                            __instance.parent,
                             __state.Angle);
                     }
 

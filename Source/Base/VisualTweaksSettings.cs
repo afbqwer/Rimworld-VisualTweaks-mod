@@ -215,6 +215,11 @@ namespace VisualTweaks
         // belts (or the reverse).
         public static bool replaceVefShieldBubbles = true;
 
+        // VEF's hediff shields are the third personal implementation: a HediffComp
+        // drawn from Pawn.DrawAt. Separate switch for the same reason as the other two
+        // VEF families, and the same personal appearance settings apply.
+        public static bool replaceVefHediffShields = true;
+
         // VEF stores the repulsor's opacity in the def's health colour alpha
         // (roughly 0.35 at low energy to 1.0 at full). That number was authored for
         // an additive MoteGlow billboard; the same alpha through an alpha-blended
@@ -776,6 +781,10 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref replaceVefShieldBubbles,
                 "replaceVefShieldBubbles",
+                true);
+            Scribe_Values.Look(
+                ref replaceVefHediffShields,
+                "replaceVefHediffShields",
                 true);
             Scribe_Values.Look(
                 ref repulsorShieldOpacity,
@@ -1380,6 +1389,7 @@ namespace VisualTweaks
             replacePersonalShields = true;
             replaceRepulsorShields = true;
             replaceVefShieldBubbles = true;
+            replaceVefHediffShields = true;
             repulsorShieldOpacity = 0.6f;
             largeShieldsVanillaOnly = false;
             personalShieldsVanillaOnly = false;

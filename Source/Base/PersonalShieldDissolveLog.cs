@@ -20,8 +20,9 @@ namespace VisualTweaks
     /// watching the shield's state fall out of Active during that call is the same
     /// signal without depending on a method name that either mod is free to rename.
     ///
-    /// The key is the base <see cref="ThingComp"/> because vanilla belts and VEF
-    /// bubbles are different comp types feeding the same animation.
+    /// The key is <see cref="object"/> because the three families are different comp
+    /// types — vanilla belts, VEF bubbles and VEF hediff shields — feeding the same
+    /// animation, and the hediff comp is not even a ThingComp.
     ///
     /// Keyed through a ConditionalWeakTable so a discarded belt takes its state with
     /// it, and not scribed: a dissolve surviving a save would need its start tick
@@ -51,8 +52,8 @@ namespace VisualTweaks
             public bool SawInactive;
         }
 
-        private static readonly ConditionalWeakTable<ThingComp, State> States =
-            new ConditionalWeakTable<ThingComp, State>();
+        private static readonly ConditionalWeakTable<object, State> States =
+            new ConditionalWeakTable<object, State>();
 
         /// <summary>
         /// Starts (or restarts) a dissolve. The angle is the damage direction — from
@@ -60,11 +61,10 @@ namespace VisualTweaks
         /// Null means no useful bearing (a dev break, for instance); a deterministic
         /// side is chosen from the thing id instead.
         /// </summary>
-        internal static void Begin(ThingComp comp, float? damageAngle)
+        internal static void Begin(object comp, Thing? host, float? damageAngle)
         {
             TickManager? tickManager = Find.TickManager;
-            ThingWithComps? parent = comp?.parent;
-            if (comp == null || tickManager == null || parent == null)
+            if (comp == null || host == null || tickManager == null)
             {
                 return;
             }
@@ -83,7 +83,7 @@ namespace VisualTweaks
             }
             else
             {
-                float a = (parent.thingIDNumber * 0.6180339887f % 1f) * Mathf.PI * 2f;
+                float a = (host.thingIDNumber * 0.6180339887f % 1f) * Mathf.PI * 2f;
                 ox = Mathf.Cos(a);
                 oz = Mathf.Sin(a);
             }
@@ -98,7 +98,7 @@ namespace VisualTweaks
             // Small on purpose: the shader adds this to noise lattice coordinates and
             // works in float32. Feeding raw ticks made the hash collapse into square
             // blocks after a few hours of play. See ShieldDissolveLog for the details.
-            int hash = Gen.HashCombineInt(parent.thingIDNumber, now);
+            int hash = Gen.HashCombineInt(host.thingIDNumber, now);
             state.Seed = (hash & 0xFFFF) / 65535f * 4f;
             state.SawInactive = false;
         }
@@ -108,7 +108,7 @@ namespace VisualTweaks
         /// advances on TicksGame, so the animation pauses and speeds up with the game
         /// clock like a vanilla mote.
         /// </summary>
-        internal static State? Progress(ThingComp comp, out float progress)
+        internal static State? Progress(object comp, out float progress)
         {
             progress = 0f;
             TickManager? tickManager = Find.TickManager;
@@ -132,7 +132,7 @@ namespace VisualTweaks
         }
 
         /// <summary>Ends a dissolve early, when the belt is back before it finishes.</summary>
-        internal static void Cancel(ThingComp comp)
+        internal static void Cancel(object comp)
         {
             if (comp != null)
             {

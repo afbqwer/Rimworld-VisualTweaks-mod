@@ -445,7 +445,7 @@ namespace VisualTweaks
                 return;
             }
 
-            PersonalShieldDissolveLog.Begin(comp, damageAngle);
+            PersonalShieldDissolveLog.Begin(comp, comp.parent, damageAngle);
         }
     }
 }
