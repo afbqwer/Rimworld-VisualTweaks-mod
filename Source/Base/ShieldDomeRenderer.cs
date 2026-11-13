@@ -208,7 +208,10 @@ namespace VisualTweaks
             // tick patch because this is the one place that already knows what "up"
             // means for both adapters: Active for an interceptor, active plus charge
             // for a repulsor. See ShieldRestoreLog.
-            ShieldRestoreLog.Observe(comp, present);
+            ShieldRestoreLog.Observe(
+                comp,
+                present,
+                Mathf.RoundToInt(VisualTweaksSettings.largeShieldRestoreTicks));
 
             // ------------------------------------------------------------------
             // Dissolve.

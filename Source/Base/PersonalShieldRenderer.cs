@@ -185,7 +185,10 @@ namespace VisualTweaks
             // adapters already distinguish "available" from "visible", so the
             // animation follows the shield state rather than whether the stock rule
             // happens to paint it right now.
-            ShieldRestoreLog.Observe(comp, active);
+            ShieldRestoreLog.Observe(
+                comp,
+                active,
+                Mathf.RoundToInt(VisualTweaksSettings.personalShieldRestoreTicks));
 
             ShieldBreakStyle breakStyle =
                 VisualTweaksSettings.CurrentShieldBreakStyleFor(

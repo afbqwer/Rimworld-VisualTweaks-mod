@@ -366,12 +366,16 @@ namespace VisualTweaks
 
         // How a shield comes back after being down. Unlike the break choice this is
         // one value per family, not per surface: coming online is the same event on
-        // every surface, and a surface switch should not silently rewrite it. The
-        // animation lasts ShieldRestoreLog.DurationTicks (60 ticks) for both.
+        // every surface, and a surface switch should not silently rewrite it. Each
+        // family also has its own duration; None ignores it.
+        public const float MinShieldRestoreTicks = 10f;
+        public const float MaxShieldRestoreTicks = 180f;
         public static ShieldRestoreStyle largeShieldRestoreStyle =
             ShieldRestoreStyle.Grow;
         public static ShieldRestoreStyle personalShieldRestoreStyle =
             ShieldRestoreStyle.Grow;
+        public static float largeShieldRestoreTicks = 60f;
+        public static float personalShieldRestoreTicks = 60f;
 
         /// <summary>The break animation that belongs to the selected dome style.</summary>
         public static ShieldBreakStyle CurrentShieldBreakStyle =>
@@ -877,6 +881,14 @@ namespace VisualTweaks
                 ref personalShieldRestoreStyle,
                 "personalShieldRestoreStyle",
                 ShieldRestoreStyle.Grow);
+            Scribe_Values.Look(
+                ref largeShieldRestoreTicks,
+                "largeShieldRestoreTicks",
+                60f);
+            Scribe_Values.Look(
+                ref personalShieldRestoreTicks,
+                "personalShieldRestoreTicks",
+                60f);
 
             Scribe_Values.Look(
                 ref largeShieldHexFaceStrength,
@@ -1248,6 +1260,14 @@ namespace VisualTweaks
                 largeShieldRestoreStyle);
             personalShieldRestoreStyle = SanitizeShieldRestoreStyle(
                 personalShieldRestoreStyle);
+            largeShieldRestoreTicks = Mathf.Round(Mathf.Clamp(
+                largeShieldRestoreTicks,
+                MinShieldRestoreTicks,
+                MaxShieldRestoreTicks));
+            personalShieldRestoreTicks = Mathf.Round(Mathf.Clamp(
+                personalShieldRestoreTicks,
+                MinShieldRestoreTicks,
+                MaxShieldRestoreTicks));
 
             largeShieldDissolveTicks = Mathf.Clamp(
                 largeShieldDissolveTicks,
@@ -1453,6 +1473,8 @@ namespace VisualTweaks
             personalHexShieldBreakStyle = ShieldBreakStyle.HexDissipate;
             largeShieldRestoreStyle = ShieldRestoreStyle.Grow;
             personalShieldRestoreStyle = ShieldRestoreStyle.Grow;
+            largeShieldRestoreTicks = 60f;
+            personalShieldRestoreTicks = 60f;
             largeShieldHexFaceStrength = 0.22f;
             largeShieldHexLineStrength = 0.75f;
             personalShieldHexFaceStrength = 0.22f;

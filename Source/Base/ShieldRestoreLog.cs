@@ -25,15 +25,12 @@ namespace VisualTweaks
     /// constructed generator, equipping a belt and enabling the replacement: all of
     /// them arrive with an already-active shield and should not flash.
     ///
-    /// Not scribed for the same reason as the dissolve logs: the animation is at most
-    /// a second and rebasing its start tick against a clock that may have advanced by
-    /// thousands of ticks has no value.
+    /// Not scribed for the same reason as the dissolve logs: the animation is only a
+    /// few seconds and rebasing its start tick against a clock that may have advanced
+    /// by thousands of ticks has no value.
     /// </summary>
     internal static class ShieldRestoreLog
     {
-        /// <summary>The restore animation lasts one second at normal game speed.</summary>
-        internal const int DurationTicks = 60;
-
         /// <summary>
         /// How small a Grow animation starts. Not zero: a quad scaled to nothing is
         /// invisible for the first frames anyway because the alpha starts at zero, and
@@ -46,7 +43,7 @@ namespace VisualTweaks
             public bool Initialized;
             public bool WasPresent;
             public int StartTick = -1;
-            public int DurationTicks = ShieldRestoreLog.DurationTicks;
+            public int DurationTicks = 1;
         }
 
         private static readonly ConditionalWeakTable<object, State> States =
@@ -57,8 +54,10 @@ namespace VisualTweaks
         /// changes from false to true, and drops any running restore when it goes down
         /// (a break, cooldown, EMP stun or shutdown owns the surface from then on).
         /// Idempotent, so the renderer can call it once per draw without checking.
+        /// The duration is captured at the start of each restore, so moving the slider
+        /// mid-animation affects the next one rather than restarting this one.
         /// </summary>
-        internal static void Observe(object comp, bool present)
+        internal static void Observe(object comp, bool present, int durationTicks)
         {
             if (comp == null)
             {
@@ -92,7 +91,7 @@ namespace VisualTweaks
             }
 
             state.StartTick = tickManager.TicksGame;
-            state.DurationTicks = DurationTicks;
+            state.DurationTicks = Mathf.Max(1, durationTicks);
         }
 
         /// <summary>

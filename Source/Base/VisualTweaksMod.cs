@@ -541,8 +541,7 @@ namespace VisualTweaks
                 };
         }
 
-        // Restore animation order. The duration is fixed at 60 ticks for both
-        // families; only the style is a choice.
+        // Restore animation order. The duration is a separate per-family slider.
         private static readonly ShieldRestoreStyle[] RestoreOrder =
         {
             ShieldRestoreStyle.None,
@@ -986,6 +985,11 @@ namespace VisualTweaks
                 listing,
                 "VisualTweaks_ShieldDome_RestoreGroup".Translate());
             DrawRestoreChoice(listing, false);
+            if (VisualTweaksSettings.largeShieldRestoreStyle
+                != ShieldRestoreStyle.None)
+            {
+                DrawRestoreSlider(listing, false);
+            }
         }
 
         /// <summary>
@@ -1055,6 +1059,11 @@ namespace VisualTweaks
                 listing,
                 "VisualTweaks_ShieldDome_RestoreGroup".Translate());
             DrawRestoreChoice(listing, true);
+            if (VisualTweaksSettings.personalShieldRestoreStyle
+                != ShieldRestoreStyle.None)
+            {
+                DrawRestoreSlider(listing, true);
+            }
 
             SettingsLayout.SubHeader(
                 listing,
@@ -1438,6 +1447,34 @@ namespace VisualTweaks
             {
                 VisualTweaksSettings.largeShieldRestoreStyle = RestoreOrder[picked];
             }
+        }
+
+        /// <summary>Timing for one family's restore animation.</summary>
+        private static void DrawRestoreSlider(Listing_Standard listing, bool personal)
+        {
+            if (personal)
+            {
+                VisualTweaksSettings.personalShieldRestoreTicks =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_RestoreTime".Translate(),
+                        VisualTweaksSettings.personalShieldRestoreTicks,
+                        VisualTweaksSettings.MinShieldRestoreTicks,
+                        VisualTweaksSettings.MaxShieldRestoreTicks,
+                        "VisualTweaks_ShieldDome_RestoreTimeTip".Translate(),
+                        step: 1f);
+                return;
+            }
+
+            VisualTweaksSettings.largeShieldRestoreTicks =
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_RestoreTime".Translate(),
+                    VisualTweaksSettings.largeShieldRestoreTicks,
+                    VisualTweaksSettings.MinShieldRestoreTicks,
+                    VisualTweaksSettings.MaxShieldRestoreTicks,
+                    "VisualTweaks_ShieldDome_RestoreTimeTip".Translate(),
+                    step: 1f);
         }
 
         /// <summary>

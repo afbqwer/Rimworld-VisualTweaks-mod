@@ -192,9 +192,11 @@
   <VisualTweaks_ShieldDome_RestoreNone>无</VisualTweaks_ShieldDome_RestoreNone>
   <VisualTweaks_ShieldDome_RestoreNoneTip>不播放恢复动画：护盾恢复可用时直接以正常大小和不透明度出现。</VisualTweaks_ShieldDome_RestoreNoneTip>
   <VisualTweaks_ShieldDome_RestoreFade>淡入</VisualTweaks_ShieldDome_RestoreFade>
-  <VisualTweaks_ShieldDome_RestoreFadeTip>护盾恢复可用时从透明逐渐变为正常不透明度，持续 60 tick（1 秒）。</VisualTweaks_ShieldDome_RestoreFadeTip>
+  <VisualTweaks_ShieldDome_RestoreFadeTip>护盾恢复可用时从透明逐渐变为正常不透明度。</VisualTweaks_ShieldDome_RestoreFadeTip>
   <VisualTweaks_ShieldDome_RestoreGrow>放大</VisualTweaks_ShieldDome_RestoreGrow>
-  <VisualTweaks_ShieldDome_RestoreGrowTip>护盾恢复可用时从透明、较小尺寸逐渐放大到正常大小，持续 60 tick（1 秒）。默认。</VisualTweaks_ShieldDome_RestoreGrowTip>
+  <VisualTweaks_ShieldDome_RestoreGrowTip>护盾恢复可用时从透明、较小尺寸逐渐放大到正常大小。默认。</VisualTweaks_ShieldDome_RestoreGrowTip>
+  <VisualTweaks_ShieldDome_RestoreTime>恢复时长</VisualTweaks_ShieldDome_RestoreTime>
+  <VisualTweaks_ShieldDome_RestoreTimeTip>从开始恢复到完全出现的 tick 数，60 tick = 1 秒。</VisualTweaks_ShieldDome_RestoreTimeTip>
 
   <VisualTweaks_ShieldDome_PersonalGroup>个人护盾</VisualTweaks_ShieldDome_PersonalGroup>
   <VisualTweaks_ShieldPersonal_VanillaOnly>只替换原版个人护盾</VisualTweaks_ShieldPersonal_VanillaOnly>
