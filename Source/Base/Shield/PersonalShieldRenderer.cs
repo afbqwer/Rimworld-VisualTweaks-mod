@@ -405,7 +405,7 @@ namespace VisualTweaks
             }
 
             NVector4 centerParam = new NVector4(center.x, center.z, hitHold, 0f);
-            float time = Time.realtimeSinceStartup;
+            float time = ShieldAnimationClock.Time;
 
             if (breaking && dissolve != null)
             {

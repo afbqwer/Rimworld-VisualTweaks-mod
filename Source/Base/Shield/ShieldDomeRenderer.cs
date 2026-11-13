@@ -412,7 +412,7 @@ namespace VisualTweaks
 
             NVector4 tint = new NVector4(color.r, color.g, color.b, 1f);
             NVector4 centerParam = new NVector4(center.x, center.z, hitHold, 0f);
-            float time = Time.realtimeSinceStartup;
+            float time = ShieldAnimationClock.Time;
 
             // Pulse off replaces vanilla's GetCurrentAlpha() entirely: one fixed,
             // lower value, with no sin term left anywhere in the surface. Pulse on
@@ -625,7 +625,7 @@ namespace VisualTweaks
                     originX,
                     originZ,
                     seed,
-                    Time.realtimeSinceStartup);
+                    ShieldAnimationClock.Time);
             }
             catch (Exception ex)
             {

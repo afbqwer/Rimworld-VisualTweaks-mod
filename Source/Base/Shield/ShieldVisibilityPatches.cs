@@ -109,7 +109,7 @@ namespace VisualTweaks
             }
 
             float phase = (float)(Gen.HashCombineInt(parent.thingIDNumber, PhaseSalt) % 100)
-                + Time.realtimeSinceStartup * __instance.Props.idlePulseSpeed;
+                + ShieldAnimationClock.Time * __instance.Props.idlePulseSpeed;
 
             __result = Mathf.Lerp(MinAlpha, MaxAlpha, (Mathf.Sin(phase) + 1f) / 2f);
         }

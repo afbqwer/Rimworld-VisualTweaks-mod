@@ -841,6 +841,10 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldAlways_Enable".Translate(),
                 ref VisualTweaksSettings.alwaysShowShields,
                 "VisualTweaks_ShieldAlways_EnableTip".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_Shield_PauseWhenPaused".Translate(),
+                ref VisualTweaksSettings.shieldPauseWhenPaused,
+                "VisualTweaks_Shield_PauseWhenPausedTip".Translate());
 
             // Each family owns its surface, style and break choices. Turning one off
             // hides only that section and leaves the other drawing untouched. The

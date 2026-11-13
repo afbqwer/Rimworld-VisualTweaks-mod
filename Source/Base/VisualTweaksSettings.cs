@@ -209,6 +209,13 @@ namespace VisualTweaks
         // baseline, and this is an opt-in.
         public static bool alwaysShowShields = true;
 
+        // Whether the custom shield surfaces freeze when the game is paused. The
+        // shader animation (HexBubble scan, angular drift, break noise) and the idle
+        // breathing alpha otherwise keep running over a paused colony, because their
+        // clock is wall time rather than game time. Hit and break progress already
+        // follows TicksGame and therefore freezes either way.
+        public static bool shieldPauseWhenPaused = true;
+
         // Large shields and personal belts replace vanilla's drawing independently
         // (see ShieldDomePatches and PersonalShieldPatches). Both default to on: the
         // point of the mod is that the drawn radius matches the one the game blocks
@@ -862,6 +869,10 @@ namespace VisualTweaks
                 "shieldRippleDamageScale",
                 1f);
             Scribe_Values.Look(ref alwaysShowShields, "alwaysShowShields", true);
+            Scribe_Values.Look(
+                ref shieldPauseWhenPaused,
+                "shieldPauseWhenPaused",
+                true);
             Scribe_Values.Look(
                 ref replaceLargeShields,
                 "replaceLargeShields",
