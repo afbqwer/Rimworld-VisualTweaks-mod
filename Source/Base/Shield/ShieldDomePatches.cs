@@ -246,7 +246,7 @@ namespace VisualTweaks
                 state,
                 host.DrawPos,
                 comp.Props.radius,
-                comp.Props.color,
+                style.Tint ?? comp.Props.color,
                 mode,
                 style.Surface,
                 breakStyle);

@@ -219,6 +219,52 @@ namespace VisualTweaks
             return result;
         }
 
+        /// <summary>
+        /// Mutually exclusive choices wrapped over several rows. The surface style
+        /// row gained a "follow global" option in the per-shield window, which made
+        /// six cells in one row too narrow to read; three per row keeps each label
+        /// legible without turning the control into a dropdown.
+        /// </summary>
+        public static int RadioRows(
+            Listing_Standard listing,
+            string[] labels,
+            int selected,
+            string[]? tips,
+            int perRow)
+        {
+            if (perRow < 1)
+            {
+                perRow = 1;
+            }
+
+            int result = selected;
+            for (int start = 0; start < labels.Length; start += perRow)
+            {
+                int count = Mathf.Min(perRow, labels.Length - start);
+                string[] rowLabels = new string[count];
+                string[]? rowTips = tips != null ? new string[count] : null;
+                for (int i = 0; i < count; i++)
+                {
+                    rowLabels[i] = labels[start + i];
+                    if (rowTips != null)
+                    {
+                        rowTips[i] = tips![start + i];
+                    }
+                }
+
+                int rowSelected = selected >= start && selected < start + count
+                    ? selected - start
+                    : -1;
+                int picked = RadioRow(listing, rowLabels, rowSelected, rowTips);
+                if (picked != rowSelected && picked >= 0)
+                {
+                    result = start + picked;
+                }
+            }
+
+            return result;
+        }
+
         /// <summary>Row of plain buttons of equal width. Returns the clicked index, or -1.</summary>
         public static int ButtonRow(Listing_Standard listing, string[] labels)
         {

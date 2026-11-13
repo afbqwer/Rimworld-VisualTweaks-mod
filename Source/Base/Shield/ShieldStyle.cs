@@ -1,3 +1,4 @@
+using UnityEngine;
 using Verse;
 
 namespace VisualTweaks
@@ -21,18 +22,23 @@ namespace VisualTweaks
         internal readonly ShieldRestoreStyle Restore;
         internal readonly PersonalShieldHitStyle PersonalHit;
 
+        /// <summary>Per-object RGB tint, or null to use the def's own color.</summary>
+        internal readonly Color? Tint;
+
         private ShieldStyle(
             ShieldDomeStyle surface,
             ShieldImpactStyle impact,
             ShieldBreakStyle breakStyle,
             ShieldRestoreStyle restore,
-            PersonalShieldHitStyle personalHit)
+            PersonalShieldHitStyle personalHit,
+            Color? tint)
         {
             Surface = surface;
             Impact = impact;
             Break = breakStyle;
             Restore = restore;
             PersonalHit = personalHit;
+            Tint = tint;
         }
 
         /// <summary>True for either spherical lattice surface.</summary>
@@ -131,7 +137,17 @@ namespace VisualTweaks
                     ? selection.PersonalHit
                     : (PersonalShieldHitStyle?)null);
 
-            return new ShieldStyle(surface, impact, breakStyle, restore, personalHit);
+            Color? tint = selection != null && selection.OverrideColor
+                ? selection.ShieldColor
+                : (Color?)null;
+
+            return new ShieldStyle(
+                surface,
+                impact,
+                breakStyle,
+                restore,
+                personalHit,
+                tint);
         }
 
         /// <summary>

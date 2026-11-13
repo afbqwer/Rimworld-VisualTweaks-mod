@@ -128,15 +128,21 @@
   <VisualTweaks_Shield_PauseWhenPaused>Pause shield animation when the game is paused</VisualTweaks_Shield_PauseWhenPaused>
   <VisualTweaks_Shield_PauseWhenPausedTip>Freezes the shield surface's scan and drift, plus vanilla's always-show breathing alpha, while the game is paused. Turn it off to keep them playing. Hit and break animations already follow game time and pause either way.</VisualTweaks_Shield_PauseWhenPausedTip>
   <VisualTweaks_ShieldOverride_Enable>Show shield override gizmo</VisualTweaks_ShieldOverride_Enable>
-  <VisualTweaks_ShieldOverride_EnableTip>When on, every pawn and building that owns a shield shows a gizmo that opens a style window for this mod's shield. Changes there apply to that object only; any row left on "Follow global" keeps following this page. Off by default.</VisualTweaks_ShieldOverride_EnableTip>
+  <VisualTweaks_ShieldOverride_EnableTip>When on, every pawn and building that owns a shield shows a gizmo that opens a style window for this mod's shield. Changes there apply to that object only; any row left on "Follow global" keeps following this page. On by default; the same switch is available inside the style window.</VisualTweaks_ShieldOverride_EnableTip>
   <VisualTweaks_ShieldOverride_GizmoLabel>Shield style</VisualTweaks_ShieldOverride_GizmoLabel>
-  <VisualTweaks_ShieldOverride_GizmoTip>Opens this shield's style settings. Only this pawn or building is affected; rows left on "Follow global" still use the Shields tab.</VisualTweaks_ShieldOverride_GizmoTip>
+  <VisualTweaks_ShieldOverride_GizmoTip>Opens this shield's style settings. Only this pawn or building is affected; rows left on "Follow global" still use the Shields tab. The window also contains the switch that controls whether shield override gizmos are shown.</VisualTweaks_ShieldOverride_GizmoTip>
   <VisualTweaks_ShieldOverride_UsingGlobal>This shield uses the global shield style.</VisualTweaks_ShieldOverride_UsingGlobal>
   <VisualTweaks_ShieldOverride_UsingLocal>This shield has its own style. Rows set to "Follow global" still track the global settings.</VisualTweaks_ShieldOverride_UsingLocal>
   <VisualTweaks_ShieldOverride_ReplacementOff>This shield family's replacement is currently off, so these changes will not be visible until it is enabled on the Shields tab.</VisualTweaks_ShieldOverride_ReplacementOff>
   <VisualTweaks_ShieldOverride_FollowGlobal>Follow global</VisualTweaks_ShieldOverride_FollowGlobal>
   <VisualTweaks_ShieldOverride_FollowGlobalTip>Use whatever the Shields tab currently selects for this row.</VisualTweaks_ShieldOverride_FollowGlobalTip>
   <VisualTweaks_ShieldOverride_Surface>Surface style</VisualTweaks_ShieldOverride_Surface>
+  <VisualTweaks_ShieldOverride_ColorGroup>Color</VisualTweaks_ShieldOverride_ColorGroup>
+  <VisualTweaks_ShieldOverride_ColorOverride>Override shield color</VisualTweaks_ShieldOverride_ColorOverride>
+  <VisualTweaks_ShieldOverride_ColorOverrideTip>Uses a custom RGB tint for this shield instead of its def's color. Transparency still comes from the shield itself, so the picker's alpha is ignored.</VisualTweaks_ShieldOverride_ColorOverrideTip>
+  <VisualTweaks_ShieldOverride_ColorPick>Choose color...</VisualTweaks_ShieldOverride_ColorPick>
+  <VisualTweaks_ShieldOverride_ColorOriginal>Use original color</VisualTweaks_ShieldOverride_ColorOriginal>
+  <VisualTweaks_ShieldOverride_ColorSwatchTip>Current shield color. Click "Choose color..." to change it.</VisualTweaks_ShieldOverride_ColorSwatchTip>
   <VisualTweaks_ShieldOverride_Impact>Hit animation</VisualTweaks_ShieldOverride_Impact>
   <VisualTweaks_ShieldOverride_PersonalHit>Hit animation</VisualTweaks_ShieldOverride_PersonalHit>
   <VisualTweaks_ShieldOverride_Break>Break animation</VisualTweaks_ShieldOverride_Break>
@@ -341,4 +347,9 @@
   <VisualTweaks_Leak_DistortionStrengthTip>Maximum bend in screen pixels where the stream is fully visible. Fainter parts of the stream bend less.</VisualTweaks_Leak_DistortionStrengthTip>
   <VisualTweaks_Leak_Trace>Log opening intensities (dev mode)</VisualTweaks_Leak_Trace>
   <VisualTweaks_Leak_TraceTip>Only for developer troubleshooting. When on, it writes a lot of log lines, so keep it off during normal play.</VisualTweaks_Leak_TraceTip>
+
+  <!-- Shared color picker window -->
+  <VisualTweaks_ColorPicker_Cancel>Cancel</VisualTweaks_ColorPicker_Cancel>
+  <VisualTweaks_ColorPicker_Confirm>Confirm</VisualTweaks_ColorPicker_Confirm>
+  <VisualTweaks_ColorPicker_Alpha>Alpha {0}%</VisualTweaks_ColorPicker_Alpha>
 </LanguageData>

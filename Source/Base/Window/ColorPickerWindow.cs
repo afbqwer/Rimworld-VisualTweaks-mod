@@ -173,11 +173,11 @@ public class ColorPickerWindow : Window
             DrawReadback(readbackRow);
             DrawAlphaRow(alphaRow);
 
-            if (Widgets.ButtonText(buttonRow.NewCol(ButSize.x), "GunplayPickerCancel".Translate()))
+            if (Widgets.ButtonText(buttonRow.NewCol(ButSize.x), "VisualTweaks_ColorPicker_Cancel".Translate()))
             {
                 Close();
             }
-            if (Widgets.ButtonText(buttonRow.NewCol(ButSize.x, HorizontalJustification.Right), "GunplayPickerConfirm".Translate()))
+            if (Widgets.ButtonText(buttonRow.NewCol(ButSize.x, HorizontalJustification.Right), "VisualTweaks_ColorPicker_Confirm".Translate()))
             {
                 onSave(new Color(color.r, color.g, color.b, alpha));
                 Close();
@@ -245,7 +245,7 @@ public class ColorPickerWindow : Window
 
         using (new TextBlock(TextAnchor.MiddleLeft))
         {
-            Widgets.Label(labelRect, "GunplayPickerAlpha".Translate(Mathf.RoundToInt(alpha * 100f)));
+            Widgets.Label(labelRect, "VisualTweaks_ColorPicker_Alpha".Translate(Mathf.RoundToInt(alpha * 100f)));
         }
 
         alpha = Widgets.HorizontalSlider(sliderRect, alpha, 0f, 1f, middleAlignment: true, roundTo: 0.01f);

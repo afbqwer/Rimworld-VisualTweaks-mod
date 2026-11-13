@@ -935,11 +935,12 @@ namespace VisualTweaks
             int styleIndex = IndexOf(
                 LargeShieldStyleOrder,
                 VisualTweaksSettings.shieldDomeStyle);
-            int pickedStyle = SettingsLayout.RadioRow(
+            int pickedStyle = SettingsLayout.RadioRows(
                 listing,
                 ShieldStyleLabels(true),
                 styleIndex,
-                ShieldStyleTips(true));
+                ShieldStyleTips(true),
+                3);
             if (pickedStyle != styleIndex)
             {
                 VisualTweaksSettings.shieldDomeStyle =
@@ -1041,11 +1042,12 @@ namespace VisualTweaks
             int styleIndex = IndexOf(
                 PersonalShieldStyleOrder,
                 VisualTweaksSettings.personalShieldDomeStyle);
-            int pickedStyle = SettingsLayout.RadioRow(
+            int pickedStyle = SettingsLayout.RadioRows(
                 listing,
                 ShieldStyleLabels(false),
                 styleIndex,
-                ShieldStyleTips(false));
+                ShieldStyleTips(false),
+                3);
             if (pickedStyle != styleIndex)
             {
                 VisualTweaksSettings.personalShieldDomeStyle =

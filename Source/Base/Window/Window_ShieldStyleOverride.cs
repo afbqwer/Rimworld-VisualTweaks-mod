@@ -1,4 +1,6 @@
 using System;
+using ASQPicker;
+using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -69,7 +71,37 @@ namespace VisualTweaks
                         "VisualTweaks_ShieldOverride_ReplacementOff".Translate());
                 }
 
+                // The same master switch as the Shields tab. It lives here too so
+                // a player who finds the gizmo noisy can turn it off without
+                // hunting through the settings page; the window stays open while
+                // they do it.
+                bool showGizmos = VisualTweaksSettings.shieldOverrideGizmo;
+                listing.CheckboxLabeled(
+                    "VisualTweaks_ShieldOverride_Enable".Translate(),
+                    ref showGizmos,
+                    "VisualTweaks_ShieldOverride_EnableTip".Translate());
+                if (showGizmos != VisualTweaksSettings.shieldOverrideGizmo)
+                {
+                    VisualTweaksSettings.shieldOverrideGizmo = showGizmos;
+
+                    // This window is not the settings dialog, so the game will not
+                    // write mod settings on its close. Persist the master switch
+                    // immediately; it is one tiny XML write on a click.
+                    try
+                    {
+                        LoadedModManager.GetMod<VisualTweaksMod>()?.WriteSettings();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.ErrorOnce(
+                            "[Visual Tweaks] Could not persist the gizmo switch: "
+                                + ex,
+                            typeof(Window_ShieldStyleOverride).GetHashCode() ^ 0x51);
+                    }
+                }
+
                 DrawSurfaceRow(listing, entry);
+                DrawColorRow(listing, entry);
 
                 // The surface choice decides which impact and break sets exist, so
                 // the rows below read the effective style rather than the raw
@@ -129,7 +161,7 @@ namespace VisualTweaks
                 : 0;
 
             listing.Label("VisualTweaks_ShieldOverride_Surface".Translate());
-            int picked = SettingsLayout.RadioRow(listing, labels, selected, tips);
+            int picked = SettingsLayout.RadioRows(listing, labels, selected, tips, 3);
             if (picked == selected)
             {
                 return;
@@ -148,6 +180,87 @@ namespace VisualTweaks
                     ShieldHexMap.EnsureBaked(target);
                 }
             }
+        }
+
+        private void DrawColorRow(
+            Listing_Standard listing,
+            ShieldStyleOverride entry)
+        {
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldOverride_ColorGroup".Translate());
+
+            bool enabled = entry.OverrideColor;
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldOverride_ColorOverride".Translate(),
+                ref enabled,
+                "VisualTweaks_ShieldOverride_ColorOverrideTip".Translate());
+            if (enabled != entry.OverrideColor)
+            {
+                entry.OverrideColor = enabled;
+                if (enabled)
+                {
+                    entry.ShieldColor = CurrentBaseColor();
+                }
+            }
+
+            if (!entry.OverrideColor)
+            {
+                return;
+            }
+
+            Rect row = listing.GetRect(30f);
+            Rect swatch = new Rect(row.x, row.y + 2f, 26f, 26f);
+            ColorPickerWindow.DrawCheckerSwatch(swatch, entry.ShieldColor);
+
+            Rect pick = new Rect(swatch.xMax + 8f, row.y, 160f, 30f);
+            if (Widgets.ButtonText(
+                    pick,
+                    "VisualTweaks_ShieldOverride_ColorPick".Translate()))
+            {
+                Find.WindowStack?.Add(
+                    new ColorPickerWindow(
+                        entry.ShieldColor,
+                        delegate(Color picked)
+                        {
+                            // The shield's own alpha carries transparency; the
+                            // picker's alpha is deliberately discarded.
+                            entry.OverrideColor = true;
+                            entry.ShieldColor = new Color(
+                                picked.r,
+                                picked.g,
+                                picked.b,
+                                1f);
+                        }));
+            }
+
+            Rect original = new Rect(pick.xMax + 8f, row.y, 170f, 30f);
+            if (Widgets.ButtonText(
+                    original,
+                    "VisualTweaks_ShieldOverride_ColorOriginal".Translate()))
+            {
+                entry.OverrideColor = false;
+            }
+
+            TooltipHandler.TipRegion(
+                swatch,
+                "VisualTweaks_ShieldOverride_ColorSwatchTip".Translate());
+            listing.Gap(SettingsLayout.RowGap);
+        }
+
+        /// <summary>The def's own color, used as the picker's starting point.</summary>
+        private Color CurrentBaseColor()
+        {
+            CompProjectileInterceptor? interceptor =
+                thing.GetComp<CompProjectileInterceptor>();
+            if (interceptor != null)
+            {
+                return interceptor.Props.color;
+            }
+
+            // Vanilla belts and most VEF bubbles are white; a VEF bubble with a
+            // def color still lets the player pick from white and adjust.
+            return Color.white;
         }
 
         private void DrawLargeImpactRow(

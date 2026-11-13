@@ -390,10 +390,12 @@ namespace VisualTweaks
 
             // Vanilla belts have always drawn white here; VEF lets its def pick the
             // bubble colour, so the adapter passes it through instead of hard-coding.
+            // A per-object override replaces that tint.
+            Color drawnColor = style.Tint ?? baseColor;
             NVector4 tint = new NVector4(
-                baseColor.r,
-                baseColor.g,
-                baseColor.b,
+                drawnColor.r,
+                drawnColor.g,
+                drawnColor.b,
                 1f);
             bool hexBubble = style.IsHexBubble;
 

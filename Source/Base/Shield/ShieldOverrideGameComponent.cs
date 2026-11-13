@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 using Verse;
 
 namespace VisualTweaks
@@ -40,12 +41,16 @@ namespace VisualTweaks
         public bool OverridePersonalHit;
         public PersonalShieldHitStyle PersonalHit = PersonalShieldHitStyle.Jitter;
 
+        public bool OverrideColor;
+        public Color ShieldColor = Color.white;
+
         internal bool IsEmpty =>
             !OverrideSurface
             && !OverrideImpact
             && !OverrideBreak
             && !OverrideRestore
-            && !OverridePersonalHit;
+            && !OverridePersonalHit
+            && !OverrideColor;
 
         public void ExposeData()
         {
@@ -67,6 +72,11 @@ namespace VisualTweaks
                 ref PersonalHit,
                 "personalHit",
                 PersonalShieldHitStyle.Jitter);
+            Scribe_Values.Look(ref OverrideColor, "overrideColor", false);
+            ASQPicker.ColorPickerWindow.LookColor(
+                ref ShieldColor,
+                "shieldColor",
+                Color.white);
         }
 
         internal void Clear()
@@ -76,6 +86,7 @@ namespace VisualTweaks
             OverrideBreak = false;
             OverrideRestore = false;
             OverridePersonalHit = false;
+            OverrideColor = false;
         }
     }
 

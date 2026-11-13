@@ -398,9 +398,13 @@ namespace VisualTweaks
             // emitting light, not sitting idle, so it keeps the def's colour. The VEF
             // adapter never asks for this dimming: a repulsor that is off is not drawn
             // by VEF at all, so there is no "selected but idle" surface to recolour.
+            // The per-object color override replaces the def's tint only while the
+            // shield is actually drawn as itself. Vanilla's selected-but-inactive
+            // grey still wins: that state is a status cue, not a surface choice.
+            Color drawnColor = style.Tint ?? baseColor;
             Color color = dissolve == null && !present && selected
                 ? InactiveColor
-                : baseColor;
+                : drawnColor;
 
             bool hexBubble = style.IsHexBubble;
 

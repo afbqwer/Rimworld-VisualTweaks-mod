@@ -214,7 +214,7 @@ namespace VisualTweaks
         // that shield, while every field left unset keeps following the global
         // choices above. Off by default so the vanilla gizmo bar is untouched until
         // the player opts in.
-        public static bool shieldOverrideGizmo = false;
+        public static bool shieldOverrideGizmo = true;
 
         // Whether the custom shield surfaces freeze when the game is paused. The
         // shader animation (HexBubble scan, angular drift, break noise) and the idle
@@ -846,7 +846,7 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref shieldOverrideGizmo,
                 "shieldOverrideGizmo",
-                false);
+                true);
             Scribe_Values.Look(
                 ref shieldPauseWhenPaused,
                 "shieldPauseWhenPaused",
