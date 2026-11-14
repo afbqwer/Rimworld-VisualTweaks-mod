@@ -16,12 +16,26 @@ namespace VisualTweaks
     /// Pawn and Building separately: both eventually call that base method, so one
     /// patch covers every gizmo-producing host without replacing the eager pawn
     /// gizmo lists other mods may build.
+    ///
+    /// Only the first caller of a frame answers. Vanilla asks every selected object
+    /// for its gizmos once per frame and then merges the identical commands back
+    /// into one button, so every later answer was built only to be discarded -- and
+    /// each one cost a full shield scan. One frame stamp makes the first caller
+    /// answer for the whole selection, which keeps that scan at a single object per
+    /// frame however large the selection is. A selection whose first object has no
+    /// shield shows no gizmo; the player selects a shielded object directly.
     /// </summary>
     internal static class ShieldOverridePatches
     {
         private const string GizmoIconPath = "UI/Commands/ChangeColor";
         private static Texture2D? gizmoIcon;
         private static bool gizmoIconResolved;
+
+        /// <summary>
+        /// The frame this postfix last answered, so the rest of that frame's callers
+        /// leave on an int compare. Same clock <c>GizmoGridDrawer</c> caches on.
+        /// </summary>
+        private static int answeredFrame = -1;
 
         internal static void Apply(Harmony harmony)
         {
@@ -92,6 +106,20 @@ namespace VisualTweaks
                 return;
             }
 
+            // Every selected object is asked once per frame. Answering them all
+            // means one shield scan each -- the VEF hediff walk is the expensive
+            // one -- for commands vanilla then merges down to a single button. One
+            // frame stamp replaces that with an int compare for every caller after
+            // the first, and the stamp is taken before the scan so a first object
+            // without a shield stops the rest of the frame too.
+            int frame = Time.frameCount;
+            if (frame == answeredFrame)
+            {
+                return;
+            }
+
+            answeredFrame = frame;
+
             try
             {
                 if (TryGetShieldTarget(__instance, out ShieldHexTarget target))
@@ -156,12 +184,10 @@ namespace VisualTweaks
                 defaultLabel = "VisualTweaks_ShieldOverride_GizmoLabel".Translate(),
                 defaultDesc = "VisualTweaks_ShieldOverride_GizmoTip".Translate(),
                 icon = GizmoIcon(),
-                // Vanilla keeps only the first gizmo of a group whose label and
-                // icon match (GizmoGridDrawer + Command.GroupsWith), so a
-                // multi-selection draws this command once and drops the copies.
-                // The action therefore reads the live selection rather than the
-                // captured thing: every selected shield is edited together by the
-                // one window that opens.
+                // The action reads the live selection rather than the captured
+                // thing: the gizmo is only ever built for the first selected object,
+                // but every selected shield is edited together by the one window
+                // that opens.
                 action = delegate { OpenForSelection(thing, target); },
             };
         }
@@ -212,6 +238,9 @@ namespace VisualTweaks
         /// Personal shields are checked first on a building and large shields first
         /// on a pawn, so the family that owns the drawn surface wins in the rare
         /// case an object has both.
+        ///
+        /// Runs for at most one object per frame, so the scans below are a
+        /// per-frame cost of one object and not a per-selection cost.
         /// </summary>
         private static bool TryGetShieldTarget(
             ThingWithComps thing,
