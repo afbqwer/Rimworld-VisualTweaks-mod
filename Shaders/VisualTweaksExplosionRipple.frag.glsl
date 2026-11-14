@@ -24,9 +24,10 @@ layout(std430, set = 2, binding = 3) readonly buffer _RippleParams
 // displacement peaks on the wave front and falls away to zero on both sides.
 //
 // The scene grab is declared in VisualTweaksShaders.xml:
-//   <sceneGrab><name>VisualTweaksExplosionRipple</name>...</sceneGrab>
-// which binds the frame colour to _GrabVisualTweaksExplosionRipple. The grab is
-// taken at queue 3178, after motes and explosion flashes (3151) and before the
+//   <sceneGrab><name>VisualTweaksRefraction</name>...</sceneGrab>
+// which binds the frame colour to _GrabVisualTweaksRefraction. The declaration is
+// shared with the vacuum leak shader, so the frame is copied once for both. The grab
+// is taken at queue 3179, after motes and explosion flashes (3151) and before the
 // darkness layer (3180), so the shockwave also bends the blast's own fireball.
 //
 // Output is opaque inside the band: the refracted scene replaces the frame there
@@ -74,7 +75,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
     vec4 _Params5; // @default = vec4(0.0, 0.0, 0.0, 0.0)
 } u;
 
-layout(set = 2, binding = 1) uniform sampler2D _GrabVisualTweaksExplosionRipple;
+layout(set = 2, binding = 1) uniform sampler2D _GrabVisualTweaksRefraction;
 
 float hash21(vec2 p)
 {
@@ -217,7 +218,7 @@ void main()
         discard;
     }
 
-    vec2 grabSize = vec2(textureSize(_GrabVisualTweaksExplosionRipple, 0));
+    vec2 grabSize = vec2(textureSize(_GrabVisualTweaksRefraction, 0));
     vec2 grabUv = gl_FragCoord.xy / max(grabSize, vec2(1.0));
 
     // Compressed air acts as a positive lens: sample towards the centre so the
@@ -235,7 +236,7 @@ void main()
         grabUv - vec2(offset.x, -offset.y),
         vec2(0.0),
         vec2(1.0));
-    vec3 scene = texture(_GrabVisualTweaksExplosionRipple, sampleUv).rgb;
+    vec3 scene = texture(_GrabVisualTweaksRefraction, sampleUv).rgb;
 
     // A faint brightness lift on the compression crest reads as air glinting in
     // the blast light.

@@ -218,10 +218,10 @@ namespace VisualTweaks
                 Speed = tickManager != null ? tickManager.CurTimeSpeed : TimeSpeed.Normal,
             };
 
-            // Order follows the shader render queues (gas 2990, wind 2991, cold mist and
-            // heat haze 3174, vacuum leak 3177, shockwaves 3178), which already decide
-            // the blending order. Drawing in that sequence just keeps the code readable
-            // against the defs.
+            // Submission order is for readability only: the shader queue decides the blend
+            // order, and inside a shared queue Waylith orders transparent draws by camera
+            // depth (altitude). Gas and wind share 2991, cold mist and heat haze share
+            // 3174, vacuum leaks and shockwaves share 3179.
             DrawLayer(gasField, in frame);
 
             // Same queue band (the dust pass uses vanilla's 3000), so this reads in the order
@@ -248,10 +248,9 @@ namespace VisualTweaks
             // the ripples that may still be fading on top of it.
             DrawLayer(shieldBreaks, in frame);
 
-            // Shield ripples share the shockwave render queue (3178). Submitting them
-            // first lets a blast that lands in the same frame draw over them, which is
-            // the correct read: the shield ripple is a surface event, the shockwave is
-            // in front of everything.
+            // Shield ripples share the shockwave queue and scene grab (3179), so a hit
+            // never costs a second full-frame copy. They are submitted first; overlapping
+            // draws are ordered by depth inside the queue.
             DrawLayer(shieldRipples, in frame);
             DrawLayer(explosions, in frame);
         }

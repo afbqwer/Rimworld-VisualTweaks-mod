@@ -38,7 +38,7 @@ namespace VisualTweaks
         // publishes at this cadence, and the mesh upload is the expensive part.
         private const float RebuildInterval = 0.1f;
 
-        // Vanilla's own gas material queue. Above the field (2990) so dust is not dimmed by
+        // Vanilla's own gas material queue. Above the field (2991) so dust is not dimmed by
         // the gas cloud it sits in, and below fog of war (3175), which covers it as usual.
         private const int RenderQueue = 3000;
 

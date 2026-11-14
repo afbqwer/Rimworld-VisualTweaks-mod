@@ -22,7 +22,10 @@ namespace VisualTweaks
     /// </summary>
     internal sealed class VacuumLeakRenderer : IDisposable
     {
-        private const int RenderQueue = 3177;
+        // Shared with the shockwave: both need the post-fog, pre-darkness slot, and the
+        // shader defs also share one scene grab at this queue, so the frame is copied
+        // once. Inside the queue the stream is below the shockwave by altitude.
+        private const int RenderQueue = 3179;
 
         // Safety bound on a single submission. Ports are bounded by the map's
         // ventilation openings and breaches by VacuumBreaches' own cap (64), so

@@ -15,10 +15,10 @@ namespace VisualTweaks
     /// material constants. Two reasons that is the right call and not just the cheap
     /// one:
     ///
-    /// 1. The shockwave scene grab is taken at queue 3178, which is after the shield
-    ///    itself (MoteGlow, default 3000). The refracted sample therefore already
-    ///    contains the shield's own glow ring, and the ripple visibly bends it —
-    ///    exactly the "the surface is being disturbed" read we want.
+    /// 1. The shockwave scene grab is taken at queue 3179, which is after the shield
+    ///    itself (MoteGlow, 3151). The refracted sample therefore already contains the
+    ///    shield's own glow ring, and the ripple visibly bends it — exactly the "the
+    ///    surface is being disturbed" read we want.
     /// 2. A second shader with its own scene grab would mean a second full-frame
     ///    copy every frame. Shield hits are not rare: a mech cluster shield can soak
     ///    dozens of bullets per second in a raid. Refraction-by-reuse costs nothing

@@ -161,14 +161,20 @@ namespace VisualTweaks
         private const int ParticleTextureWidth = 64;
         private const int ParticleTextureHeight = 16;
 
-        // Drawn *under* the map overlays instead of over them. RimWorld's overlay
-        // materials (fog of war, darkness, snow, shadow masks) sit at the default
-        // transparent queue of 3000, so anything below that is painted first and is then
-        // covered by them: fogged cells hide the streaks by themselves instead of needing
-        // to be skipped, and night darkness dims them the way it dims the terrain.
-        // Anything above 3000 draws on top of the fog again.
-        private const int BaseRenderQueue = 2990;
-        private const int DashRenderQueue = 2991;
+        // Drawn *under* the map overlays instead of over them. Fog of war (3175),
+        // gravship shadow (3176) and darkness (3180) all sit above this queue, so the
+        // streaks are painted first and are then covered by them: fogged cells hide the
+        // streaks by themselves instead of needing to be skipped, and night darkness dims
+        // them the way it dims the terrain. Anything above 3175 draws on top of the fog
+        // again.
+        //
+        // One queue for the guide line, the streaks and the gas field. Their order is
+        // carried by altitude instead: the guide sits one AltInc below the fog layer, the
+        // streaks DashAltitudeOffset above it, and the gas field five layers below both.
+        // Waylith sorts transparent draws inside a queue by camera depth, so the lower
+        // quad is submitted first and the result is the same as the old 2990/2991 split,
+        // without claiming two slots — 2990 is already vanilla's MoteGlowPulseLow.
+        private const int RenderQueue = 2991;
 
         // One AltInc below AltitudeLayer.FogOfWar, i.e. between the visual effects and the
         // fog quad. Only matters for depth-tested passes; the queue above does the
@@ -2107,7 +2113,7 @@ namespace VisualTweaks
             gpuMaterial = new Material((Shader)def)
             {
                 name = "VisualTweaksAOWindGpuMat",
-                renderQueue = DashRenderQueue,
+                renderQueue = RenderQueue,
             };
             gpuMaterial.mainTexture = particleTexture;
             gpuMaterial.color = new Color(1f, 1f, 1f, opacityScale);
@@ -2641,7 +2647,7 @@ namespace VisualTweaks
             }
 
             // No fog test here any more: the layer is drawn under the fog of war (see
-            // BaseRenderQueue), so fogged cells are hidden by the fog itself. Dropping it
+            // RenderQueue), so fogged cells are hidden by the fog itself. Dropping it
             // also keeps this method small enough to inline, which matters more than the
             // two guards it used to carry.
             //
@@ -2973,14 +2979,14 @@ namespace VisualTweaks
 
             if (baseMaterial == null)
             {
-                baseMaterial = NewMaterial("AOWindStreamlineBaseMat", BaseColor, lineTexture, BaseRenderQueue);
+                baseMaterial = NewMaterial("AOWindStreamlineBaseMat", BaseColor, lineTexture, RenderQueue);
             }
 
             // One line at startup. If the fog ever stops covering this layer, this number
             // is the reason: our queue has to sit below the fog's.
             VisualTweaksLog.TraceOnce(
                 ref layerLogged,
-                "queue " + BaseRenderQueue
+                "queue " + RenderQueue
                     + ", fog queue " + (MatBases.FogOfWar != null ? MatBases.FogOfWar.renderQueue : -1)
                     + ", fog altitude " + Altitudes.AltitudeFor(AltitudeLayer.FogOfWar));
 
@@ -2997,7 +3003,7 @@ namespace VisualTweaks
                         "AOWindStreamlineMat" + i,
                         BucketColors[i],
                         cometTexture,
-                        DashRenderQueue);
+                        RenderQueue);
                 }
             }
         }

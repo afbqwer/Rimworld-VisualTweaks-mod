@@ -19,7 +19,10 @@ namespace VisualTweaks
     /// </summary>
     internal sealed class ExplosionRippleRenderer : IDisposable
     {
-        private const int RenderQueue = 3178;
+        // Shared with the vacuum leak: both need the post-fog, pre-darkness slot, and the
+        // shader defs also share one scene grab at this queue, so the frame is copied
+        // once per frame instead of once per effect.
+        private const int RenderQueue = 3179;
 
         // A single wave is ~0.2 µs with the plain path; the instanced setup has a
         // fixed cost (buffer rent/write, descriptor set, binding list) in the low
@@ -33,9 +36,12 @@ namespace VisualTweaks
         private const float RingFrontAtEdge = 1f / QuadOvershoot;
 
         // Constant for the whole session (altitude layers are a fixed ladder), so
-        // resolve it once instead of through an extension method per frame.
+        // resolve it once instead of through an extension method per frame. One AltInc
+        // above AltitudeLayer.Gas (the vacuum leak's altitude) keeps the blast on top of
+        // the air stream now that both share a render queue: Waylith orders transparent
+        // draws inside a queue by camera depth, so the lower quad is submitted first.
         internal static readonly float Altitude =
-            Altitudes.AltitudeFor(AltitudeLayer.MoteOverhead);
+            Altitudes.AltitudeFor(AltitudeLayer.Gas) + Altitudes.AltInc;
 
         private static readonly int ParamsId = Shader.PropertyToID("_Params");
         private static readonly int Params2Id = Shader.PropertyToID("_Params2");

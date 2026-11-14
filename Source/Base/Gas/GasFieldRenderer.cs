@@ -18,7 +18,12 @@ namespace VisualTweaks
     /// </summary>
     internal sealed class GasFieldRenderer : IDisposable
     {
-        private const int RenderQueue = 2990;
+        // Shared with the wind layer (guide line and streaks). The three are separated by
+        // altitude, not by queue: the field sits at AltitudeLayer.Gas, the guide line one
+        // AltInc below the fog layer and the streaks just above it, and Waylith orders
+        // transparent draws inside one queue by camera depth. Keeping them in one queue
+        // leaves 2990 — which vanilla's MoteGlowPulseLow already owns — to vanilla.
+        private const int RenderQueue = 2991;
         // Fallback cadence: AO's default of 6 ticks at 60 TPS. The live value comes from
         // CurrentPublishPeriod(), because AO lets the interval be 3..30 ticks and ticks
         // themselves run faster at 2x/3x. The refresh timer uses it as-is.

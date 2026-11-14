@@ -39,12 +39,14 @@ layout(std430, set = 2, binding = 3) readonly buffer _LeakParams
 //   _Params.z  refraction enabled (0 or 1)
 //   _Params.w  refraction amplitude in pixels at full coverage
 //
-// The scene grab is declared in VisualTweaksShaders.xml and captured at the same
-// queue, so it holds everything the stream may bend but never the stream. The
-// output composites the refracted frame with the pale stream colour using the
-// same weight an alpha blend would have used, and writes alpha 1: the displaced
-// sample fades to the untouched frame at the silhouette, so no seam appears.
-// Everything else is procedural: no textures, no asset dependencies.
+// The scene grab is declared in VisualTweaksShaders.xml at queue 3179 and captured
+// before the queue's own draws, so it holds everything the stream may bend but never
+// the stream. The declaration is shared with the shockwave shader: both sample the
+// same post-fog, pre-darkness frame, so Waylith copies it once per frame instead of
+// once per effect. The output composites the refracted frame with the pale stream
+// colour using the same weight an alpha blend would have used, and writes alpha 1:
+// the displaced sample fades to the untouched frame at the silhouette, so no seam
+// appears. Everything else is procedural: no textures, no asset dependencies.
 
 layout(location = 0) in vec2 vUv;
 layout(location = 1) in vec4 vParams;
@@ -59,7 +61,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
     vec4 _Params3; // @default = vec4(0.0, 4.5, 0.0, 0.0)
 } u;
 
-layout(set = 2, binding = 1) uniform sampler2D _GrabVisualTweaksVacuumLeak;
+layout(set = 2, binding = 1) uniform sampler2D _GrabVisualTweaksRefraction;
 
 float hash21(vec2 p)
 {
@@ -101,7 +103,7 @@ float fbm2(vec2 p)
 // untouched frame, so the composite below is exactly the old alpha blend.
 vec3 sampleRefracted(vec2 noiseCoord, float coverage, float strength)
 {
-    vec2 grabSize = max(vec2(textureSize(_GrabVisualTweaksVacuumLeak, 0)), vec2(1.0));
+    vec2 grabSize = max(vec2(textureSize(_GrabVisualTweaksRefraction, 0)), vec2(1.0));
     vec2 grabUv = gl_FragCoord.xy / grabSize;
     vec2 wobble = vec2(
         fbm2(noiseCoord * 1.7 + vec2(3.1, 7.7)),
@@ -111,7 +113,7 @@ vec3 sampleRefracted(vec2 noiseCoord, float coverage, float strength)
         * strength * coverage;
     vec2 offset = wobble * (2.0 * distortPx) / grabSize;
     return texture(
-        _GrabVisualTweaksVacuumLeak,
+        _GrabVisualTweaksRefraction,
         clamp(grabUv + offset, vec2(0.0), vec2(1.0))).rgb;
 }
 
