@@ -147,10 +147,18 @@ namespace VisualTweaks
         /// advances on TicksGame, so the animation freezes with the rest of the world
         /// when the game is paused and speeds up with the game's own time controls —
         /// exactly like a vanilla mote.
+        ///
+        /// <paramref name="existing"/> is whatever state the table holds, running or
+        /// expired, so <see cref="TryConsumeFinished"/> can answer from the same
+        /// lookup instead of peeking a second time.
         /// </summary>
-        internal static State? Progress(ThingComp comp, out float progress)
+        internal static State? Progress(
+            ThingComp comp,
+            out float progress,
+            out State? existing)
         {
             progress = 0f;
+            existing = null;
             TickManager? tickManager = Find.TickManager;
             if (tickManager == null
                 || !States.TryGetValue(comp, out State? state)
@@ -158,6 +166,8 @@ namespace VisualTweaks
             {
                 return null;
             }
+
+            existing = state;
 
             int age = tickManager.TicksGame - state.StartTick;
             if (age < 0 || age >= state.DurationTicks)
@@ -181,14 +191,14 @@ namespace VisualTweaks
         /// becomes the "it is back" signal. Only a break that ended within one duration
         /// counts; an old state left over while the shield stayed down must not fade it
         /// in when it finally returns — Observe handles that case through the down edge.
+        ///
+        /// Takes the state <see cref="Progress"/> already fetched; null means the table
+        /// held nothing, which is the same answer the lookup used to give.
         /// </summary>
-        internal static bool TryConsumeFinished(ThingComp comp)
+        internal static bool TryConsumeFinished(ThingComp comp, State? state)
         {
             TickManager? tickManager = Find.TickManager;
-            if (tickManager == null
-                || comp == null
-                || !States.TryGetValue(comp, out State? state)
-                || state == null)
+            if (tickManager == null || comp == null || state == null)
             {
                 return false;
             }

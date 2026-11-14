@@ -47,6 +47,13 @@ namespace VisualTweaks
         private static FieldInfo? ticksTillReset;
         private static FieldInfo? graphic;
 
+        // Compiled readers for the same four members; see <see cref="VefMemberAccess"/>.
+        // The fields above are kept for binding and type checking.
+        private static Func<object, float>? energyOf;
+        private static Func<object, bool>? useEnergyOf;
+        private static Func<object, int>? ticksTillResetOf;
+        private static Func<object, GraphicData>? graphicOf;
+
         private static bool fatal;
         private static bool signalsBroken;
         private static bool patched;
@@ -166,6 +173,21 @@ namespace VisualTweaks
             {
                 Log.Warning("[Visual Tweaks] VEF HediffComp_Shield members have"
                     + " unexpected types; hediff shields keep the stock drawing.");
+                return false;
+            }
+
+            energyOf = VefMemberAccess.CompileField<float>(energy);
+            useEnergyOf = VefMemberAccess.CompileField<bool>(useEnergy);
+            ticksTillResetOf = VefMemberAccess.CompileField<int>(ticksTillReset);
+            graphicOf = VefMemberAccess.CompileField<GraphicData>(graphic);
+
+            if (energyOf == null
+                || useEnergyOf == null
+                || ticksTillResetOf == null
+                || graphicOf == null)
+            {
+                Log.Warning("[Visual Tweaks] VEF HediffComp_Shield members could not be"
+                    + " compiled; hediff shields keep the stock drawing.");
                 return false;
             }
 
@@ -306,7 +328,7 @@ namespace VisualTweaks
                 }
 
                 __state.WasActive = true;
-                __state.EnergyBefore = ReadFloat(energy!, __instance);
+                __state.EnergyBefore = energyOf!(__instance);
                 __state.Angle = dinfo.Angle;
             }
             catch (Exception ex)
@@ -335,9 +357,9 @@ namespace VisualTweaks
 
             try
             {
-                float energyNow = ReadFloat(energy!, __instance);
-                int resetTicks = ReadInt(ticksTillReset!, __instance);
-                bool draining = ReadBool(useEnergy!, __instance);
+                float energyNow = energyOf!(__instance);
+                int resetTicks = ticksTillResetOf!(__instance);
+                bool draining = useEnergyOf!(__instance);
 
                 // A real down period only exists when the shield uses charge and the
                 // def asks for a recharge delay. VEF's defaults reset instantly inside
@@ -405,7 +427,7 @@ namespace VisualTweaks
                     return true;
                 }
 
-                GraphicData? data = graphic!.GetValue(__instance.props) as GraphicData;
+                GraphicData? data = graphicOf!(__instance.props);
                 if (data == null)
                 {
                     return true;
@@ -450,27 +472,7 @@ namespace VisualTweaks
         /// <summary>VEF's own <c>ShieldActive</c> expression.</summary>
         private static bool ShieldActive(HediffComp comp)
         {
-            return ReadBool(useEnergy!, comp)
-                ? ReadFloat(energy!, comp) > 0f
-                : true;
-        }
-
-        private static float ReadFloat(FieldInfo field, object instance)
-        {
-            object? value = field.GetValue(instance);
-            return value is float number ? number : 0f;
-        }
-
-        private static int ReadInt(FieldInfo field, object instance)
-        {
-            object? value = field.GetValue(instance);
-            return value is int number ? number : 0;
-        }
-
-        private static bool ReadBool(FieldInfo field, object instance)
-        {
-            object? value = field.GetValue(instance);
-            return value is bool flag && flag;
+            return useEnergyOf!(comp) ? energyOf!(comp) > 0f : true;
         }
     }
 }

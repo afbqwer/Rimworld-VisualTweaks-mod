@@ -217,11 +217,14 @@ namespace VisualTweaks
                 : 2f;
 
             PersonalShieldDissolveLog.State? dissolve = null;
+            PersonalShieldDissolveLog.State? dissolveState = null;
             float dissolveProgress = 0f;
             if (customBreak)
             {
                 dissolve = PersonalShieldDissolveLog.Progress(
-                    comp, out dissolveProgress);
+                    comp,
+                    out dissolveProgress,
+                    out dissolveState);
             }
 
             int now = Find.TickManager?.TicksGame ?? 0;
@@ -252,6 +255,7 @@ namespace VisualTweaks
 
             ShieldVanishStyle vanishStyle = style.Vanish;
             ShieldVanishLog.State? vanish = null;
+            float vanishProgress = 0f;
             bool vanishWanted = vanishStyle != ShieldVanishStyle.None;
             if (vanishWanted)
             {
@@ -263,14 +267,16 @@ namespace VisualTweaks
                     drawnSize,
                     Mathf.RoundToInt(VisualTweaksSettings.personalShieldVanishTicks),
                     dissolve == null,
-                    out bool instantReturn);
+                    out bool instantReturn,
+                    out vanishProgress);
                 if (instantReturn)
                 {
                     ShieldRestoreLog.Cancel(comp);
                 }
             }
 
-            ShieldRestoreLog.Observe(comp, restorePresent, restoreTicks);
+            ShieldRestoreLog.State? restoreState =
+                ShieldRestoreLog.Observe(comp, restorePresent, restoreTicks);
 
             // Break wins. A tear that starts underneath a fade takes the frame over.
             if (dissolve != null && vanish != null)
@@ -295,6 +301,7 @@ namespace VisualTweaks
                 {
                     PersonalShieldDissolveLog.Cancel(comp);
                     dissolve = null;
+                    dissolveState = null;
 
                     // A belt whose state returned while it was off screen gets no
                     // restore now: the clock would run out before anyone saw it. The
@@ -322,7 +329,7 @@ namespace VisualTweaks
                 && restorePresent
                 && customBreak
                 && restoreStyle != ShieldRestoreStyle.None
-                && PersonalShieldDissolveLog.TryConsumeFinished(comp))
+                && PersonalShieldDissolveLog.TryConsumeFinished(comp, dissolveState))
             {
                 ShieldRestoreLog.Begin(comp, restoreTicks);
             }
@@ -360,7 +367,7 @@ namespace VisualTweaks
             float restoreProgress = -1f;
             if (dissolve == null && restoreStyle != ShieldRestoreStyle.None)
             {
-                float? progress = ShieldRestoreLog.Progress(comp);
+                float? progress = ShieldRestoreLog.Progress(restoreState);
                 if (progress.HasValue)
                 {
                     restoreProgress = progress.Value;
@@ -401,9 +408,7 @@ namespace VisualTweaks
             // ------------------------------------------------------------------
             float vanishFactor = 1f;
             float drawnVanishScale = 1f;
-            if (vanish != null
-                && !breaking
-                && ShieldVanishLog.Progress(comp, out float vanishProgress))
+            if (vanish != null && !breaking)
             {
                 float eased = ShieldVanishLog.Ease(vanishProgress);
                 vanishFactor = 1f - eased;

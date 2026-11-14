@@ -60,6 +60,21 @@ namespace VisualTweaks
         private static FieldInfo? showOnHostiles;
         private static FieldInfo? showOnNeutralInCombat;
 
+        // The same members as compiled readers. These are what every visible bubble
+        // goes through per frame; the FieldInfo/PropertyInfo above are kept only for
+        // binding and type checking. See <see cref="VefMemberAccess"/>.
+        private static Func<object, ShieldState>? shieldStateOf;
+        private static Func<object, float>? energyOf;
+        private static Func<object, Pawn>? pawnOf;
+        private static Func<object, Color>? shieldColorOf;
+        private static Func<object, float>? minShieldSizeOf;
+        private static Func<object, float>? maxShieldSizeOf;
+        private static Func<object, string>? shieldTexPathOf;
+        private static Func<object, bool>? showAlwaysOf;
+        private static Func<object, bool>? showWhenDraftedOf;
+        private static Func<object, bool>? showOnHostilesOf;
+        private static Func<object, bool>? showOnNeutralInCombatOf;
+
         private static bool fatal;
         private static bool signalsBroken;
         private static bool inCombatBroken;
@@ -125,9 +140,10 @@ namespace VisualTweaks
         /// backs off, because a dome with a guessed size, visibility or colour is
         /// worse than the stock billboard.
         ///
-        /// Read per frame through reflection: VEF's own draw also runs every frame,
-        /// the bubbles are counted in handfuls, and the alternative would be a
-        /// delegate shape matching a class this assembly cannot reference.
+        /// Every member is also compiled into a box-free reader here. The plain
+        /// <c>GetValue</c> reads used to run per frame and allocate one object per
+        /// read; the compiled readers are the same values without that cost. If any
+        /// of them cannot be compiled the file backs off like a missing member.
         /// </summary>
         private static bool BindMembers()
         {
@@ -189,6 +205,36 @@ namespace VisualTweaks
             {
                 Log.Warning("[Visual Tweaks] VEF CompShieldBubble members have"
                     + " unexpected types; bubble shields keep the stock drawing.");
+                return false;
+            }
+
+            shieldStateOf = VefMemberAccess.CompileProperty<ShieldState>(shieldState);
+            energyOf = VefMemberAccess.CompileProperty<float>(energy);
+            pawnOf = VefMemberAccess.CompileProperty<Pawn>(pawnProperty);
+            shieldColorOf = VefMemberAccess.CompileField<Color>(shieldColor);
+            minShieldSizeOf = VefMemberAccess.CompileField<float>(minShieldSize);
+            maxShieldSizeOf = VefMemberAccess.CompileField<float>(maxShieldSize);
+            shieldTexPathOf = VefMemberAccess.CompileField<string>(shieldTexPath);
+            showAlwaysOf = VefMemberAccess.CompileField<bool>(showAlways);
+            showWhenDraftedOf = VefMemberAccess.CompileField<bool>(showWhenDrafted);
+            showOnHostilesOf = VefMemberAccess.CompileField<bool>(showOnHostiles);
+            showOnNeutralInCombatOf =
+                VefMemberAccess.CompileField<bool>(showOnNeutralInCombat);
+
+            if (shieldStateOf == null
+                || energyOf == null
+                || pawnOf == null
+                || shieldColorOf == null
+                || minShieldSizeOf == null
+                || maxShieldSizeOf == null
+                || shieldTexPathOf == null
+                || showAlwaysOf == null
+                || showWhenDraftedOf == null
+                || showOnHostilesOf == null
+                || showOnNeutralInCombatOf == null)
+            {
+                Log.Warning("[Visual Tweaks] VEF CompShieldBubble members could not be"
+                    + " compiled; bubble shields keep the stock drawing.");
                 return false;
             }
 
@@ -316,7 +362,7 @@ namespace VisualTweaks
                 }
 
                 __state.WasActive = true;
-                __state.EnergyBefore = ReadFloat(energy!, __instance);
+                __state.EnergyBefore = energyOf!(__instance);
                 __state.Angle = dinfo.Angle;
             }
             catch (Exception ex)
@@ -349,7 +395,7 @@ namespace VisualTweaks
                 {
                     // The bubble burst. Start the tear from the side that was hit,
                     // unless the player chose the stock one-frame disappearance.
-                    Pawn? pawn = pawnProperty?.GetValue(__instance) as Pawn;
+                    Pawn? pawn = pawnOf!(__instance);
                     Thing? host = pawn ?? __instance.parent;
                     if (host is Apparel apparel && apparel.Wearer != null)
                     {
@@ -373,8 +419,7 @@ namespace VisualTweaks
                 // false), while the charge comparison keeps a deflected hit whose
                 // energy happened to change from being drawn as a reaction.
                 bool absorbed = __result
-                    || ReadFloat(energy!, __instance)
-                        < __state.EnergyBefore - 0.0001f;
+                    || energyOf!(__instance) < __state.EnergyBefore - 0.0001f;
                 if (absorbed)
                 {
                     PersonalShieldHitLog.Notify(__instance, __state.Angle);
@@ -433,7 +478,7 @@ namespace VisualTweaks
 
             try
             {
-                Pawn? pawn = pawnProperty!.GetValue(comp) as Pawn;
+                Pawn? pawn = pawnOf!(comp);
                 if (pawn == null
                     || !pawn.Spawned
                     || pawn.Dead
@@ -452,20 +497,18 @@ namespace VisualTweaks
                 // the def's show situations decides whether it is painted. Keeping
                 // the two separate lets a dissolve end the moment the shield
                 // recharges, even while the stock rule still hides it.
-                float energyNow = ReadFloat(energy!, comp);
+                float energyNow = energyOf!(comp);
                 bool active = ReadState(comp) == ShieldState.Active
                     && energyNow > 0f;
                 bool visible = active
                     && ShouldDisplay(comp, pawn, propsObject);
 
                 float size = Mathf.Lerp(
-                    ReadFloat(minShieldSize!, propsObject),
-                    ReadFloat(maxShieldSize!, propsObject),
+                    minShieldSizeOf!(propsObject),
+                    maxShieldSizeOf!(propsObject),
                     energyNow);
 
-                Color color = shieldColor!.GetValue(propsObject) is Color c
-                    ? c
-                    : Color.white;
+                Color color = shieldColorOf!(propsObject);
 
                 if (PersonalShieldRenderer.Draw(
                         comp,
@@ -499,12 +542,12 @@ namespace VisualTweaks
             Pawn pawn,
             object propsObject)
         {
-            if (ReadBool(showAlways!, propsObject))
+            if (showAlwaysOf!(propsObject))
             {
                 return true;
             }
 
-            if (ReadBool(showWhenDrafted!, propsObject) && pawn.Drafted)
+            if (showWhenDraftedOf!(propsObject) && pawn.Drafted)
             {
                 return true;
             }
@@ -514,7 +557,7 @@ namespace VisualTweaks
                 return false;
             }
 
-            if (ReadBool(showOnHostiles!, propsObject)
+            if (showOnHostilesOf!(propsObject)
                 && GenHostility.HostileTo(pawn, Faction.OfPlayer))
             {
                 return true;
@@ -525,7 +568,7 @@ namespace VisualTweaks
             // through to it here without that check would paint a bubble VEF hides.
             if (GenHostility.HostileTo(pawn, Faction.OfPlayer)
                 || inCombatBroken
-                || !ReadBool(showOnNeutralInCombat!, propsObject)
+                || !showOnNeutralInCombatOf!(propsObject)
                 || inCombat == null)
             {
                 return false;
@@ -558,34 +601,11 @@ namespace VisualTweaks
         /// </summary>
         private static bool IsStockBubble(object propsObject)
         {
-            string? path = shieldTexPath!.GetValue(propsObject) as string;
+            string? path = shieldTexPathOf!(propsObject);
             return path.NullOrEmpty()
                 || string.Equals(path, StockBubbleTexPath, StringComparison.Ordinal);
         }
 
-        private static ShieldState ReadState(ThingComp comp)
-        {
-            return shieldState!.GetValue(comp) is ShieldState state
-                ? state
-                : ShieldState.Disabled;
-        }
-
-        private static float ReadFloat(PropertyInfo property, object instance)
-        {
-            object? value = property.GetValue(instance, null);
-            return value is float number ? number : 0f;
-        }
-
-        private static float ReadFloat(FieldInfo field, object instance)
-        {
-            object? value = field.GetValue(instance);
-            return value is float number ? number : 0f;
-        }
-
-        private static bool ReadBool(FieldInfo field, object instance)
-        {
-            object? value = field.GetValue(instance);
-            return value is bool flag && flag;
-        }
+        private static ShieldState ReadState(ThingComp comp) => shieldStateOf!(comp);
     }
 }

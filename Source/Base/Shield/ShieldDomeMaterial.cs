@@ -84,6 +84,15 @@ namespace VisualTweaks
         private float appliedHexLine = float.NaN;
         private int appliedHexDensity = -1;
         private int appliedHexBindFor = -1;
+
+        /// <summary>
+        /// The last rendered frame this material was uploaded for. Every shield of a
+        /// family shares one material, so without this the same ~20 settings reads and
+        /// Vector4 comparisons run once per shield per frame; with it the work is once
+        /// per material per frame. Settings cannot change between two draws of the same
+        /// frame, so nothing observable is skipped.
+        /// </summary>
+        private int appliedFrame = -1;
         private Vector4 appliedScan7 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
         private Vector4 appliedScan8 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
         private Vector4 appliedAperture = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
@@ -165,10 +174,11 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Uploads the values the player can move. Called every frame, but only
-        /// writes when one actually changed: the settings are read live, and the
-        /// alternative — a per-draw property for each look constant — would put extra
-        /// vectors on every shield every frame for numbers that change once a session.
+        /// Uploads the values the player can move. Called once per material per frame,
+        /// and even then only writes when a value actually changed: the settings are
+        /// read live, and the alternative — a per-draw property for each look constant
+        /// — would put extra vectors on every shield every frame for numbers that
+        /// change once a session.
         ///
         /// The hex bind happens before the early-out because a rebake can replace the
         /// texture object without changing any of the uniforms compared below.
@@ -180,6 +190,16 @@ namespace VisualTweaks
             {
                 return;
             }
+
+            // One pass per material per frame is enough; a second shield sharing this
+            // material cannot observe anything different within the same frame.
+            int frame = RealTime.frameCount;
+            if (appliedFrame == frame)
+            {
+                return;
+            }
+
+            appliedFrame = frame;
 
             bool personal = target == ShieldHexTarget.Personal;
             float width = personal
@@ -358,6 +378,7 @@ namespace VisualTweaks
             appliedHexLine = float.NaN;
             appliedHexDensity = -1;
             appliedHexBindFor = -1;
+            appliedFrame = -1;
             appliedScan7 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
             appliedScan8 = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);
             appliedAperture = new Vector4(float.NaN, float.NaN, float.NaN, float.NaN);

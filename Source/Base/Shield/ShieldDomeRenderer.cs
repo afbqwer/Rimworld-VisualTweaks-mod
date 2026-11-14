@@ -240,10 +240,14 @@ namespace VisualTweaks
                 : 2f;
 
             ShieldDissolveLog.State? dissolve = null;
+            ShieldDissolveLog.State? dissolveState = null;
             float dissolveProgress = 0f;
             if (customBreak)
             {
-                dissolve = ShieldDissolveLog.Progress(comp, out dissolveProgress);
+                dissolve = ShieldDissolveLog.Progress(
+                    comp,
+                    out dissolveProgress,
+                    out dissolveState);
             }
 
             int now = Find.TickManager?.TicksGame ?? 0;
@@ -262,6 +266,7 @@ namespace VisualTweaks
             // really left.
             ShieldVanishStyle vanishStyle = style.Vanish;
             ShieldVanishLog.State? vanish = null;
+            float vanishProgress = 0f;
             bool vanishWanted = vanishStyle != ShieldVanishStyle.None;
             if (vanishWanted)
             {
@@ -273,14 +278,16 @@ namespace VisualTweaks
                     radius,
                     Mathf.RoundToInt(VisualTweaksSettings.largeShieldVanishTicks),
                     dissolve == null,
-                    out bool instantReturn);
+                    out bool instantReturn,
+                    out vanishProgress);
                 if (instantReturn)
                 {
                     ShieldRestoreLog.Cancel(comp);
                 }
             }
 
-            ShieldRestoreLog.Observe(comp, present, restoreTicks);
+            ShieldRestoreLog.State? restoreState =
+                ShieldRestoreLog.Observe(comp, present, restoreTicks);
 
             // A tear that started underneath a fade — an EMP landing while the dome is
             // already powering down — takes the frame over and drops the fade. Break
@@ -307,6 +314,7 @@ namespace VisualTweaks
                 {
                     ShieldDissolveLog.Cancel(comp);
                     dissolve = null;
+                    dissolveState = null;
 
                     if (age > ShieldRestoreLog.InstantRecoveryTicks
                         && restoreStyle != ShieldRestoreStyle.None)
@@ -330,7 +338,7 @@ namespace VisualTweaks
                 && present
                 && customBreak
                 && restoreStyle != ShieldRestoreStyle.None
-                && ShieldDissolveLog.TryConsumeFinished(comp))
+                && ShieldDissolveLog.TryConsumeFinished(comp, dissolveState))
             {
                 ShieldRestoreLog.Begin(comp, restoreTicks);
             }
@@ -370,7 +378,7 @@ namespace VisualTweaks
             float restoreProgress = -1f;
             if (dissolve == null && restoreStyle != ShieldRestoreStyle.None)
             {
-                float? progress = ShieldRestoreLog.Progress(comp);
+                float? progress = ShieldRestoreLog.Progress(restoreState);
                 if (progress.HasValue)
                 {
                     restoreProgress = progress.Value;
@@ -409,9 +417,7 @@ namespace VisualTweaks
             // when it is down; fading below that would dip and then pop back up.
             // ------------------------------------------------------------------
             float vanishAlpha = -1f;
-            if (vanish != null
-                && !breaking
-                && ShieldVanishLog.Progress(comp, out float vanishProgress))
+            if (vanish != null && !breaking)
             {
                 float eased = ShieldVanishLog.Ease(vanishProgress);
                 vanishAlpha = Mathf.Lerp(vanish.StartAlpha, alpha, eased);

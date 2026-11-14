@@ -101,10 +101,18 @@ namespace VisualTweaks
         /// The live dissolve, or null once it has finished. Progress is in 0..1 and
         /// advances on TicksGame, so the animation pauses and speeds up with the game
         /// clock like a vanilla mote.
+        ///
+        /// <paramref name="existing"/> is whatever state the table holds, running or
+        /// expired, so <see cref="TryConsumeFinished"/> can answer from the same
+        /// lookup instead of peeking a second time.
         /// </summary>
-        internal static State? Progress(object comp, out float progress)
+        internal static State? Progress(
+            object comp,
+            out float progress,
+            out State? existing)
         {
             progress = 0f;
+            existing = null;
             TickManager? tickManager = Find.TickManager;
             if (comp == null
                 || tickManager == null
@@ -113,6 +121,8 @@ namespace VisualTweaks
             {
                 return null;
             }
+
+            existing = state;
 
             int age = tickManager.TicksGame - state.StartTick;
             if (age < 0 || age >= state.DurationTicks)
@@ -131,14 +141,14 @@ namespace VisualTweaks
         /// <see cref="ShieldDissolveLog.TryConsumeFinished"/>: a disable and re-enable
         /// between two draws leaves no down edge for
         /// <see cref="ShieldRestoreLog.Observe"/> to see.
+        ///
+        /// Takes the state <see cref="Progress"/> already fetched; null means the table
+        /// held nothing, which is the same answer the lookup used to give.
         /// </summary>
-        internal static bool TryConsumeFinished(object comp)
+        internal static bool TryConsumeFinished(object comp, State? state)
         {
             TickManager? tickManager = Find.TickManager;
-            if (tickManager == null
-                || comp == null
-                || !States.TryGetValue(comp, out State? state)
-                || state == null)
+            if (tickManager == null || comp == null || state == null)
             {
                 return false;
             }

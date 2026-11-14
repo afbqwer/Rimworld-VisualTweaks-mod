@@ -89,6 +89,10 @@ namespace VisualTweaks
         /// caller drops the fade-in it may have just started, so a sub-frame
         /// disappearance leaves no trace — the same rule the break path uses for a
         /// shield that breaks and restores in one motion.
+        ///
+        /// <paramref name="progress"/> is the fade's position when the returned state
+        /// is not null. It is computed here, from the same tick and the same state
+        /// object, so the caller never has to look the state up a second time.
         /// </summary>
         internal static State? Observe(
             object comp,
@@ -98,9 +102,11 @@ namespace VisualTweaks
             float size,
             int durationTicks,
             bool allowBegin,
-            out bool instantReturn)
+            out bool instantReturn,
+            out float progress)
         {
             instantReturn = false;
+            progress = 0f;
 
             TickManager? tickManager = Find.TickManager;
             if (comp == null || tickManager == null)
@@ -159,37 +165,22 @@ namespace VisualTweaks
             // is what stops the next fall from animating a surface nobody saw.
             state.WasShown = shown;
 
-            return Progress(comp, out _) ? state : null;
-        }
-
-        /// <summary>
-        /// True while a vanish is playing, with progress in 0..1. TicksGame drives it,
-        /// so it freezes on pause and follows game speed like every other shield
-        /// animation. Expired states are dropped here rather than kept as evidence:
-        /// an old vanish must never be mistaken for one that is still running.
-        /// </summary>
-        internal static bool Progress(object comp, out float progress)
-        {
-            progress = 0f;
-            TickManager? tickManager = Find.TickManager;
-            if (comp == null
-                || tickManager == null
-                || !States.TryGetValue(comp, out State? state)
-                || state == null
-                || state.StartTick < 0)
+            // Same answer Progress used to give from a second table lookup: an
+            // expired fade is dropped here, not returned as evidence.
+            if (state.StartTick < 0)
             {
-                return false;
+                return null;
             }
 
-            int age = tickManager.TicksGame - state.StartTick;
+            int age = now - state.StartTick;
             if (age < 0 || age >= state.DurationTicks)
             {
                 state.StartTick = -1;
-                return false;
+                return null;
             }
 
             progress = (float)age / state.DurationTicks;
-            return true;
+            return state;
         }
 
         /// <summary>

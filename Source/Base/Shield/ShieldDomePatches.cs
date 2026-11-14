@@ -206,7 +206,8 @@ namespace VisualTweaks
                 return;
             }
 
-            ShieldDissolveLog.State? state = ShieldDissolveLog.Progress(comp, out _);
+            ShieldDissolveLog.State? state = ShieldDissolveLog.Progress(
+                comp, out _, out _);
             if (state == null)
             {
                 // A surface can also be on screen while Active is false: a shield that

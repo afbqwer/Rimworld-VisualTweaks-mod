@@ -60,6 +60,16 @@ namespace VisualTweaks
         private static FieldInfo? healthPercent;
         private static FieldInfo? healthColor;
 
+        // Compiled readers for the values the draw path reads every frame; the
+        // FieldInfo/PropertyInfo above are kept for binding and for the one-time colour
+        // ramp parse. See <see cref="VefMemberAccess"/>.
+        private static Func<object, float>? shieldRadiusOf;
+        private static Func<object, float>? energyOf;
+        private static Func<object, float>? maxEnergyOf;
+        private static Func<object, bool>? indestructibleOf;
+        private static Func<object, bool>? activeOf;
+        private static Func<object, Color>? shieldColourOf;
+
         private static MethodInfo? absorbDamageTarget;
         private static MethodInfo? recordImpactMethod;
         private static MethodInfo? energyShieldTickTarget;
@@ -137,10 +147,10 @@ namespace VisualTweaks
         /// billboard, and the version this was written against is the one whose member
         /// names are listed here.
         ///
-        /// Read per frame through <see cref="PropertyInfo"/> rather than open
-        /// delegates. Properties are stat-cached on the VEF side, repulsors are counted
-        /// in ones per map, and a few boxed floats per frame is a smaller cost than a
-        /// delegate shape that has to match a class this assembly cannot reference.
+        /// Each per-frame member is also compiled into a box-free reader here. The
+        /// plain <c>GetValue</c> reads used to box a float or a bool on every visible
+        /// repulsor every frame; the compiled readers return the same values without
+        /// that allocation.
         /// </summary>
         private static bool BindMembers()
         {
@@ -192,6 +202,26 @@ namespace VisualTweaks
             {
                 Log.Warning("[Visual Tweaks] VEF CompShieldField members have unexpected"
                     + " types; repulsor shields keep the stock drawing.");
+                return false;
+            }
+
+            shieldRadiusOf = VefMemberAccess.CompileProperty<float>(shieldRadius);
+            energyOf = VefMemberAccess.CompileProperty<float>(energy);
+            maxEnergyOf = VefMemberAccess.CompileProperty<float>(maxEnergy);
+            indestructibleOf =
+                VefMemberAccess.CompileProperty<bool>(indestructible);
+            activeOf = VefMemberAccess.CompileField<bool>(activeField);
+            shieldColourOf = VefMemberAccess.CompileField<Color>(shieldColour);
+
+            if (shieldRadiusOf == null
+                || energyOf == null
+                || maxEnergyOf == null
+                || indestructibleOf == null
+                || activeOf == null
+                || shieldColourOf == null)
+            {
+                Log.Warning("[Visual Tweaks] VEF CompShieldField members could not be"
+                    + " compiled; repulsor shields keep the stock drawing.");
                 return false;
             }
 
@@ -776,15 +806,15 @@ namespace VisualTweaks
 
             // Null-forgiving: BindMembers either found every member or disabled the
             // file, so none of these can be null once a patch is installed.
-            radius = ReadFloat(shieldRadius!, comp);
+            radius = shieldRadiusOf!(comp);
             if (radius <= 0.01f)
             {
                 return false;
             }
 
-            bool isIndestructible = ReadBool(indestructible!, comp);
-            float energyNow = ReadFloat(energy!, comp);
-            bool isActive = activeField!.GetValue(comp) is bool active && active;
+            bool isIndestructible = indestructibleOf!(comp);
+            float energyNow = energyOf!(comp);
+            bool isActive = activeOf!(comp);
 
             // VEF's Draw condition, verbatim: a switched-on shield with charge left,
             // or one that does not use charge at all.
@@ -796,16 +826,14 @@ namespace VisualTweaks
                 return false;
             }
 
-            Color shieldColourValue = shieldColour!.GetValue(propsObject) is Color c
-                ? c
-                : Color.white;
+            Color shieldColourValue = shieldColourOf!(propsObject);
 
             Color healthColour = HealthColour(
                 shieldColourValue,
                 ColourCurves.GetValue(propsObject, CreateCurve),
                 isIndestructible,
                 energyNow,
-                ReadFloat(maxEnergy!, comp));
+                maxEnergyOf!(comp));
 
             color = healthColour;
 
@@ -974,18 +1002,6 @@ namespace VisualTweaks
             }
         }
 
-        private static float ReadFloat(PropertyInfo property, object instance)
-        {
-            object? value = property.GetValue(instance, null);
-            return value is float number ? number : 0f;
-        }
-
-        private static bool ReadBool(PropertyInfo property, object instance)
-        {
-            object? value = property.GetValue(instance, null);
-            return value is bool flag && flag;
-        }
-
         /// <summary>
         /// Gate for the dome-signal patch. A repulsor this mod is not drawing keeps
         /// VEF's own reactions untouched.
@@ -1028,7 +1044,7 @@ namespace VisualTweaks
                 Thing host = __instance.parent;
                 Vector3 center = host.DrawPos;
                 Map? map = host.Map;
-                float radius = ReadFloat(shieldRadius!, __instance);
+                float radius = shieldRadiusOf!(__instance);
 
                 // The transpiler normally hands us the real projectile. VEF absorbs it
                 // while it is already inside the scan ring (up to five cells inside on

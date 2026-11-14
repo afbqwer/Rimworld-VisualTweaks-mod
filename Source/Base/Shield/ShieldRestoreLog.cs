@@ -74,18 +74,23 @@ namespace VisualTweaks
         /// Idempotent, so the renderer can call it once per draw without checking.
         /// The duration is captured at the start of each restore, so moving the slider
         /// mid-animation affects the next one rather than restarting this one.
+        ///
+        /// Returns the state it touched, or null when there is no game clock. The
+        /// renderer keeps the reference and asks <see cref="Progress"/> for the
+        /// position later, so the same state is never looked up twice in one frame.
+        /// That matters because a <see cref="Begin"/> may stamp it in between.
         /// </summary>
-        internal static void Observe(object comp, bool present, int durationTicks)
+        internal static State? Observe(object comp, bool present, int durationTicks)
         {
             if (comp == null)
             {
-                return;
+                return null;
             }
 
             TickManager? tickManager = Find.TickManager;
             if (tickManager == null)
             {
-                return;
+                return null;
             }
 
             State state = States.GetOrCreateValue(comp);
@@ -93,23 +98,24 @@ namespace VisualTweaks
             {
                 state.Initialized = true;
                 state.WasPresent = present;
-                return;
+                return state;
             }
 
             if (present == state.WasPresent)
             {
-                return;
+                return state;
             }
 
             state.WasPresent = present;
             if (!present)
             {
                 state.StartTick = -1;
-                return;
+                return state;
             }
 
             state.StartTick = tickManager.TicksGame;
             state.DurationTicks = Mathf.Max(1, durationTicks);
+            return state;
         }
 
         /// <summary>
@@ -166,17 +172,15 @@ namespace VisualTweaks
 
         /// <summary>
         /// Progress in 0..1 while a restore is playing, or null when there is none.
-        /// TicksGame drives it, so it freezes on pause and follows game speed like
-        /// every other shield animation.
+        /// Takes the state <see cref="Observe"/> returned rather than a key, so a
+        /// frame's draw does not pay for the same table lookup twice. TicksGame
+        /// drives it, so it freezes on pause and follows game speed like every other
+        /// shield animation.
         /// </summary>
-        internal static float? Progress(object comp)
+        internal static float? Progress(State? state)
         {
             TickManager? tickManager = Find.TickManager;
-            if (comp == null
-                || tickManager == null
-                || !States.TryGetValue(comp, out State? state)
-                || state == null
-                || state.StartTick < 0)
+            if (tickManager == null || state == null || state.StartTick < 0)
             {
                 return null;
             }
