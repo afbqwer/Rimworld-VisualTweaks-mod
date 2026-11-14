@@ -72,6 +72,15 @@
 // surface being cut, because a set of discrete objects fails that way. It is chosen
 // independently of the surface style, just like the hit animation.
 //
+// Which panel goes next is a choice as well (_Params9.y, one global setting), and it
+// is a choice about *timing*, not about order. The shell always empties as a ring
+// travelling outward from the wound; the setting lets each panel draw its own delay,
+// so the ring arrives as a ragged band instead of a clean line, and 0 turns that off
+// entirely. Ordering the panels by a noise field instead — the obvious reading of
+// "make it look random" — removes the sweep altogether and turns the break into the
+// continuous dissolve of mode 2, which is why the radial term stays the base of the
+// order.
+//
 // The square grid seen in the first in-game screenshot was a float32 precision
 // failure in the lattice hash, not a property of this pattern — a float64 web
 // preview looks correct. Hash21 below is hardened and the seed is kept small;
@@ -161,6 +170,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
     vec4 _Params7; // @default = vec4(1.0, 2.4, 0.20, 0.12)    // HexBubble: scan dir (+1 down / -1 up), period (s), feather, net baseline
     vec4 _Params8; // @default = vec4(1.0, 0.06, 0.0, 0.0)     // HexBubble: stripe count, band half width, leading edge (fixed 0), reserved
     vec4 _Params9; // @default = vec4(0.50, 0.0, 0.0, 0.0)     // lattice styles: clear radius (share of R); 0 disables it
+                   //                                          // panels: break timing jitter (share of the animation); 0 is the switch
     vec4 _Color;   // @color @default = vec4(1.0, 1.0, 1.0, 1.0)
 } u;
 
@@ -1028,10 +1038,9 @@ void main()
         //
         // Mode 5, the panel shell's own break option. A continuous surface tears
         // along a noise front (mode 2); a shell of discrete objects instead *loses
-        // panels*: each is entirely there or entirely gone, and the wave walks
-        // outward through the lattice. Running the noise front over the panels
-        // would cut a soft hole through them, which reads as a rendering mistake
-        // rather than as structural failure.
+        // panels*: each is entirely there or entirely gone. Running the noise front
+        // over the panels would cut a soft hole through them, which reads as a
+        // rendering mistake rather than as structural failure.
         vec2 od = u._Params3.xy;
         vec2 originDir = od / max(length(od), 1e-4);
         float progress = clamp(u._Params3.z, 0.0, 1.0);
@@ -1050,25 +1059,62 @@ void main()
             sqrt(max(1.0 - dot(originDir, originDir), 0.0)));
         float hops = acos(clamp(dot(face, originOnSphere), -1.0, 1.0)) / cellStep;
 
-        // Per-panel stagger so the front is a ragged collection of tiles instead
-        // of a perfect ring. Hash21 of the face is the same per-cell id the
-        // shading jitter uses, so a panel keeps one identity while it dies.
-        float order = hops + Hash21(face.xy * 53.0) * 0.45;
+        // The same per-cell id the shading jitter uses, so a panel keeps one
+        // identity while it dies.
+        float panelId = Hash21(face.xy * 53.0);
 
+        // When this panel lets go, as a share of the whole animation.
+        //
         // Enough hops to cross the hemisphere at this density, plus a margin so
         // progress 1 really does leave nothing. Scales with k: a denser lattice
         // has more panels between the break point and the far rim.
         float maxHops = 3.14159265 * u._Params6.w * 0.5;
         float span = maxHops + 1.5;
 
-        // When this panel lets go, as a fraction of the whole animation. 0.90 is
-        // not arbitrary: the fade below lasts 0.09, so the last panel finishes just
-        // as the clock runs out instead of being cut off mid-transition.
-        float start = (order + 0.6) / (span + 1.2) * 0.90;
+        // The ORDER is distance from the wound, always: the shell empties as a
+        // ring travelling outward, and that is what makes the animation read as a
+        // structure failing from a hit rather than as a surface dissolving. The
+        // 0.45 stagger only keeps the ring itself from being a perfect circle.
+        float radial = (hops + panelId * 0.45 + 0.6) / (span + 1.2);
+
+        // What _Params9.y adds is *timing*, not order: each panel draws its own
+        // delay, so the ring arrives as a broad ragged band instead of a clean
+        // line and two panels the same distance from the wound rarely go on the
+        // same frame. The sweep still has one direction — this is the difference
+        // between a wave with a noisy front and a noise field that happens to be
+        // drawn on a sphere. Ordering the panels by a noise field instead (which
+        // is what "make it look random" sounds like) does read as the continuous
+        // dissolve, because then nothing travels.
+        //
+        // The width is a share of the animation, applied as ±half of it. 0 disables
+        // it; the expression is then the pre-existing one, term for term.
+        //
+        // 0.90 is not arbitrary either: the fade below lasts 0.09, so the last
+        // panel finishes just as the clock runs out instead of being cut off
+        // mid-transition.
+        float start = radial * 0.90;
+        float jitter = clamp(u._Params9.y, 0.0, 0.5);
+        if (jitter > 0.001)
+        {
+            // A second hash, deliberately not the panelId above: adding two
+            // copies of one value would correlate a panel's delay with its place
+            // in the sweep, tilting the band instead of roughening it.
+            //
+            // Held back near the wound, and the hold-back grows with the width. A
+            // break's first frame is the untouched dome at progress 0, and a delay
+            // of ±half the width there would have eaten the panels around the
+            // impact before the animation began. The 0.6 is what keeps that true at
+            // every width: a fully delayed panel at the ramp's end starts at
+            // 0.9 * 0.6 * width - width / 2, which is still positive.
+            float ramp = smoothstep(0.0, max(0.12, jitter * 0.6), radial);
+            start += (Hash21(face.xy * 91.0) - 0.5) * jitter * ramp;
+        }
 
         // dt is the panel's own clock: negative while intact, 0 at the moment it
         // starts to give way, 1 once it is gone. The 9% fade is the same width the
-        // continuous tear uses: about two panels in transition at any moment.
+        // continuous tear uses. With the jitter on, the band of panels caught
+        // mid-fade is that 9% plus the jitter's own width, which is what gives the
+        // front its thickness.
         float dt = (progress - start) * (1.0 / 0.09);
         float remaining = 1.0 - smoothstep(0.0, 1.0, dt);
 

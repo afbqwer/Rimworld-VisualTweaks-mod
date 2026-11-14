@@ -309,7 +309,16 @@ namespace VisualTweaks
             // because the material is also reused across shields of the same
             // family and surface. Both families keep their own clear radius: a
             // 1.2-cell belt and a 25-cell dome need very different clearances.
-            Vector4 aperture9 = new Vector4(centerClear, 0f, 0f, 0f);
+            //
+            // y is the hex break's timing jitter: how far each panel's own moment
+            // may drift from the sweeping front, as a share of the animation. It
+            // rides here rather than in a DrawPropertyBlock because it is one
+            // global setting, not a per-shield value.
+            Vector4 aperture9 = new Vector4(
+                centerClear,
+                VisualTweaksSettings.shieldHexBreakJitter,
+                0f,
+                0f);
 
             if (width == appliedRidgeWidth
                 && brightness == appliedRidgeBrightness
@@ -363,9 +372,10 @@ namespace VisualTweaks
             mat.SetVector(Params7Id, scan7);
             mat.SetVector(Params8Id, scan8);
 
-            // _Params9 = (clear radius as a share of R, 0, 0, 0). 0 is the off
-            // switch: the shader's CenterAperture returns 1 immediately, so the
-            // two lattice styles behave exactly as before.
+            // _Params9 = (clear radius as a share of R, hex break timing jitter, 0,
+            // 0). 0 is the off switch for the clear radius: the shader's
+            // CenterAperture returns 1 immediately, so the two lattice styles
+            // behave exactly as before.
             mat.SetVector(Params9Id, aperture9);
         }
 

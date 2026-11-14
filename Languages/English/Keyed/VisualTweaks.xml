@@ -256,7 +256,9 @@
   <VisualTweaks_ShieldDome_BreakDissolve>Dissolve</VisualTweaks_ShieldDome_BreakDissolve>
   <VisualTweaks_ShieldDome_BreakDissolveTip>Erodes along a noise-driven tear with a hot edge and fine cracks.</VisualTweaks_ShieldDome_BreakDissolveTip>
   <VisualTweaks_ShieldDome_BreakHexDissipate>Hex dissipate</VisualTweaks_ShieldDome_BreakHexDissipate>
-  <VisualTweaks_ShieldDome_BreakHexDissipateTip>Loses panels one by one outward from the failure point. Available on the hexagonal surface and the hex bubble.</VisualTweaks_ShieldDome_BreakHexDissipateTip>
+  <VisualTweaks_ShieldDome_BreakHexDissipateTip>Loses whole panels instead of eroding the surface. Available on the hexagonal surface and the hex bubble.</VisualTweaks_ShieldDome_BreakHexDissipateTip>
+  <VisualTweaks_ShieldDome_HexBreakJitter>Panel timing scatter</VisualTweaks_ShieldDome_HexBreakJitter>
+  <VisualTweaks_ShieldDome_HexBreakJitterTip>Panels are always lost by distance from the impact, so the ring always sweeps outward; this shifts each panel's own moment at random around it. 0 gives a clean line, 0.2 a ragged band that still visibly travels, 0.5 lets the erosion spread over most of the shell. Applies to projector domes and personal shields alike.</VisualTweaks_ShieldDome_HexBreakJitterTip>
   <VisualTweaks_ShieldDome_DissolveTime>Break duration</VisualTweaks_ShieldDome_DissolveTime>
   <VisualTweaks_ShieldDome_DissolveTimeTip>Ticks from the first crack to fully gone; 60 ticks = 1 second.</VisualTweaks_ShieldDome_DissolveTimeTip>
   <VisualTweaks_ShieldDome_DissolveBrightness>Break brightness</VisualTweaks_ShieldDome_DissolveBrightness>

@@ -392,6 +392,23 @@ namespace VisualTweaks
         public static ShieldBreakStyle personalHexShieldBreakStyle =
             ShieldBreakStyle.HexDissipate;
 
+        // How far each lost panel's own moment may drift from the ring sweeping over
+        // it, as a share of the break animation: a panel's start time moves by ±half
+        // of this. 0 is the off switch — every panel then dies exactly when the
+        // front reaches it and the shell empties as a clean line travelling outward.
+        //
+        // A slider rather than a switch because both ends are legitimate looks:
+        // 0 is a hard ring, about 0.2 is a ragged band that still clearly travels,
+        // past about 0.35 the sweep stops reading as a direction and the erosion
+        // spreads over the whole shell.
+        //
+        // Deliberately not "order the panels by noise". That was an earlier attempt
+        // and it read as the continuous dissolve: once the order stops depending on
+        // distance, nothing travels. This is a timing jitter, never an ordering.
+        public const float MinHexBreakJitter = 0f;
+        public const float MaxHexBreakJitter = 0.5f;
+        public static float shieldHexBreakJitter = 0.2f;
+
         // How a shield comes back after being down. Unlike the break choice this is
         // one value per family, not per surface: coming online is the same event on
         // every surface, and a surface switch should not silently rewrite it. Each
@@ -1012,6 +1029,10 @@ namespace VisualTweaks
                 ref personalHexShieldBreakStyle,
                 "personalHexShieldBreakStyle",
                 ShieldBreakStyle.HexDissipate);
+            Scribe_Values.Look(
+                ref shieldHexBreakJitter,
+                "shieldHexBreakJitter",
+                0.2f);
             Scribe_Values.Look(
                 ref largeShieldRestoreStyle,
                 "largeShieldRestoreStyle",

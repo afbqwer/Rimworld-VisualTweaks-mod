@@ -256,7 +256,9 @@
   <VisualTweaks_ShieldDome_BreakDissolve>溶解</VisualTweaks_ShieldDome_BreakDissolve>
   <VisualTweaks_ShieldDome_BreakDissolveTip>沿噪声撕裂前沿逐渐溶解，带热边和细裂纹。</VisualTweaks_ShieldDome_BreakDissolveTip>
   <VisualTweaks_ShieldDome_BreakHexDissipate>六边消散</VisualTweaks_ShieldDome_BreakHexDissipate>
-  <VisualTweaks_ShieldDome_BreakHexDissipateTip>从破裂点向外逐块失去面板。六边形与六边泡泡可用。</VisualTweaks_ShieldDome_BreakHexDissipateTip>
+  <VisualTweaks_ShieldDome_BreakHexDissipateTip>整块失去面板，而不是把表面溶出一个洞。六边形与六边泡泡可用。</VisualTweaks_ShieldDome_BreakHexDissipateTip>
+  <VisualTweaks_ShieldDome_HexBreakJitter>消失时刻随机幅度</VisualTweaks_ShieldDome_HexBreakJitter>
+  <VisualTweaks_ShieldDome_HexBreakJitterTip>面板始终按与破裂点的距离依次脱落，环始终从伤口向外扫过；这一项只决定每一格的消失时刻前后随机偏移多少。0 是一条干净的线，0.2 是有厚度但仍明显推进的破碎带，0.5 则接近整片壳面同时侵蚀。对大型穹顶和个人护盾同时生效。</VisualTweaks_ShieldDome_HexBreakJitterTip>
   <VisualTweaks_ShieldDome_DissolveTime>破裂时长</VisualTweaks_ShieldDome_DissolveTime>
   <VisualTweaks_ShieldDome_DissolveTimeTip>从开始破裂到完全消失的 tick 数，60 tick = 1 秒。</VisualTweaks_ShieldDome_DissolveTimeTip>
   <VisualTweaks_ShieldDome_DissolveBrightness>破裂亮度</VisualTweaks_ShieldDome_DissolveBrightness>

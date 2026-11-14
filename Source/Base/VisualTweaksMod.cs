@@ -1110,6 +1110,7 @@ namespace VisualTweaks
                 != ShieldBreakStyle.Vanilla)
             {
                 DrawDissolveSliders(listing, false);
+                DrawHexBreakJitter(listing, false);
             }
 
             SettingsLayout.SubHeader(
@@ -1222,6 +1223,7 @@ namespace VisualTweaks
                 != ShieldBreakStyle.Vanilla)
             {
                 DrawDissolveSliders(listing, true);
+                DrawHexBreakJitter(listing, true);
             }
 
             SettingsLayout.SubHeader(
@@ -1958,6 +1960,37 @@ namespace VisualTweaks
             {
                 VisualTweaksSettings.largeCrispShieldBreakStyle = value;
             }
+        }
+
+        /// <summary>
+        /// How far each lost panel's own moment drifts from the ring sweeping over
+        /// it.
+        ///
+        /// One value for both families, like the restore-on-first-appearance switch:
+        /// it is drawn in whichever break group is on screen and edits the same
+        /// field either way. Hidden unless the current surface really breaks into
+        /// panels — on every other break style the uniform is never read, and a
+        /// control that changes nothing is worse than no control.
+        /// </summary>
+        private static void DrawHexBreakJitter(Listing_Standard listing, bool personal)
+        {
+            ShieldBreakStyle style = personal
+                ? VisualTweaksSettings.CurrentShieldBreakStyleFor(
+                    ShieldHexTarget.Personal)
+                : VisualTweaksSettings.CurrentShieldBreakStyle;
+            if (style != ShieldBreakStyle.HexDissipate)
+            {
+                return;
+            }
+
+            VisualTweaksSettings.shieldHexBreakJitter =
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_HexBreakJitter".Translate(),
+                    VisualTweaksSettings.shieldHexBreakJitter,
+                    VisualTweaksSettings.MinHexBreakJitter,
+                    VisualTweaksSettings.MaxHexBreakJitter,
+                    "VisualTweaks_ShieldDome_HexBreakJitterTip".Translate());
         }
 
         /// <summary>Timing and brightness for one family's custom break.</summary>
