@@ -173,6 +173,7 @@
   <VisualTweaks_ShieldOverride_PersonalHit>Hit animation</VisualTweaks_ShieldOverride_PersonalHit>
   <VisualTweaks_ShieldOverride_Break>Break animation</VisualTweaks_ShieldOverride_Break>
   <VisualTweaks_ShieldOverride_Restore>Restore animation</VisualTweaks_ShieldOverride_Restore>
+  <VisualTweaks_ShieldOverride_Vanish>Vanish animation</VisualTweaks_ShieldOverride_Vanish>
   <VisualTweaks_ShieldOverride_GroupReset>Reset</VisualTweaks_ShieldOverride_GroupReset>
   <VisualTweaks_ShieldOverride_ResetAll>Clear overrides and follow global</VisualTweaks_ShieldOverride_ResetAll>
 
@@ -258,6 +259,16 @@
   <VisualTweaks_ShieldDome_DissolveBrightness>Break brightness</VisualTweaks_ShieldDome_DissolveBrightness>
   <VisualTweaks_ShieldDome_DissolveBrightnessTip>Brightness as it breaks; vanilla visibility is already zero, so the animation carries its own.</VisualTweaks_ShieldDome_DissolveBrightnessTip>
 
+  <VisualTweaks_ShieldDome_VanishGroup>Vanish animation</VisualTweaks_ShieldDome_VanishGroup>
+  <VisualTweaks_ShieldDome_VanishNone>None</VisualTweaks_ShieldDome_VanishNone>
+  <VisualTweaks_ShieldDome_VanishNoneTip>No animation: a shield that shuts off without breaking is gone at once, exactly like vanilla.</VisualTweaks_ShieldDome_VanishNoneTip>
+  <VisualTweaks_ShieldDome_VanishFade>Fade out</VisualTweaks_ShieldDome_VanishFade>
+  <VisualTweaks_ShieldDome_VanishFadeTip>A shield that shuts off without breaking dims from its current brightness until it is gone. Default.</VisualTweaks_ShieldDome_VanishFadeTip>
+  <VisualTweaks_ShieldDome_VanishShrink>Shrink</VisualTweaks_ShieldDome_VanishShrink>
+  <VisualTweaks_ShieldDome_VanishShrinkTip>A shield that shuts off without breaking dims while contracting toward its centre — the exact inverse of the Grow restore.</VisualTweaks_ShieldDome_VanishShrinkTip>
+  <VisualTweaks_ShieldDome_VanishTime>Vanish duration</VisualTweaks_ShieldDome_VanishTime>
+  <VisualTweaks_ShieldDome_VanishTimeTip>Ticks from the start of the fade to fully gone; 60 ticks = 1 second.</VisualTweaks_ShieldDome_VanishTimeTip>
+  <VisualTweaks_ShieldDome_VanishNote>For shields that stop on their own: charge cycles, timed expiry, manual deactivation, EMP stun, dormancy. A shield destroyed by damage is handled by the break animation above; the two never play at once.</VisualTweaks_ShieldDome_VanishNote>
   <VisualTweaks_ShieldDome_RestoreGroup>Restore animation</VisualTweaks_ShieldDome_RestoreGroup>
   <VisualTweaks_ShieldDome_RestoreNone>None</VisualTweaks_ShieldDome_RestoreNone>
   <VisualTweaks_ShieldDome_RestoreNoneTip>No animation: the shield appears at its normal size and opacity when it comes back online.</VisualTweaks_ShieldDome_RestoreNoneTip>

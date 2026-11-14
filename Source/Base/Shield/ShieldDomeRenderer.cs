@@ -216,14 +216,6 @@ namespace VisualTweaks
 
             Vector3 center = host.DrawPos;
 
-            // The up edge owns the restore animation. Observed here rather than from a
-            // tick patch because this is the one place that already knows what "up"
-            // means for both adapters: Active for an interceptor, active plus charge
-            // for a repulsor. See ShieldRestoreLog.
-            int restoreTicks = Mathf.RoundToInt(
-                VisualTweaksSettings.largeShieldRestoreTicks);
-            ShieldRestoreLog.Observe(comp, present, restoreTicks);
-
             // ------------------------------------------------------------------
             // Dissolve.
             //
@@ -255,6 +247,49 @@ namespace VisualTweaks
             }
 
             int now = Find.TickManager?.TicksGame ?? 0;
+
+            // The up edge owns the restore animation. Observed here rather than from a
+            // tick patch because this is the one place that already knows what "up"
+            // means for both adapters: Active for an interceptor, active plus charge
+            // for a repulsor. See ShieldRestoreLog.
+            int restoreTicks = Mathf.RoundToInt(
+                VisualTweaksSettings.largeShieldRestoreTicks);
+
+            // The down edge owns the vanish animation, and it is observed *before* the
+            // restore edge on purpose: a shield that goes away and comes back inside
+            // the instant window has to take its fade-in down with it, otherwise the
+            // player sees a fade-out stacked on a fade-in for a shield that never
+            // really left.
+            ShieldVanishStyle vanishStyle = style.Vanish;
+            ShieldVanishLog.State? vanish = null;
+            bool vanishWanted = vanishStyle != ShieldVanishStyle.None;
+            if (vanishWanted)
+            {
+                vanish = ShieldVanishLog.Observe(
+                    comp,
+                    present,
+                    alpha > 0f,
+                    alpha,
+                    radius,
+                    Mathf.RoundToInt(VisualTweaksSettings.largeShieldVanishTicks),
+                    dissolve == null,
+                    out bool instantReturn);
+                if (instantReturn)
+                {
+                    ShieldRestoreLog.Cancel(comp);
+                }
+            }
+
+            ShieldRestoreLog.Observe(comp, present, restoreTicks);
+
+            // A tear that started underneath a fade — an EMP landing while the dome is
+            // already powering down — takes the frame over and drops the fade. Break
+            // wins; the two never play together.
+            if (dissolve != null && vanish != null)
+            {
+                ShieldVanishLog.Cancel(comp);
+                vanish = null;
+            }
 
             // A break is only ever *drawn* while the shield is down. On the tick a
             // Deactivate() begins, Active can still be true for the rest of that tick;
@@ -357,6 +392,48 @@ namespace VisualTweaks
                 }
             }
 
+            // ------------------------------------------------------------------
+            // Vanish.
+            //
+            // A shield that goes away without breaking has no event to hang on and,
+            // for the same reason the dissolve has none, no alpha of its own: whatever
+            // ended it — a charge cycle starting, a timed activation running out, a
+            // stun, dormancy, VEF switching a repulsor off — only ever changes a
+            // condition that vanilla reads while drawing. ShieldVanishLog watches that
+            // read and keeps the brightness the surface had on its last shown frame,
+            // which is the only value a fade can start from: by the time the state is
+            // false, vanilla's alpha is already zero.
+            //
+            // Fade runs from that frozen value to the surface's *current* steady alpha
+            // rather than to zero. A def with minAlpha > 0 keeps a dim dome on screen
+            // when it is down; fading below that would dip and then pop back up.
+            // ------------------------------------------------------------------
+            float vanishAlpha = -1f;
+            if (vanish != null
+                && !breaking
+                && ShieldVanishLog.Progress(comp, out float vanishProgress))
+            {
+                float eased = ShieldVanishLog.Ease(vanishProgress);
+                vanishAlpha = Mathf.Lerp(vanish.StartAlpha, alpha, eased);
+
+                // Shrink is Grow backwards. Only applied when the surface really is
+                // going dark: a minAlpha dome stays on screen at full radius, and
+                // shrinking it would snap back at the end of the fade.
+                if (vanishStyle == ShieldVanishStyle.Shrink && alpha <= 0.01f)
+                {
+                    drawnRadius = Mathf.Lerp(
+                        vanish.StartSize,
+                        vanish.StartSize * ShieldVanishLog.ShrinkEndScale,
+                        eased);
+                }
+            }
+            else
+            {
+                // Not running (finished, cancelled, or suppressed by a break): drop the
+                // reference so no later branch thinks a fade still owns the frame.
+                vanish = null;
+            }
+
             // 2 * radius normally, with no texture-margin factor: the shader puts the
             // silhouette on r == 1.0, so the quad edge and the gameplay radius are the
             // same circle. The stock-like style is the exception — its soft rim is
@@ -375,8 +452,11 @@ namespace VisualTweaks
             // Nothing is submitted while the surface is fully transparent, no break
             // is in flight and the last recorded hit has already faded. Deciding that
             // before touching the material keeps a hidden shield down to a few field
-            // reads and one lookup per frame instead of an Ensure/ApplyLook pass.
+            // reads and one lookup per frame instead of an Ensure/ApplyLook pass. A
+            // fading shield is the exception: its alpha is zero by definition, and the
+            // surface has to outlive it for the length of the fade.
             if (dissolve == null
+                && vanish == null
                 && alpha <= 0f
                 && !ShieldImpactLog.HasLive(comp))
             {
@@ -395,14 +475,17 @@ namespace VisualTweaks
 
             // Vanilla paints a selected-but-inactive shield dark grey so "this is off"
             // is visible at a glance. A shield that is actively tearing itself apart is
-            // emitting light, not sitting idle, so it keeps the def's colour. The VEF
-            // adapter never asks for this dimming: a repulsor that is off is not drawn
-            // by VEF at all, so there is no "selected but idle" surface to recolour.
-            // The per-object color override replaces the def's tint only while the
-            // shield is actually drawn as itself. Vanilla's selected-but-inactive
-            // grey still wins: that state is a status cue, not a surface choice.
+            // emitting light, not sitting idle, so it keeps the def's colour. A shield
+            // that is powering down is still the thing the player selected, so it keeps
+            // its colour too; the grey arrives with the idle frame after the fade. The
+            // VEF adapter never asks for this dimming: a repulsor that is off is not
+            // drawn by VEF at all, so there is no "selected but idle" surface to
+            // recolour. The per-object color override replaces the def's tint only
+            // while the shield is actually drawn as itself. Vanilla's
+            // selected-but-inactive grey still wins: that state is a status cue, not a
+            // surface choice.
             Color drawnColor = style.Tint ?? baseColor;
-            Color color = dissolve == null && !present && selected
+            Color color = dissolve == null && vanish == null && !present && selected
                 ? InactiveColor
                 : drawnColor;
 
@@ -426,14 +509,17 @@ namespace VisualTweaks
 
             // Pulse off replaces vanilla's GetCurrentAlpha() entirely: one fixed,
             // lower value, with no sin term left anywhere in the surface. Pulse on
-            // keeps vanilla's own pulsing alpha as-is.
+            // keeps vanilla's own pulsing alpha as-is. A fade overrides both: it
+            // carries its own value, because vanilla's has already reached the
+            // surface's steady state by the time the fade starts.
+            float alphaForDraw = vanishAlpha >= 0f ? vanishAlpha : alpha;
             float drawnAlpha = hexBubble
                 ? ShieldHexBubble.Alpha(
-                    alpha,
+                    alphaForDraw,
                     time,
                     VisualTweaksSettings.hexBubblePulse,
                     rawAlphaPulses: true)
-                : alpha;
+                : alphaForDraw;
 
             bool drew = false;
             bool restoring = dissolve == null && restoreProgress >= 0f;
@@ -448,7 +534,8 @@ namespace VisualTweaks
                 // before DrawImpact), so this also keeps the two families aligned.
                 // A restoring dome suppresses them for the same reason: a full-strength
                 // flare on a surface that is still fading in reads as a second object.
-                if (dissolve == null && !restoring)
+                // A fading dome is the same story the other way round.
+                if (dissolve == null && vanish == null && !restoring)
                 {
                     // Which reaction is a player choice now, but not every surface can
                     // draw every one: the lattice wave needs the baked hex map, while the
@@ -501,7 +588,7 @@ namespace VisualTweaks
                         hexBubble,
                         time);
                 }
-                else if (alpha > 0f)
+                else if (alphaForDraw > 0f)
                 {
                     properties[0] = DrawProperty.Vector(
                         ParamsId,

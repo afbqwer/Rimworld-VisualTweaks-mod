@@ -204,7 +204,6 @@ namespace VisualTweaks
             // happens to paint it right now.
             int restoreTicks = Mathf.RoundToInt(
                 VisualTweaksSettings.personalShieldRestoreTicks);
-            ShieldRestoreLog.Observe(comp, active, restoreTicks);
 
             ShieldBreakStyle breakStyle = style.Break;
             PersonalShieldHitStyle hitStyle = style.PersonalHit;
@@ -226,6 +225,43 @@ namespace VisualTweaks
             }
 
             int now = Find.TickManager?.TicksGame ?? 0;
+
+            // The down edge owns the vanish animation for every adapter too: a belt
+            // whose wearer enters self-shutdown, a bubble VEF stops paying for, a
+            // hediff shield whose comp stops being available. Observed before the
+            // restore edge so a disappearance that is undone inside the instant window
+            // can take its fade-in down with it. A belt has no state-driven alpha of
+            // its own — visibility is the gate — so "shown" is what decides whether
+            // anything was on screen to fade, and the alpha passed here is only the
+            // log's "was it opaque enough to bother" marker.
+            ShieldVanishStyle vanishStyle = style.Vanish;
+            ShieldVanishLog.State? vanish = null;
+            bool vanishWanted = vanishStyle != ShieldVanishStyle.None;
+            if (vanishWanted)
+            {
+                vanish = ShieldVanishLog.Observe(
+                    comp,
+                    active,
+                    visible,
+                    1f,
+                    drawnSize,
+                    Mathf.RoundToInt(VisualTweaksSettings.personalShieldVanishTicks),
+                    dissolve == null,
+                    out bool instantReturn);
+                if (instantReturn)
+                {
+                    ShieldRestoreLog.Cancel(comp);
+                }
+            }
+
+            ShieldRestoreLog.Observe(comp, active, restoreTicks);
+
+            // Break wins. A tear that starts underneath a fade takes the frame over.
+            if (dissolve != null && vanish != null)
+            {
+                ShieldVanishLog.Cancel(comp);
+                vanish = null;
+            }
 
             // A break is only ever *drawn* while the shield is down. On the tick a
             // break begins the state can still read Active for the rest of that tick;
@@ -327,10 +363,46 @@ namespace VisualTweaks
 
             bool restoring = dissolve == null && restoreProgress >= 0f;
 
-            // Nothing is submitted for a shield that is neither breaking nor active
-            // and visible, so the material and its look uniforms are resolved only
-            // after that decision.
-            if (!breaking && !visible)
+            // ------------------------------------------------------------------
+            // Vanish.
+            //
+            // The mirror of the restore above, for every adapter: a belt that is
+            // switched off, stunned into dormancy or stopped being available goes away
+            // without Break() ever running, and vanilla collapses the bubble on the
+            // next frame. Unlike the dome, a belt has no state-driven alpha, so this
+            // multiplies the player's opacity instead of replacing it — the fade can
+            // start from whatever the surface was drawing at, and the last alpha does
+            // not have to be captured at all.
+            //
+            // Shrink starts from the size frozen at the fall, because the belt sizes
+            // itself from energy and that value has usually already changed by the
+            // time the state reads inactive.
+            // ------------------------------------------------------------------
+            float vanishFactor = 1f;
+            float drawnVanishScale = 1f;
+            if (vanish != null
+                && !breaking
+                && ShieldVanishLog.Progress(comp, out float vanishProgress))
+            {
+                float eased = ShieldVanishLog.Ease(vanishProgress);
+                vanishFactor = 1f - eased;
+                if (vanishStyle == ShieldVanishStyle.Shrink)
+                {
+                    drawnVanishScale = Mathf.Lerp(
+                        1f,
+                        ShieldVanishLog.ShrinkEndScale,
+                        eased);
+                }
+            }
+            else
+            {
+                vanish = null;
+            }
+
+            // Nothing is submitted for a shield that is neither breaking, nor fading
+            // away, nor active and visible, so the material and its look uniforms are
+            // resolved only after that decision.
+            if (!breaking && vanish == null && !visible)
             {
                 return false;
             }
@@ -352,10 +424,11 @@ namespace VisualTweaks
             // also displace it. The dissolve owns the frame when one is playing, so no
             // hit reaction is layered on top of it either; a restoring bubble does the
             // same, because a full-strength reaction on a surface still fading in
-            // reads as a second object.
+            // reads as a second object. A fading one is the same story.
             Vector3 jitterOffset = Vector3.zero;
             float jitterShrink = 0f;
             if (dissolve == null
+                && vanish == null
                 && !restoring
                 && hitStyle == PersonalShieldHitStyle.Jitter)
             {
@@ -366,9 +439,12 @@ namespace VisualTweaks
                     out jitterShrink);
             }
 
-            float size = drawnSize - jitterShrink;
+            // A fading bubble keeps the size it had when it went out. Sizing it from
+            // the live value would pop it to minDrawSize the moment the state changed,
+            // because a belt's diameter follows its energy.
+            float size = vanish != null ? vanish.StartSize : drawnSize - jitterShrink;
             float radius = Mathf.Max(size * 0.5f, 0.05f);
-            float drawnRadius = radius * restoreScale;
+            float drawnRadius = radius * restoreScale * drawnVanishScale;
 
             Vector3 center = baseCenter + jitterOffset;
 
@@ -474,7 +550,7 @@ namespace VisualTweaks
             // dome uses, so the rim is the last thing written. Jitter has already
             // moved the surface itself, so that branch is a no-op here. A restoring
             // surface suppresses the reaction for the same reason as the dome.
-            if (dissolve == null && !restoring)
+            if (dissolve == null && vanish == null && !restoring)
             {
                 DrawImpact(
                     comp,
@@ -511,7 +587,7 @@ namespace VisualTweaks
                 ParamsId,
                 new NVector4(
                     0f,
-                    alpha * restoreAlpha * style.OpacityMultiplier,
+                    alpha * restoreAlpha * vanishFactor * style.OpacityMultiplier,
                     time,
                     drawnRadius));
             properties[1] = DrawProperty.Vector(Params4Id, centerParam);

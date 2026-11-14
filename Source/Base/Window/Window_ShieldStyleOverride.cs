@@ -216,6 +216,7 @@ namespace VisualTweaks
                 }
 
                 DrawBreakRow(listing, allHex, anyHex);
+                DrawVanishRow(listing);
                 DrawRestoreRow(listing);
                 DrawResetRow(listing);
 
@@ -883,6 +884,40 @@ namespace VisualTweaks
             }
         }
 
+        private void DrawVanishRow(Listing_Standard listing)
+        {
+            ShieldVanishStyle[] order = VisualTweaksMod.VanishOrder;
+            string[] labels = WithGlobal(VisualTweaksMod.VanishLabels());
+            string[] tips = WithGlobalTip(VisualTweaksMod.VanishTips());
+
+            int selected = CommonChoice(
+                allEntries,
+                static entry => entry.OverrideVanish,
+                static entry => entry.Vanish,
+                order);
+
+            listing.Label("VisualTweaks_ShieldOverride_Vanish".Translate());
+            int picked = SettingsLayout.RadioRow(listing, labels, selected, tips);
+            if (picked < 0 || picked == selected)
+            {
+                return;
+            }
+
+            for (int i = 0; i < allEntries.Count; i++)
+            {
+                ShieldStyleOverride entry = allEntries[i];
+                if (picked == 0)
+                {
+                    entry.OverrideVanish = false;
+                }
+                else
+                {
+                    entry.OverrideVanish = true;
+                    entry.Vanish = order[picked - 1];
+                }
+            }
+        }
+
         private void DrawResetRow(Listing_Standard listing)
         {
             SettingsLayout.Header(
@@ -958,6 +993,7 @@ namespace VisualTweaks
                 if (Differs(first.OverrideSurface, first.Surface, entry.OverrideSurface, entry.Surface)
                     || Differs(first.OverrideBreak, first.Break, entry.OverrideBreak, entry.Break)
                     || Differs(first.OverrideRestore, first.Restore, entry.OverrideRestore, entry.Restore)
+                    || Differs(first.OverrideVanish, first.Vanish, entry.OverrideVanish, entry.Vanish)
                     || first.OverrideColor != entry.OverrideColor
                     || (first.OverrideColor && !SameRgb(first.ShieldColor, entry.ShieldColor))
                     || Mathf.Abs(first.OpacityMultiplier - entry.OpacityMultiplier) > 0.0001f)

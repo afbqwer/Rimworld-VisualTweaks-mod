@@ -575,6 +575,35 @@ namespace VisualTweaks
             };
         }
 
+        // Vanish animation order, the mirror of the restore one. Same three slots,
+        // with Shrink standing in for Grow.
+        internal static readonly ShieldVanishStyle[] VanishOrder =
+        {
+            ShieldVanishStyle.None,
+            ShieldVanishStyle.Fade,
+            ShieldVanishStyle.Shrink
+        };
+
+        internal static string[] VanishLabels()
+        {
+            return new string[]
+            {
+                "VisualTweaks_ShieldDome_VanishNone".Translate(),
+                "VisualTweaks_ShieldDome_VanishFade".Translate(),
+                "VisualTweaks_ShieldDome_VanishShrink".Translate()
+            };
+        }
+
+        internal static string[] VanishTips()
+        {
+            return new string[]
+            {
+                "VisualTweaks_ShieldDome_VanishNoneTip".Translate(),
+                "VisualTweaks_ShieldDome_VanishFadeTip".Translate(),
+                "VisualTweaks_ShieldDome_VanishShrinkTip".Translate()
+            };
+        }
+
         private static void DoGasTab(Listing_Standard listing)
         {
             SettingsLayout.Header(listing, "VisualTweaks_Gas_GroupSwitch".Translate());
@@ -1077,6 +1106,23 @@ namespace VisualTweaks
 
             SettingsLayout.SubHeader(
                 listing,
+                "VisualTweaks_ShieldDome_VanishGroup".Translate());
+            DrawVanishChoice(listing, false);
+            if (VisualTweaksSettings.largeShieldVanishStyle
+                != ShieldVanishStyle.None)
+            {
+                DrawVanishSlider(listing, false);
+            }
+
+            // Spelled out because the group name alone invites the wrong reading:
+            // "vanish" is the shield running out of charge or time, not the shield
+            // being destroyed, and the two have separate settings.
+            SettingsLayout.Note(
+                listing,
+                "VisualTweaks_ShieldDome_VanishNote".Translate());
+
+            SettingsLayout.SubHeader(
+                listing,
                 "VisualTweaks_ShieldDome_RestoreGroup".Translate());
             DrawRestoreChoice(listing, false);
             if (VisualTweaksSettings.largeShieldRestoreStyle
@@ -1168,6 +1214,20 @@ namespace VisualTweaks
             {
                 DrawDissolveSliders(listing, true);
             }
+
+            SettingsLayout.SubHeader(
+                listing,
+                "VisualTweaks_ShieldDome_VanishGroup".Translate());
+            DrawVanishChoice(listing, true);
+            if (VisualTweaksSettings.personalShieldVanishStyle
+                != ShieldVanishStyle.None)
+            {
+                DrawVanishSlider(listing, true);
+            }
+
+            SettingsLayout.Note(
+                listing,
+                "VisualTweaks_ShieldDome_VanishNote".Translate());
 
             SettingsLayout.SubHeader(
                 listing,
@@ -1725,6 +1785,65 @@ namespace VisualTweaks
                     VisualTweaksSettings.MinShieldRestoreTicks,
                     VisualTweaksSettings.MaxShieldRestoreTicks,
                     "VisualTweaks_ShieldDome_RestoreTimeTip".Translate(),
+                    step: 1f);
+        }
+
+        /// <summary>
+        /// How one family leaves the screen when it was not broken. One value per
+        /// family, like the restore choice: the same event on every surface.
+        /// </summary>
+        private static void DrawVanishChoice(Listing_Standard listing, bool personal)
+        {
+            ShieldVanishStyle current = personal
+                ? VisualTweaksSettings.personalShieldVanishStyle
+                : VisualTweaksSettings.largeShieldVanishStyle;
+
+            int index = IndexOf(VanishOrder, current);
+            int picked = SettingsLayout.RadioRow(
+                listing,
+                VanishLabels(),
+                index,
+                VanishTips());
+            if (picked == index)
+            {
+                return;
+            }
+
+            if (personal)
+            {
+                VisualTweaksSettings.personalShieldVanishStyle = VanishOrder[picked];
+            }
+            else
+            {
+                VisualTweaksSettings.largeShieldVanishStyle = VanishOrder[picked];
+            }
+        }
+
+        /// <summary>Timing for one family's vanish animation.</summary>
+        private static void DrawVanishSlider(Listing_Standard listing, bool personal)
+        {
+            if (personal)
+            {
+                VisualTweaksSettings.personalShieldVanishTicks =
+                    SettingsLayout.Slider(
+                        listing,
+                        "VisualTweaks_ShieldDome_VanishTime".Translate(),
+                        VisualTweaksSettings.personalShieldVanishTicks,
+                        VisualTweaksSettings.MinShieldVanishTicks,
+                        VisualTweaksSettings.MaxShieldVanishTicks,
+                        "VisualTweaks_ShieldDome_VanishTimeTip".Translate(),
+                        step: 1f);
+                return;
+            }
+
+            VisualTweaksSettings.largeShieldVanishTicks =
+                SettingsLayout.Slider(
+                    listing,
+                    "VisualTweaks_ShieldDome_VanishTime".Translate(),
+                    VisualTweaksSettings.largeShieldVanishTicks,
+                    VisualTweaksSettings.MinShieldVanishTicks,
+                    VisualTweaksSettings.MaxShieldVanishTicks,
+                    "VisualTweaks_ShieldDome_VanishTimeTip".Translate(),
                     step: 1f);
         }
 

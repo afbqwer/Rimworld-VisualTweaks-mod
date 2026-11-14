@@ -46,6 +46,20 @@ namespace VisualTweaks
         Grow = 2
     }
 
+    /// <summary>
+    /// How a shield animates when it goes away without breaking: a charge cycle
+    /// starting, a timed activation running out, a stun or dormancy change, VEF
+    /// switching a repulsor off. Deliberately the mirror of
+    /// <see cref="ShieldRestoreStyle"/> — Shrink is Fade plus the inverse of Grow —
+    /// because it is the same event seen from the other end.
+    /// </summary>
+    public enum ShieldVanishStyle
+    {
+        None = 0,
+        Fade = 1,
+        Shrink = 2
+    }
+
     /// <summary>How a personal belt answers an absorbed hit.</summary>
     public enum PersonalShieldHitStyle
     {
@@ -383,6 +397,21 @@ namespace VisualTweaks
             ShieldRestoreStyle.Grow;
         public static float largeShieldRestoreTicks = 60f;
         public static float personalShieldRestoreTicks = 60f;
+
+        // How a shield goes away when it was not broken: a charging cycle starting, a
+        // timed activation expiring, a stun, dormancy, a repulsor switched off between
+        // raids. None keeps vanilla's one-frame disappearance. Like the restore choice
+        // this is one value per family, not per surface: leaving is the same event on
+        // every surface, and a surface switch should not rewrite it. The duration is a
+        // separate per-family slider and is ignored by None.
+        public const float MinShieldVanishTicks = 10f;
+        public const float MaxShieldVanishTicks = 180f;
+        public static ShieldVanishStyle largeShieldVanishStyle =
+            ShieldVanishStyle.Shrink;
+        public static ShieldVanishStyle personalShieldVanishStyle =
+            ShieldVanishStyle.Shrink;
+        public static float largeShieldVanishTicks = 45f;
+        public static float personalShieldVanishTicks = 45f;
 
         /// <summary>The break animation that belongs to the selected dome style.</summary>
         public static ShieldBreakStyle CurrentShieldBreakStyle =>
@@ -968,6 +997,22 @@ namespace VisualTweaks
                 ref personalShieldRestoreTicks,
                 "personalShieldRestoreTicks",
                 60f);
+            Scribe_Values.Look(
+                ref largeShieldVanishStyle,
+                "largeShieldVanishStyle",
+                ShieldVanishStyle.Shrink);
+            Scribe_Values.Look(
+                ref personalShieldVanishStyle,
+                "personalShieldVanishStyle",
+                ShieldVanishStyle.Shrink);
+            Scribe_Values.Look(
+                ref largeShieldVanishTicks,
+                "largeShieldVanishTicks",
+                45f);
+            Scribe_Values.Look(
+                ref personalShieldVanishTicks,
+                "personalShieldVanishTicks",
+                45f);
 
             Scribe_Values.Look(
                 ref largeShieldHexFaceStrength,
@@ -1397,6 +1442,19 @@ namespace VisualTweaks
                 MinShieldRestoreTicks,
                 MaxShieldRestoreTicks));
 
+            largeShieldVanishStyle = SanitizeShieldVanishStyle(
+                largeShieldVanishStyle);
+            personalShieldVanishStyle = SanitizeShieldVanishStyle(
+                personalShieldVanishStyle);
+            largeShieldVanishTicks = Mathf.Round(Mathf.Clamp(
+                largeShieldVanishTicks,
+                MinShieldVanishTicks,
+                MaxShieldVanishTicks));
+            personalShieldVanishTicks = Mathf.Round(Mathf.Clamp(
+                personalShieldVanishTicks,
+                MinShieldVanishTicks,
+                MaxShieldVanishTicks));
+
             largeShieldDissolveTicks = Mathf.Clamp(
                 largeShieldDissolveTicks,
                 MinShieldDissolveTicks,
@@ -1533,6 +1591,19 @@ namespace VisualTweaks
             }
 
             return ShieldRestoreStyle.Grow;
+        }
+
+        private static ShieldVanishStyle SanitizeShieldVanishStyle(
+            ShieldVanishStyle value)
+        {
+            if (value == ShieldVanishStyle.None
+                || value == ShieldVanishStyle.Fade
+                || value == ShieldVanishStyle.Shrink)
+            {
+                return value;
+            }
+
+            return ShieldVanishStyle.Fade;
         }
     }
 }

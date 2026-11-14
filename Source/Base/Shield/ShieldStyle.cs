@@ -20,6 +20,7 @@ namespace VisualTweaks
         internal readonly ShieldImpactStyle Impact;
         internal readonly ShieldBreakStyle Break;
         internal readonly ShieldRestoreStyle Restore;
+        internal readonly ShieldVanishStyle Vanish;
         internal readonly PersonalShieldHitStyle PersonalHit;
 
         /// <summary>Per-object RGB tint, or null to use the def's own color.</summary>
@@ -39,6 +40,7 @@ namespace VisualTweaks
             ShieldImpactStyle impact,
             ShieldBreakStyle breakStyle,
             ShieldRestoreStyle restore,
+            ShieldVanishStyle vanish,
             PersonalShieldHitStyle personalHit,
             Color? tint,
             float opacityMultiplier,
@@ -49,6 +51,7 @@ namespace VisualTweaks
             Impact = impact;
             Break = breakStyle;
             Restore = restore;
+            Vanish = vanish;
             PersonalHit = personalHit;
             Tint = tint;
             OpacityMultiplier = opacityMultiplier;
@@ -156,6 +159,12 @@ namespace VisualTweaks
                     : (ShieldRestoreStyle?)null,
                 target);
 
+            ShieldVanishStyle vanish = ResolveVanish(
+                selection != null && selection.OverrideVanish
+                    ? selection.Vanish
+                    : (ShieldVanishStyle?)null,
+                target);
+
             PersonalShieldHitStyle personalHit = ResolvePersonalHit(
                 selection != null && selection.OverridePersonalHit
                     ? selection.PersonalHit
@@ -190,6 +199,7 @@ namespace VisualTweaks
                 impact,
                 breakStyle,
                 restore,
+                vanish,
                 personalHit,
                 tint,
                 opacityMultiplier,
@@ -286,6 +296,24 @@ namespace VisualTweaks
                 : fallback;
         }
 
+        /// <summary>
+        /// The animation for a shield that goes away without breaking. One value per
+        /// family, like the restore choice it mirrors: leaving is the same event on
+        /// every surface, so there is nothing surface-specific to resolve.
+        /// </summary>
+        internal static ShieldVanishStyle ResolveVanish(
+            ShieldVanishStyle? wanted,
+            ShieldHexTarget target)
+        {
+            ShieldVanishStyle fallback = target == ShieldHexTarget.Personal
+                ? VisualTweaksSettings.personalShieldVanishStyle
+                : VisualTweaksSettings.largeShieldVanishStyle;
+            fallback = SanitizeVanish(fallback);
+            return wanted.HasValue
+                ? SanitizeVanish(wanted.Value)
+                : fallback;
+        }
+
         internal static PersonalShieldHitStyle ResolvePersonalHit(
             PersonalShieldHitStyle? wanted)
         {
@@ -369,6 +397,18 @@ namespace VisualTweaks
             }
 
             return ShieldRestoreStyle.Grow;
+        }
+
+        private static ShieldVanishStyle SanitizeVanish(ShieldVanishStyle value)
+        {
+            if (value == ShieldVanishStyle.None
+                || value == ShieldVanishStyle.Fade
+                || value == ShieldVanishStyle.Shrink)
+            {
+                return value;
+            }
+
+            return ShieldVanishStyle.Fade;
         }
 
         private static PersonalShieldHitStyle SanitizePersonalHit(

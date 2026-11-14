@@ -38,6 +38,9 @@ namespace VisualTweaks
         public bool OverrideRestore;
         public ShieldRestoreStyle Restore = ShieldRestoreStyle.Grow;
 
+        public bool OverrideVanish;
+        public ShieldVanishStyle Vanish = ShieldVanishStyle.Fade;
+
         public bool OverridePersonalHit;
         public PersonalShieldHitStyle PersonalHit = PersonalShieldHitStyle.Jitter;
 
@@ -62,6 +65,7 @@ namespace VisualTweaks
             && !OverrideImpact
             && !OverrideBreak
             && !OverrideRestore
+            && !OverrideVanish
             && !OverridePersonalHit
             && !OverrideColor
             && !OverrideHexLineColor
@@ -83,6 +87,8 @@ namespace VisualTweaks
             Scribe_Values.Look(ref Break, "break", ShieldBreakStyle.Dissolve);
             Scribe_Values.Look(ref OverrideRestore, "overrideRestore", false);
             Scribe_Values.Look(ref Restore, "restore", ShieldRestoreStyle.Grow);
+            Scribe_Values.Look(ref OverrideVanish, "overrideVanish", false);
+            Scribe_Values.Look(ref Vanish, "vanish", ShieldVanishStyle.Fade);
             Scribe_Values.Look(ref OverridePersonalHit, "overridePersonalHit", false);
             Scribe_Values.Look(
                 ref PersonalHit,
@@ -130,6 +136,7 @@ namespace VisualTweaks
             OverrideImpact = false;
             OverrideBreak = false;
             OverrideRestore = false;
+            OverrideVanish = false;
             OverridePersonalHit = false;
             OverrideColor = false;
             OpacityMultiplier = 1f;
