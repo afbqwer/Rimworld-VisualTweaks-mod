@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 using RimWorld;
@@ -59,6 +60,22 @@ namespace VisualTweaks
         private static FieldInfo? healthPercent;
         private static FieldInfo? healthColor;
 
+        private static MethodInfo? absorbDamageTarget;
+        private static MethodInfo? recordImpactMethod;
+        private static MethodInfo? energyShieldTickTarget;
+
+        /// <summary>
+        /// The projectile seen by the injected <c>EnergyShieldTick</c> call, waiting
+        /// for the absorb postfix. One slot is enough: the transpiler records it
+        /// immediately before <c>AbsorbDamage</c>, which runs synchronously on the
+        /// same thread, and the postfix clears it on every call.
+        /// </summary>
+        [ThreadStatic]
+        private static ThingComp? pendingImpactComp;
+
+        [ThreadStatic]
+        private static Thing? pendingImpactProjectile;
+
         private static readonly ConditionalWeakTable<object, ColourCurve> ColourCurves =
             new ConditionalWeakTable<object, ColourCurve>();
 
@@ -101,6 +118,7 @@ namespace VisualTweaks
                 PatchPostDraw(harmony);
                 PatchAbsorbDamage(harmony);
                 PatchEnergyDepleted(harmony);
+                PatchEnergyShieldTick(harmony);
             }
             catch (Exception ex)
             {
@@ -215,13 +233,19 @@ namespace VisualTweaks
 
         /// <summary>
         /// Both absorb overloads end in the float one, so patching that single method
-        /// records every intercepted projectile exactly once. VEF's angle means the
-        /// same thing as vanilla's <c>lastInterceptAngle</c> — a bearing from the
-        /// projectile towards the shield — but it is expressed in Unity's Y-euler
-        /// convention (<c>AngleFlat</c> / <c>exactRotation.eulerAngles.y</c>), not in
-        /// the <c>AngleToFlat</c> convention the interceptor logs use. That is a
-        /// 90-degree difference, converted once in the postfix so every shared
-        /// consumer (impact log, dissolve origin, ripple) receives the dome convention.
+        /// records every intercepted projectile exactly once.
+        ///
+        /// The angle is NOT the quantity vanilla's <c>lastInterceptAngle</c> is. VEF
+        /// passes <c>ExactRotation.eulerAngles.y</c>, the launch-to-target flight
+        /// bearing, which is constant for the whole trajectory; vanilla uses the
+        /// bearing from the projectile's position at the rim crossing towards the
+        /// centre. The two coincide only for shots aimed at the centre. On an
+        /// off-centre shot they differ by the grazing angle, and on a 16.9-cell
+        /// repulsor that put the visuals on the wrong side of the dome. The 90-degree
+        /// conversion between Unity's Y-euler convention and the <c>AngleToFlat</c>
+        /// convention is still required, but the reference point is what has to be
+        /// replaced: <see cref="PatchEnergyShieldTick"/> records the real projectile,
+        /// and the postfix prefers its position over the flight bearing.
         /// </summary>
         private static void PatchAbsorbDamage(Harmony harmony)
         {
@@ -245,6 +269,10 @@ namespace VisualTweaks
                     + " repulsor hits will not ripple.");
                 return;
             }
+
+            // Kept for the transpiler, which identifies the two call sites by this
+            // method. The postfix itself does not need it.
+            absorbDamageTarget = target;
 
             try
             {
@@ -296,6 +324,388 @@ namespace VisualTweaks
             {
                 Log.Error("[Visual Tweaks] Failed to patch repulsor energy depletion: "
                     + ex);
+            }
+        }
+
+        /// <summary>
+        /// Installs the transpiler that records the actual projectile at VEF's two
+        /// absorb call sites. This patch is an accuracy improvement, not a
+        /// prerequisite: when it cannot be installed the postfix keeps using the
+        /// flight bearing, which is what the file did before.
+        /// </summary>
+        private static void PatchEnergyShieldTick(Harmony harmony)
+        {
+            Type? type = compType;
+            if (type == null || absorbDamageTarget == null)
+            {
+                return;
+            }
+
+            MethodInfo? target = AccessTools.Method(
+                type,
+                "EnergyShieldTick",
+                Type.EmptyTypes);
+            MethodInfo? transpiler = AccessTools.Method(
+                typeof(VefRepulsorShieldCompat),
+                nameof(EnergyShieldTickTranspiler));
+            recordImpactMethod = AccessTools.Method(
+                typeof(VefRepulsorShieldCompat),
+                nameof(RecordImpact));
+
+            if (target == null || transpiler == null || recordImpactMethod == null)
+            {
+                Log.Warning("[Visual Tweaks] Cannot patch VEF CompShieldField."
+                    + "EnergyShieldTick; repulsor hits keep the flight bearing.");
+                return;
+            }
+
+            // The transpiler reads the method body to type-check the projectile local.
+            energyShieldTickTarget = target;
+
+            try
+            {
+                harmony.Patch(target, transpiler: new HarmonyMethod(transpiler));
+                VisualTweaksLog.Info("Patched VEF CompShieldField.EnergyShieldTick"
+                    + " (repulsor impact origin).");
+            }
+            catch (Exception ex)
+            {
+                energyShieldTickTarget = null;
+                Log.Error("[Visual Tweaks] Failed to patch repulsor EnergyShieldTick;"
+                    + " repulsor hit directions stay approximate: " + ex);
+            }
+        }
+
+        /// <summary>
+        /// Records the projectile that is about to be passed to the comp's absorb
+        /// call. Injected by <see cref="EnergyShieldTickTranspiler"/>; the postfix
+        /// consumes it on the same thread.
+        /// </summary>
+        internal static void RecordImpact(ThingComp? comp, Thing? projectile)
+        {
+            pendingImpactComp = comp;
+            pendingImpactProjectile = projectile;
+        }
+
+        /// <summary>
+        /// Hands the recorded projectile to the postfix and clears the slot. Clearing
+        /// happens for every call, including the source-based absorb overload that has
+        /// no projectile, so a stale entry can never leak into a later hit.
+        /// </summary>
+        private static Thing? TakePendingProjectile(ThingComp? comp)
+        {
+            Thing? projectile = ReferenceEquals(pendingImpactComp, comp)
+                ? pendingImpactProjectile
+                : null;
+            pendingImpactComp = null;
+            pendingImpactProjectile = null;
+            return projectile;
+        }
+
+        /// <summary>
+        /// The point where this projectile crossed the shield rim on its way in.
+        ///
+        /// VEF absorbs a projectile while it is already inside the scan ring (on a
+        /// large shield, up to five cells inside), so its current position is not the
+        /// point that should ripple. Projectiles fly in a straight line and
+        /// <c>ExactRotation</c> is that line's constant direction, so stepping
+        /// backwards from the current position along the line to the circle recovers
+        /// the entry point — the same kind of point vanilla's interception reports.
+        /// The projectile is always inside or just outside the circle at this moment;
+        /// the positive root is the crossing behind it either way.
+        /// </summary>
+        private static Vector3 ProjectileRimPoint(
+            Projectile projectile,
+            Vector3 center,
+            float radius)
+        {
+            Vector3 position = projectile.DrawPos;
+            Vector3 travel = Vector3Utility.HorizontalVectorFromAngle(
+                projectile.ExactRotation.eulerAngles.y);
+
+            float dx = position.x - center.x;
+            float dz = position.z - center.z;
+
+            // Solve |position - t * travel - center| = radius for the crossing behind
+            // the projectile: t = (u.d) + sqrt(R^2 - |u|^2 + (u.d)^2).
+            float along = dx * travel.x + dz * travel.z;
+            float discriminant = radius * radius - (dx * dx + dz * dz) + along * along;
+            float back = along + Mathf.Sqrt(Mathf.Max(0f, discriminant));
+
+            return new Vector3(
+                position.x - travel.x * back,
+                0f,
+                position.z - travel.z * back);
+        }
+
+        /// <summary>
+        /// Inserts <c>RecordImpact(this, projectile)</c> at the head of both absorb
+        /// calls inside <c>EnergyShieldTick</c>. This is the only place the projectile
+        /// object is still reachable: the public
+        /// <c>AbsorbDamage(float, DamageDef, float)</c> receives only
+        /// <c>ExactRotation.eulerAngles.y</c>, the flight bearing, while the real rim
+        /// point is the projectile's own position.
+        ///
+        /// The stack shape is unchanged. In both call sites the argument list starts
+        /// with <c>ldarg.0; ldloc &lt;projectile&gt;</c>, so the inserted block is
+        /// placed between those two instructions: it duplicates the comp, loads the
+        /// projectile and calls the recorder, leaving the original comp on the stack
+        /// for the absorb call. Inserting after the <c>ldarg.0</c> rather than before
+        /// it also keeps a branch that targets that instruction landing ahead of the
+        /// duplicate.
+        ///
+        /// Nothing is emitted unless the local after <c>ldarg.0</c> really is a Thing
+        /// (VEF's loop variable is a Projectile). A body of a different shape yields
+        /// no insertions: the transpiler logs once, hands the method back untouched,
+        /// and the postfix falls back to the flight bearing instead of risking bad IL
+        /// in the framework's tick.
+        /// </summary>
+        private static IEnumerable<CodeInstruction> EnergyShieldTickTranspiler(
+            IEnumerable<CodeInstruction> instructions)
+        {
+            List<CodeInstruction> source = new List<CodeInstruction>(instructions);
+            MethodInfo? record = recordImpactMethod;
+            Type? type = compType;
+            if (record == null || type == null)
+            {
+                return source;
+            }
+
+            // Each entry is (insert-after index, projectile load to clone).
+            List<KeyValuePair<int, CodeInstruction>> insertions =
+                new List<KeyValuePair<int, CodeInstruction>>();
+
+            for (int i = 0; i < source.Count; i++)
+            {
+                if (source[i].opcode != OpCodes.Call
+                    && source[i].opcode != OpCodes.Callvirt)
+                {
+                    continue;
+                }
+
+                if (source[i].operand is not MethodInfo called
+                    || called.DeclaringType != type
+                    || called.Name != "AbsorbDamage")
+                {
+                    continue;
+                }
+
+                int thisLoad = FindAbsorbArgumentStart(source, i);
+                if (thisLoad < 0
+                    || HasControlFlow(source, thisLoad + 1, i)
+                    || ContainsInsertion(insertions, thisLoad + 1))
+                {
+                    continue;
+                }
+
+                CodeInstruction projectileLoad = source[thisLoad + 1];
+                insertions.Add(new KeyValuePair<int, CodeInstruction>(
+                    thisLoad + 1,
+                    projectileLoad));
+            }
+
+            if (insertions.Count == 0)
+            {
+                Log.Warning("[Visual Tweaks] VEF CompShieldField.EnergyShieldTick has"
+                    + " an unexpected shape; repulsor hits keep the flight bearing.");
+                return source;
+            }
+
+            List<CodeInstruction> result =
+                new List<CodeInstruction>(source.Count + insertions.Count * 3);
+            int next = 0;
+            for (int i = 0; i <= source.Count; i++)
+            {
+                while (next < insertions.Count && insertions[next].Key == i)
+                {
+                    CodeInstruction projectileLoad = insertions[next].Value;
+                    result.Add(new CodeInstruction(OpCodes.Ldarg_0));
+                    result.Add(new CodeInstruction(
+                        projectileLoad.opcode,
+                        projectileLoad.operand));
+                    result.Add(new CodeInstruction(OpCodes.Call, record));
+                    next++;
+                }
+
+                if (i < source.Count)
+                {
+                    result.Add(source[i]);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// The nearest preceding <c>ldarg.0</c> that starts the absorb call's argument
+        /// list: it must be followed immediately by a load of a Thing local. Scanning
+        /// for the pair rather than the load alone skips a <c>ldarg.0</c> that loads
+        /// the comp merely to read a field in a later argument.
+        /// </summary>
+        private static int FindAbsorbArgumentStart(
+            List<CodeInstruction> instructions,
+            int callIndex)
+        {
+            for (int i = callIndex - 1; i >= 0; i--)
+            {
+                if (!IsThisLoad(instructions[i]) || i + 1 >= callIndex)
+                {
+                    continue;
+                }
+
+                CodeInstruction projectileLoad = instructions[i + 1];
+                if (IsLocalLoad(projectileLoad.opcode)
+                    && IsThingLocal(projectileLoad, energyShieldTickTarget))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// True when a control transfer sits between the candidate argument start and
+        /// the call. That means the call is reached from a different path (the
+        /// candidate belongs to an earlier statement), so it is not this call's
+        /// argument list and must not be used. The real VEF body has no such transfer
+        /// before either absorb call.
+        /// </summary>
+        private static bool HasControlFlow(
+            List<CodeInstruction> instructions,
+            int from,
+            int to)
+        {
+            for (int i = from; i < to; i++)
+            {
+                FlowControl flow = instructions[i].opcode.FlowControl;
+                if (flow == FlowControl.Branch
+                    || flow == FlowControl.Cond_Branch
+                    || flow == FlowControl.Return
+                    || flow == FlowControl.Throw)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ContainsInsertion(
+            List<KeyValuePair<int, CodeInstruction>> insertions,
+            int index)
+        {
+            for (int i = 0; i < insertions.Count; i++)
+            {
+                if (insertions[i].Key == index)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// True for <c>ldarg.0</c> in either the short form the C# compiler emits or a
+        /// long form another rewriter may have substituted.
+        /// </summary>
+        private static bool IsThisLoad(CodeInstruction instruction)
+        {
+            if (instruction.opcode == OpCodes.Ldarg_0)
+            {
+                return true;
+            }
+
+            if (instruction.opcode != OpCodes.Ldarg_S
+                && instruction.opcode != OpCodes.Ldarg)
+            {
+                return false;
+            }
+
+            if (instruction.operand is ParameterInfo parameter)
+            {
+                return parameter.Position == 0;
+            }
+
+            if (instruction.operand is int index)
+            {
+                return index == 0;
+            }
+
+            return instruction.operand is byte small && small == 0;
+        }
+
+        private static bool IsLocalLoad(OpCode code)
+        {
+            return code == OpCodes.Ldloc_0
+                || code == OpCodes.Ldloc_1
+                || code == OpCodes.Ldloc_2
+                || code == OpCodes.Ldloc_3
+                || code == OpCodes.Ldloc_S
+                || code == OpCodes.Ldloc;
+        }
+
+        /// <summary>
+        /// True when the local this instruction loads is a Thing (in practice VEF's
+        /// Projectile loop variable). The short ldloc forms carry the index in the
+        /// opcode itself, so the declared type has to come from the method body.
+        /// </summary>
+        private static bool IsThingLocal(CodeInstruction load, MethodInfo? method)
+        {
+            if (load.operand is LocalBuilder builder)
+            {
+                return typeof(Thing).IsAssignableFrom(builder.LocalType);
+            }
+
+            if (method == null)
+            {
+                return false;
+            }
+
+            OpCode code = load.opcode;
+            int index;
+            if (code == OpCodes.Ldloc_0)
+            {
+                index = 0;
+            }
+            else if (code == OpCodes.Ldloc_1)
+            {
+                index = 1;
+            }
+            else if (code == OpCodes.Ldloc_2)
+            {
+                index = 2;
+            }
+            else if (code == OpCodes.Ldloc_3)
+            {
+                index = 3;
+            }
+            else if (load.operand is int number)
+            {
+                index = number;
+            }
+            else if (load.operand is byte small)
+            {
+                index = small;
+            }
+            else
+            {
+                return false;
+            }
+
+            try
+            {
+                IList<LocalVariableInfo>? locals =
+                    method.GetMethodBody()?.LocalVariables;
+                return locals != null
+                    && index >= 0
+                    && index < locals.Count
+                    && typeof(Thing).IsAssignableFrom(locals[index].LocalType);
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -594,6 +1004,10 @@ namespace VisualTweaks
             float amount,
             float angle)
         {
+            // Consume the pending projectile before any early exit, so the single slot
+            // cannot survive into an unrelated hit.
+            Thing? projectile = TakePendingProjectile(__instance);
+
             // The two visuals are independent switches, like on vanilla shields: a
             // player can keep the hit ripple while the repulsor keeps its stock
             // surface, or replace the surface without the ripple.
@@ -611,10 +1025,49 @@ namespace VisualTweaks
             // disables this file's hit bookkeeping, never the drawing.
             try
             {
-                // VEF reports a Unity Y-euler bearing; the dome's logs are keyed in
-                // the interceptor's AngleToFlat convention. The two differ by 90
-                // degrees, so convert once instead of at every consumer.
-                float domeAngle = angle - 90f;
+                Thing host = __instance.parent;
+                Vector3 center = host.DrawPos;
+                Map? map = host.Map;
+                float radius = ReadFloat(shieldRadius!, __instance);
+
+                // The transpiler normally hands us the real projectile. VEF absorbs it
+                // while it is already inside the scan ring (up to five cells inside on
+                // a large shield), so its DrawPos is not the rim point; the entry point
+                // is reconstructed from its straight trajectory below. When that patch
+                // is unavailable (or the hit came through the source-based overload),
+                // fall back to VEF's angle, converted once from Unity's Y-euler
+                // convention to the interceptor's AngleToFlat convention.
+                Projectile? bullet = projectile as Projectile;
+                bool fromProjectile = bullet != null
+                    && map != null
+                    && bullet.Spawned
+                    && bullet.Map == map
+                    && radius > 0.01f;
+
+                // Both conventions point from the projectile towards the centre; the
+                // shared consumers negate them to get the outward direction. The rim
+                // point is the same quantity vanilla's lastInterceptAngle is built
+                // from, so the two families now agree.
+                Vector3 hitPos;
+                float domeAngle;
+                if (fromProjectile)
+                {
+                    hitPos = ProjectileRimPoint(bullet!, center, radius);
+                    domeAngle = hitPos.AngleToFlat(center);
+                }
+                else
+                {
+                    domeAngle = angle - 90f;
+
+                    // Without a projectile, the best available point is the rim in the
+                    // direction the round came from. Exact only for shots aimed at the
+                    // centre, which is why it is the fallback and not the rule.
+                    Vector3 toward = Vector3Utility.HorizontalVectorFromAngle(angle);
+                    hitPos = new Vector3(
+                        center.x - toward.x * radius,
+                        0f,
+                        center.z - toward.z * radius);
+                }
 
                 if (ShieldDomeBridge.RepulsorActive)
                 {
@@ -630,32 +1083,17 @@ namespace VisualTweaks
                         Find.TickManager?.TicksGame ?? -1);
                 }
 
-                // The repulsor's own hit effect says nothing about where the shot came
-                // from on the surface, so the same bearing is turned into a rim point
-                // for the refraction ripple. The angle follows the shot, so the impact
-                // sits on the opposite side of the centre.
-                Map? map = __instance.parent.Map;
-                if (map == null || !ShieldRippleLayer.Active)
+                if (map == null || !ShieldRippleLayer.Active || radius <= 0.01f)
                 {
                     return;
                 }
 
-                float radius = ReadFloat(shieldRadius!, __instance);
-                if (radius <= 0.01f)
-                {
-                    return;
-                }
-
-                Vector3 center = __instance.parent.DrawPos;
-                Vector3 toward = Vector3Utility.HorizontalVectorFromAngle(angle);
-
+                // The ripple gets the same kind of point vanilla passes (the projectile
+                // crossing the rim); the layer projects it onto the silhouette.
                 map.GetComponent<OverlayMapComponent>()?.NotifyShieldHit(
-                    __instance.parent,
+                    host,
                     radius,
-                    new Vector3(
-                        center.x - toward.x * radius,
-                        0f,
-                        center.z - toward.z * radius),
+                    hitPos,
                     amount);
             }
             catch (Exception ex)

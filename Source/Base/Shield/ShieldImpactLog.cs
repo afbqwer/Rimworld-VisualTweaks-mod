@@ -64,9 +64,11 @@ namespace VisualTweaks
         {
             /// <summary>
             /// Same convention as vanilla's <c>lastInterceptAngle</c>: the
-            /// <c>AngleToFlat</c> bearing from the projectile toward the shield.
-            /// Callers whose angle is a Unity Y-euler value (VEF's repulsor, for
-            /// instance) must convert by subtracting 90 degrees before notifying.
+            /// <c>AngleToFlat</c> bearing from the impact point toward the shield.
+            /// Callers whose angle is a Unity Y-euler value (a raw
+            /// <c>DamageInfo.Angle</c>, for instance) must convert by subtracting 90
+            /// degrees before notifying. The VEF repulsor computes the bearing from the
+            /// real rim crossing, so it already arrives in this convention.
             /// </summary>
             public float Angle;
 

@@ -20,7 +20,7 @@ namespace VisualTweaks
 
                 int culledDefsFixed = ShieldCullFix.Apply();
 
-                Harmony harmony = new Harmony("local.visualtweaks");
+                Harmony harmony = new Harmony("assssssqwww.visualtweaks");
                 GasFieldPatches.Apply(harmony);
                 ExplosionRipplePatches.Apply(harmony);
                 ShieldRipplePatches.Apply(harmony);
