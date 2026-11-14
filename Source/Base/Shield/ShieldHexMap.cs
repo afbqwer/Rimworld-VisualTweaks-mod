@@ -90,12 +90,21 @@ namespace VisualTweaks
     /// ---- cost -------------------------------------------------------------
     ///
     /// 2048^2 texels at 25 dots each (bin guess + hill climb + wall set) measured
-    /// 0.2 s in a Release .NET build of the same loop, so the Mono JIT plus the
+    /// 0.2 s in a Release .NET build of the same loop, so the runtime JIT plus the
     /// SetPixels upload puts the in-game cost at a fraction of a second, once. VRAM
-    /// is 32 MiB for the dome texture plus the belt's own (2 MiB at 512²), each
-    /// shared by every shield of its target. No per-frame CPU work, no extra draw
-    /// calls, no extra geometry, and nothing is baked while neither the surface nor
-    /// a belt's hit effect would sample it.
+    /// is ~43 MiB for the dome texture including its mip chain, plus the belt's own
+    /// (~2.7 MiB at 512²), each shared by every shield of its target. No per-frame
+    /// CPU work, no extra draw calls, no extra geometry, and nothing is baked while
+    /// neither the surface nor a belt's hit effect would sample it.
+    ///
+    /// The mip chain is not decoration. A dome drawn small still walks the whole
+    /// 0..1 disc of a 2048^2 texture, and without mips that becomes a scattered
+    /// stream of cache lines at every minification step — the most persistent GPU
+    /// cost of this feature, paid by every layer (the static surface and each impact
+    /// quad). Mips let a distant dome read a small level; a magnified dome still
+    /// samples level 0, so the near appearance is untouched. Only the panel shading
+    /// softens at range, which is where the line term has already faded below the
+    /// 5-pixel legibility floor.
     ///
     /// 2048 rather than 1024 because the ceiling moved: at k=12 a cell spans ~0.10 of
     /// the radius, so a 25-cell gravship dome magnified to 1500 px would put ~60 px
@@ -429,7 +438,11 @@ namespace VisualTweaks
                 // (as 1/eRef) to rebuild the exact field gradient.
                 float eRef = ERefPerSubdivision / k;
 
-                created = new Texture2D(size, size, TextureFormat.RGBAHalf, false)
+                // Mipmapped on purpose: a dome drawn small still samples the whole
+                // disc, and without mips that is a scattered cache-line stream over
+                // 32 MiB on every draw. A magnified dome keeps reading level 0, so
+                // the close-up appearance is exactly what it was.
+                created = new Texture2D(size, size, TextureFormat.RGBAHalf, true)
                 {
                     name = "VisualTweaksShieldHexMap_" + surface.Target + "_" + size,
                     filterMode = FilterMode.Bilinear,
@@ -545,7 +558,9 @@ namespace VisualTweaks
                     created.SetPixels(0, y0, size, rows, strip, 0);
                 }
 
-                created.Apply(false, true);
+                // Generate the mip chain from the rows just uploaded, then drop the
+                // CPU copy: the texture is only ever read by the shader.
+                created.Apply(true, true);
 
                 if (surface.Texture != null)
                 {
