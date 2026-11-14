@@ -151,6 +151,13 @@ namespace VisualTweaks
         // "whole gas layer flashes for one frame" defect: the setting writes a full
         // per-frame snapshot to a temp log. Flip the default to false before shipping.
         public static bool gasFieldDiagnostics = false;
+
+        // Reports other content sources that declare or create draws on the queues this
+        // mod reserves (2991 gas/wind, 3174 mist/haze, 3179 leak/shockwave). Off by
+        // default: the probe walks every live material every 30 s and logs warnings,
+        // which is cheap but has no reason to run for players who are not diagnosing a
+        // visual overlap. Enabling it triggers a scan on the next drawn frame.
+        public static bool renderQueueProbe = false;
         public static float gasFieldOpacity = 1f;
         public static float gasFieldScale = 1f;
         public static float gasFieldAnimation = 1f;
@@ -848,6 +855,7 @@ namespace VisualTweaks
             Scribe_Values.Look(ref gasFieldSmoothTau, "gasFieldSmoothTau", 0.15f);
             Scribe_Values.Look(ref gasFieldTraceWindows, "gasFieldTraceWindows", false);
             Scribe_Values.Look(ref gasFieldDiagnostics, "gasFieldDiagnostics", false);
+            Scribe_Values.Look(ref renderQueueProbe, "renderQueueProbe", false);
             Scribe_Values.Look(ref gasFieldOpacity, "gasFieldOpacity", 1f);
             Scribe_Values.Look(ref gasFieldScale, "gasFieldScale", 1f);
             Scribe_Values.Look(ref gasFieldAnimation, "gasFieldAnimation", 1f);

@@ -745,6 +745,14 @@ namespace VisualTweaks
                 "VisualTweaks_Gas_Diagnostics".Translate(),
                 ref VisualTweaksSettings.gasFieldDiagnostics,
                 "VisualTweaks_Gas_DiagnosticsTip".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_QueueProbe_Enable".Translate(),
+                ref VisualTweaksSettings.renderQueueProbe,
+                "VisualTweaks_QueueProbe_EnableTip".Translate());
+            if (VisualTweaksSettings.renderQueueProbe)
+            {
+                SettingsLayout.Note(listing, "VisualTweaks_QueueProbe_Note".Translate());
+            }
 
             // Vacuum leak used to have a tab of its own, but it is another way air is
             // shown moving, and the tab strip was getting crowded. It sits at the bottom

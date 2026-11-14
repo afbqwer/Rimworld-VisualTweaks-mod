@@ -206,6 +206,12 @@ namespace VisualTweaks
                 return;
             }
 
+            // Cheap on almost every frame: the probe only scans on its own slow timer.
+            // Kept here rather than in a component of its own so no extra MapComponent
+            // entry is added to the map (the same reason the overlay layers are plain
+            // objects).
+            RenderQueueConflictProbe.Tick();
+
             TickManager tickManager = Find.TickManager;
 
             OverlayFrame frame = new OverlayFrame
