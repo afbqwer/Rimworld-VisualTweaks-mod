@@ -285,6 +285,8 @@
   <VisualTweaks_ShieldDome_RestoreGrowTip>护盾恢复可用时从透明、较小尺寸逐渐放大到正常大小。默认。</VisualTweaks_ShieldDome_RestoreGrowTip>
   <VisualTweaks_ShieldDome_RestoreTime>恢复时长</VisualTweaks_ShieldDome_RestoreTime>
   <VisualTweaks_ShieldDome_RestoreTimeTip>从开始恢复到完全出现的 tick 数，60 tick = 1 秒。</VisualTweaks_ShieldDome_RestoreTimeTip>
+  <VisualTweaks_ShieldDome_RestoreFirstSight>首次出现时也播放恢复动画</VisualTweaks_ShieldDome_RestoreFirstSight>
+  <VisualTweaks_ShieldDome_RestoreFirstSightTip>护盾第一次出现时也按上面的方式淡入或放大，而不是直接冒出来。对大型穹顶和个人护盾同时生效。</VisualTweaks_ShieldDome_RestoreFirstSightTip>
 
   <VisualTweaks_ShieldDome_PersonalGroup>个人护盾</VisualTweaks_ShieldDome_PersonalGroup>
   <VisualTweaks_ShieldPersonal_VanillaOnly>只替换原版个人护盾</VisualTweaks_ShieldPersonal_VanillaOnly>

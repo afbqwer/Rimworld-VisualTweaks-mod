@@ -275,8 +275,11 @@ namespace VisualTweaks
                 }
             }
 
-            ShieldRestoreLog.State? restoreState =
-                ShieldRestoreLog.Observe(comp, restorePresent, restoreTicks);
+            ShieldRestoreLog.State? restoreState = ShieldRestoreLog.Observe(
+                comp,
+                restorePresent,
+                restoreTicks,
+                VisualTweaksSettings.shieldRestoreOnFirstSight);
 
             // Break wins. A tear that starts underneath a fade takes the frame over.
             if (dissolve != null && vanish != null)

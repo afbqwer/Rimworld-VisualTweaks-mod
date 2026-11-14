@@ -286,8 +286,11 @@ namespace VisualTweaks
                 }
             }
 
-            ShieldRestoreLog.State? restoreState =
-                ShieldRestoreLog.Observe(comp, present, restoreTicks);
+            ShieldRestoreLog.State? restoreState = ShieldRestoreLog.Observe(
+                comp,
+                present,
+                restoreTicks,
+                VisualTweaksSettings.shieldRestoreOnFirstSight);
 
             // A tear that started underneath a fade — an EMP landing while the dome is
             // already powering down — takes the frame over and drops the fade. Break

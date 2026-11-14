@@ -1137,6 +1137,7 @@ namespace VisualTweaks
                 != ShieldRestoreStyle.None)
             {
                 DrawRestoreSlider(listing, false);
+                DrawRestoreFirstSight(listing);
             }
         }
 
@@ -1254,6 +1255,7 @@ namespace VisualTweaks
                 != ShieldRestoreStyle.None)
             {
                 DrawRestoreSlider(listing, true);
+                DrawRestoreFirstSight(listing);
             }
 
             // The same rule in the other direction. On, a bubble that reappears after
@@ -1812,6 +1814,22 @@ namespace VisualTweaks
                     VisualTweaksSettings.MaxShieldRestoreTicks,
                     "VisualTweaks_ShieldDome_RestoreTimeTip".Translate(),
                     step: 1f);
+        }
+
+        /// <summary>
+        /// Whether a shield that has never been drawn before animates in.
+        ///
+        /// One switch for both families, so it is drawn in whichever restore group is
+        /// on screen and edits the same field either way — a user reading the personal
+        /// section should not have to hunt for it in the dome section, and the two
+        /// checkboxes can never disagree.
+        /// </summary>
+        private static void DrawRestoreFirstSight(Listing_Standard listing)
+        {
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_RestoreFirstSight".Translate(),
+                ref VisualTweaksSettings.shieldRestoreOnFirstSight,
+                "VisualTweaks_ShieldDome_RestoreFirstSightTip".Translate());
         }
 
         /// <summary>

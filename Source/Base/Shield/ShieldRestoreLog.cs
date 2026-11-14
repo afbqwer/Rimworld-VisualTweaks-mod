@@ -26,9 +26,20 @@ namespace VisualTweaks
     /// renderer calls <see cref="Begin"/> when that break plays out, and the restore
     /// happens even though no frame ever saw the shield down.
     ///
-    /// The first observation never animates. That covers loading a save, a newly
-    /// constructed generator, equipping a belt and enabling the replacement: all of
-    /// them arrive with an already-active shield and should not flash.
+    /// The first observation is a setting. Watch a shield for the first time and
+    /// there is no earlier frame to compare against, so the edge is invisible: a
+    /// newly constructed generator, a freshly equipped belt, a map scrolled onto all
+    /// read as "already up". Animating that one frame is what makes a shield look
+    /// like it is coming online, so
+    /// <c>VisualTweaksSettings.shieldRestoreOnFirstSight</c> (on by default) makes the
+    /// first observation animate too.
+    ///
+    /// The price of that is loading a save, where every shield on screen is first
+    /// observed on the same frame and would all grow in together. So a load arms a
+    /// grace window (<see cref="LoadGraceTicks"/>): for that long after the first
+    /// frame drawn post-load, a first observation is recorded without an animation.
+    /// Only the first-observation path is gated — a shield that really was down and
+    /// comes back a moment after loading still gets its animation.
     ///
     /// Not scribed for the same reason as the dissolve logs: the animation is only a
     /// few seconds and rebasing its start tick against a clock that may have advanced
@@ -56,6 +67,30 @@ namespace VisualTweaks
         /// </summary>
         internal const float GrowStartScale = 0.15f;
 
+        /// <summary>
+        /// How long after a save is loaded a first observation stays silent.
+        ///
+        /// Every shield in the save is first observed on the same frame, so with the
+        /// first-sight animation on they would all grow in together — a wall of
+        /// movement with no cause the player can point at. One second is longer than
+        /// the first drawn frame plus the frames the map takes to settle, and shorter
+        /// than anything the player would notice as a delay.
+        ///
+        /// Game ticks, so it does not run while the game is paused on load.
+        /// </summary>
+        internal const int LoadGraceTicks = 60;
+
+        /// <summary>
+        /// Set by the load patch, consumed by the first observation: the tick the
+        /// grace window is measured from is the first frame drawn after loading, not
+        /// the moment <c>LoadedGame</c> ran. Those are close, but only the first draw
+        /// is guaranteed to have a live TickManager and a map actually on screen.
+        /// </summary>
+        private static bool loadGraceArmed;
+
+        /// <summary>First observations before this tick do not animate.</summary>
+        private static int firstSightBlockedUntil = int.MinValue;
+
         internal sealed class State
         {
             public bool Initialized;
@@ -75,12 +110,20 @@ namespace VisualTweaks
         /// The duration is captured at the start of each restore, so moving the slider
         /// mid-animation affects the next one rather than restarting this one.
         ///
+        /// <paramref name="animateFirstSight"/> is read from the settings on every
+        /// draw, not cached: the switch is global, and flipping it has to affect the
+        /// next shield that appears rather than the next game session.
+        ///
         /// Returns the state it touched, or null when there is no game clock. The
         /// renderer keeps the reference and asks <see cref="Progress"/> for the
         /// position later, so the same state is never looked up twice in one frame.
         /// That matters because a <see cref="Begin"/> may stamp it in between.
         /// </summary>
-        internal static State? Observe(object comp, bool present, int durationTicks)
+        internal static State? Observe(
+            object comp,
+            bool present,
+            int durationTicks,
+            bool animateFirstSight)
         {
             if (comp == null)
             {
@@ -93,11 +136,21 @@ namespace VisualTweaks
                 return null;
             }
 
+            int now = tickManager.TicksGame;
+            StampLoadGrace(now);
+
             State state = States.GetOrCreateValue(comp);
             if (!state.Initialized)
             {
                 state.Initialized = true;
                 state.WasPresent = present;
+
+                if (present && animateFirstSight && now >= firstSightBlockedUntil)
+                {
+                    state.StartTick = now;
+                    state.DurationTicks = Mathf.Max(1, durationTicks);
+                }
+
                 return state;
             }
 
@@ -113,9 +166,30 @@ namespace VisualTweaks
                 return state;
             }
 
-            state.StartTick = tickManager.TicksGame;
+            state.StartTick = now;
             state.DurationTicks = Mathf.Max(1, durationTicks);
             return state;
+        }
+
+        /// <summary>
+        /// Opens the post-load window at the first frame drawn afterwards. Called once
+        /// per load by <see cref="ShieldRestorePatches"/>; a game that was never loaded
+        /// never arms it, so the ordinary first sight of a shield is never delayed.
+        /// </summary>
+        internal static void OnGameLoaded()
+        {
+            loadGraceArmed = true;
+        }
+
+        private static void StampLoadGrace(int now)
+        {
+            if (!loadGraceArmed)
+            {
+                return;
+            }
+
+            loadGraceArmed = false;
+            firstSightBlockedUntil = now + LoadGraceTicks;
         }
 
         /// <summary>

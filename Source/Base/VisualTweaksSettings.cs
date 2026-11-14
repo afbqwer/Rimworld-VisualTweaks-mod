@@ -405,6 +405,18 @@ namespace VisualTweaks
         public static float largeShieldRestoreTicks = 45f;
         public static float personalShieldRestoreTicks = 30f;
 
+        // Whether the restore animation also plays the first time a shield is looked
+        // at. The draw path has nothing to compare a first observation against, so by
+        // default it treated every new shield as "already up" and skipped the
+        // animation: a generator the player just built popped into existence at full
+        // size. On (the default), that first frame counts as an up edge and animates.
+        //
+        // One switch for both families: whatever a first appearance looks like on a
+        // dome should look the same on a belt. Loading a save is the exception the
+        // switch cannot express, so ShieldRestoreLog holds first observations back for
+        // a moment after a load — see ShieldRestoreLog.LoadGraceTicks.
+        public static bool shieldRestoreOnFirstSight = true;
+
         // How a shield goes away when it was not broken: a charging cycle starting, a
         // timed activation expiring, a stun, dormancy, a repulsor switched off between
         // raids. None keeps vanilla's one-frame disappearance. Like the restore choice
@@ -1016,6 +1028,10 @@ namespace VisualTweaks
                 ref personalShieldRestoreTicks,
                 "personalShieldRestoreTicks",
                 30f);
+            Scribe_Values.Look(
+                ref shieldRestoreOnFirstSight,
+                "shieldRestoreOnFirstSight",
+                true);
             Scribe_Values.Look(
                 ref largeShieldVanishStyle,
                 "largeShieldVanishStyle",
