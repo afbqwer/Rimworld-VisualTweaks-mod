@@ -223,7 +223,7 @@ namespace VisualTweaks
                     return;
                 }
 
-                state = ShieldDissolveLog.Begin(comp);
+                state = ShieldDissolveLog.Begin(comp, fromCentre: true);
             }
 
             if (state == null)

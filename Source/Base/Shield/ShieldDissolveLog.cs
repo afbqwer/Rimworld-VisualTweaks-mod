@@ -22,7 +22,9 @@ namespace VisualTweaks
     /// patched in ShieldDomePatches, plus the destruction of the host building.
     /// Destruction has no PostDraw left to draw through, so that path hands this same
     /// state to the map overlay instead of starting a separate animation; see
-    /// <see cref="ShieldBreakLayer"/>.
+    /// <see cref="ShieldBreakLayer"/>. Destruction also starts its break from the
+    /// centre of the disc rather than from a point on the rim — see
+    /// <see cref="Begin"/>.
     ///
     /// Keyed by the comp through a ConditionalWeakTable, like the impact log. A
     /// destroyed generator's state is handed to the overlay queue before the comp goes
@@ -42,7 +44,13 @@ namespace VisualTweaks
             public int StartTick;
             public int DurationTicks;
 
-            /// <summary>Unit direction in world xz toward the point that failed.</summary>
+            /// <summary>
+            /// Where the failure started, as a point in the shield's disc: a unit
+            /// vector for a wound on the rim, (0,0) for the centre. The shader reads
+            /// the zero case as "distance from the middle", so a centred break
+            /// travels outward from the middle of the dome instead of tearing in
+            /// from one side.
+            /// </summary>
             public float OriginX;
             public float OriginZ;
 
@@ -58,8 +66,14 @@ namespace VisualTweaks
         /// and from host destruction, and only when the custom dome is actually
         /// installed. Returns the new state so the destruction path can hand it to the
         /// overlay draw queue; the ordinary shutdown paths ignore the result.
+        ///
+        /// <paramref name="fromCentre"/> makes both break animations start in the
+        /// middle of the disc and travel outward, instead of tearing in from a point
+        /// on the rim. This is what destruction uses: nothing was hit and the shield
+        /// itself is what went away, so a wound at an arbitrary bearing would point at
+        /// a cause that does not exist.
         /// </summary>
-        internal static State? Begin(ThingComp comp)
+        internal static State? Begin(ThingComp comp, bool fromCentre = false)
         {
             TickManager? tickManager = Find.TickManager;
             ThingWithComps? parent = comp.parent;
@@ -70,27 +84,35 @@ namespace VisualTweaks
 
             int now = tickManager.TicksGame;
 
-            // Fallback origin: the most recent recorded hit. Both break methods run
-            // from inside CheckIntercept, and RefreshOrigin below will replace this
-            // with the fatal shot's own bearing before the frame is drawn.
-            float ox = 1f;
+            // Origin: (0,0) is the centre, a unit vector is a point on the rim.
+            float ox = 0f;
             float oz = 0f;
-            System.Collections.Generic.List<ShieldImpactLog.Impact>? impacts =
-                ShieldImpactLog.Peek(comp);
-            if (impacts != null && impacts.Count > 0)
+            if (!fromCentre)
             {
-                Vector3 toward = Vector3Utility.FromAngleFlat(
-                    impacts[impacts.Count - 1].Angle);
-                ox = -toward.x;
-                oz = -toward.z;
-            }
-            else
-            {
-                // Deterministic, so a given building always breaks from the same side
-                // when there was no projectile to blame (lord destroyed, switched off).
-                float a = (parent.thingIDNumber * 0.6180339887f % 1f) * Mathf.PI * 2f;
-                ox = Mathf.Cos(a);
-                oz = Mathf.Sin(a);
+                // Fallback origin: the most recent recorded hit. Both break methods
+                // run from inside CheckIntercept, and RefreshOrigin below will
+                // replace this with the fatal shot's own bearing before the frame is
+                // drawn.
+                ox = 1f;
+                System.Collections.Generic.List<ShieldImpactLog.Impact>? impacts =
+                    ShieldImpactLog.Peek(comp);
+                if (impacts != null && impacts.Count > 0)
+                {
+                    Vector3 toward = Vector3Utility.FromAngleFlat(
+                        impacts[impacts.Count - 1].Angle);
+                    ox = -toward.x;
+                    oz = -toward.z;
+                }
+                else
+                {
+                    // Deterministic, so a given building always breaks from the same
+                    // side when there was no projectile to blame (lord destroyed,
+                    // switched off).
+                    float a = (parent.thingIDNumber * 0.6180339887f % 1f)
+                        * Mathf.PI * 2f;
+                    ox = Mathf.Cos(a);
+                    oz = Mathf.Sin(a);
+                }
             }
 
             State state = States.GetOrCreateValue(comp);

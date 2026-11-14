@@ -60,6 +60,12 @@
 // actually shuts down. The third break option is simply not drawing either mode,
 // which leaves vanilla's one-frame disappearance intact.
 //
+// That state also carries the origin, a point in the disc rather than necessarily a
+// point on its rim: a unit vector for a wound where a shot got through, or (0,0) for
+// the centre, which is what a destroyed shield uses — nothing was hit, the shield
+// itself went away. Both modes divide by 1 + |origin| so the two cases cross their
+// available surface at the same pace.
+//
 // Mode 2 is the continuous tear: the surface is erased by a threshold crossing a
 // scalar field. The field is the distance from the point of failure, perturbed by
 // low-frequency noise, so the front splits into fingers instead of expanding as a
@@ -813,8 +819,13 @@ void main()
         // Tear front: distance from the point that failed, perturbed by
         // low-frequency noise so it splits into fingers instead of sweeping across
         // as a clean circle.
+        //
+        // The origin is a point in the disc, not necessarily on its edge: a wound on
+        // the rim has 2R of surface to cross, a break from the centre has 1R, and
+        // the division is what gives both the same pace. Without it a centred tear
+        // reaches the rim at half the clock and the rest of the animation is empty.
         float noise = Fbm(p * 3.5 + vec2(seed, seed * 1.37));
-        float spread = length(p - originDir) * 0.5;
+        float spread = length(p - originDir) / (1.0 + length(originDir));
         float field = clamp(spread + (noise - 0.5) * 0.42, 0.0, 1.0);
 
         float threshold = progress * 1.15 - 0.15;
@@ -1065,10 +1076,16 @@ void main()
 
         // When this panel lets go, as a share of the whole animation.
         //
-        // Enough hops to cross the hemisphere at this density, plus a margin so
-        // progress 1 really does leave nothing. Scales with k: a denser lattice
-        // has more panels between the break point and the far rim.
-        float maxHops = 3.14159265 * u._Params6.w * 0.5;
+        // Enough hops to cover the farthest panel from the origin, plus a margin so
+        // progress 1 really does leave nothing. Scales with k: a denser lattice has
+        // more panels between the break point and the far rim.
+        //
+        // The farthest panel is π away for a wound on the rim but only π/2 away for
+        // a break from the centre, hence the 1 + |origin| scaling — the same one
+        // `spread` uses in mode 2, and for the same reason: without it a centred
+        // break runs out of panels halfway through its clock.
+        float maxHops = 3.14159265 * u._Params6.w * 0.25
+            * (1.0 + length(originDir));
         float span = maxHops + 1.5;
 
         // The ORDER is distance from the wound, always: the shell empties as a
