@@ -1,162 +1,51 @@
 #version 450
 
 // Projectile-interceptor shield, in five surface types: crisp ring, hexagonal
-// panel shell, stock-like (two profiles, because vanilla's projector dome and
-// personal belt use different textures), and the hex bubble — a ShieldBubble
-// surface under a transparent spherical lattice revealed by a scan band. See
-// the two stock-like surfaces and the hex bubble surface sections below.
+// panel shell, two stock-like profiles (vanilla paints a projector dome with
+// Other/ForceField and a personal belt with Other/ShieldBubble), and the hex
+// bubble — a ShieldBubble body under a transparent spherical lattice revealed
+// by a scan band.
 //
-// This replaces CompProjectileInterceptor.PostDraw, which paints Other/ForceField
-// through ShaderDatabase.MoteGlow: a soft radial gradient texture, so the rim is a
-// smear several pixels wide and the glow continues past the radius the game
-// actually tests against (Props.radius in CheckIntercept). The gameplay radius and
-// the painted radius disagree, and the eye reads the painted one.
+// This replaces CompProjectileInterceptor.PostDraw, which paints a soft radial
+// glow whose rim smears past Props.radius; the drawn edge and the tested one
+// disagree. Apart from one sample of the baked hex lattice, everything here is
+// analytic, so the silhouette sits on r == 1.0.
 //
-// Everything below is analytic, so the silhouette sits exactly on r == 1.0.
+// Surface (DomeColor) — three concentric terms:
+//   RIDGE  edge weight, in pixels, so a 3-cell and a 25-cell shield carry the
+//          same drawn weight
+//   CORE   gaussian hot line trending to white: the "lit" look
+//   GLOW   pow(r, n): rises toward the silhouette, which is the dome cue
+// Plus a body trace, angular drift, and a 1px inner feather that antialiases
+// without ever growing past the intercept radius.
 //
-// ---- how the silhouette is built ------------------------------------------
+// Hit reactions — one additive quad per impact, kept in a list by
+// ShieldImpactLog, because vanilla keeps only the last angle/ticks and loses a
+// burst from two directions:
+//   mode 1  painted flare (ends inside the visual rim)
+//   mode 3  panels around the hit light up, the light walks outward (hex only)
+//   mode 4  a sector of the surface itself brightens (any surface)
 //
-// Three concentric terms, each answering a different question:
+// Breaks — modes 2 and 5 carry their own progress and brightness, supplied by
+// ShieldDissolveLog from the four places the comp shuts down; GetCurrentAlpha()
+// collapses to zero on the next frame and cannot drive them:
+//   mode 2  continuous noise-driven tear
+//   mode 5  whole panels lost, as a ring travelling outward from the wound
+// The origin is a point in the disc: a unit vector for a wound, or (0,0) for the
+// centre (destroyed shield). Both scale by 1 + |origin| for equal pacing.
 //
-//   1. RIDGE — how thick the edge reads. A soft band a few pixels wide, centred
-//      just inside the rim. One narrow line reads as vector art at any size; a
-//      band reads as material. Width is in *pixels* (see _Params5.x), converted
-//      through the same derivative the antialiasing uses, so a 3-cell shield and a
-//      25-cell one carry the same drawn weight.
-//   2. CORE — what makes it look lit. A gaussian hot line sitting inside the
-//      ridge, trending towards white rather than the def's tint. Its tails are why
-//      it reads as light instead of as a stroke.
-//   3. GLOW — why it reads as a dome and not a disc. pow(r, n) rises toward the
-//      silhouette, which is where a sphere seen head-on is brightest. Without
-//      this the shape stays a circle no matter how good the edge is.
+// Break paint is clipped by BreakEdge: r == 1 for crisp/panel, 1.05R for the
+// stock-like profiles (1.0R for the hex bubble), so a hot front cannot float
+// outside the surface.
 //
-// On top of those: a trace of body (r^2) so the interior is not empty, angular
-// drift so nothing is perfectly uniform, and a one-pixel inner feather at r == 1
-// so the silhouette antialiases without ever growing past the intercept radius.
-//
-// ---- the interception flare ----------------------------------------------
-//
-// Mode 1 draws one flare per recorded impact, not one per shield. Vanilla keeps a
-// single lastInterceptAngle and a single lastInterceptTicks, so a burst from two
-// directions collapses into whichever bullet resolved last — the older directions
-// are simply lost. The flare is therefore driven by a list of impacts supplied by
-// ShieldImpactLog, one quad each, additive, so overlapping hits accumulate the way
-// several lights on one surface should. The flare always ends inside the visual rim,
-// even on the soft stock-like dome, so it cannot continue into the texture margin.
-//
-// The panel style can answer the same impact with mode 3 instead: the panels around
-// the hit light white and the light walks outward ring by ring. Same data, same one
-// quad per impact; only the shape of the answer differs, because a group of tiles
-// cannot plausibly be struck by a painted wedge. Mode 4 is the third answer, a
-// sector of the surface itself brightening, and it is available to every style.
-//
-// ---- the dissolve --------------------------------------------------------
-//
-// Modes 2 and 5 are the optional break animations. Vanilla's Shield_Break effecter
-// flashes a texture and plays a sound, but the dome itself is gone on the very next
-// frame: GetCurrentAlpha() collapses to zero because Active is false. A dissolve
-// cannot be driven by that alpha, so these modes carry their own progress and their
-// own brightness, supplied by ShieldDissolveLog from the four places the comp
-// actually shuts down. The third break option is simply not drawing either mode,
-// which leaves vanilla's one-frame disappearance intact.
-//
-// That state also carries the origin, a point in the disc rather than necessarily a
-// point on its rim: a unit vector for a wound where a shot got through, or (0,0) for
-// the centre, which is what a destroyed shield uses — nothing was hit, the shield
-// itself went away. Both modes divide by 1 + |origin| so the two cases cross their
-// available surface at the same pace.
-//
-// Mode 2 is the continuous tear: the surface is erased by a threshold crossing a
-// scalar field. The field is the distance from the point of failure, perturbed by
-// low-frequency noise, so the front splits into fingers instead of expanding as a
-// clean circle. A hot line rides that front, and a finer noise ridge adds cracks to
-// the material just behind it. Coordinates are normalised by the radius
-// (p = d / radius), so a 2-cell bubble and a 25-cell gravship dome break into the
-// same number of pieces rather than the large one simply turning into sand.
-//
-// Mode 5 is the panel shell's alternative: whole panels are lost instead of the
-// surface being cut, because a set of discrete objects fails that way. It is chosen
-// independently of the surface style, just like the hit animation.
-//
-// Which panel goes next is a choice as well (_Params9.y, one global setting), and it
-// is a choice about *timing*, not about order. The shell always empties as a ring
-// travelling outward from the wound; the setting lets each panel draw its own delay,
-// so the ring arrives as a ragged band instead of a clean line, and 0 turns that off
-// entirely. Ordering the panels by a noise field instead — the obvious reading of
-// "make it look random" — removes the sweep altogether and turns the break into the
-// continuous dissolve of mode 2, which is why the radial term stays the base of the
-// order.
-//
-// The square grid seen in the first in-game screenshot was a float32 precision
-// failure in the lattice hash, not a property of this pattern — a float64 web
-// preview looks correct. Hash21 below is hardened and the seed is kept small;
-// the dissolve algorithm itself is untouched.
-//
-// The break is clipped by BreakEdge: exactly r == 1 (with one pixel of AA) for the
-// crisp and panel styles, and 1.05R for the stock-like ones — the same 1.04..1.05R
-// convention the hit reactions use. The stock-like *idle* surface keeps its longer
-// haze tail; only the break is tightened, so its hot front cannot float outside the
-// shield it is tearing.
-//
-// ---- the hexagonal shell (second style) ----------------------------------
-//
-// A hexagon grid in screen space is a flat honeycomb pasted onto a circle; the
-// cells do not shrink near the silhouette, so it never reads as a dome. The
-// alternative treats the disc as the orthographic projection of a hemisphere and
-// lays a *spherical* tiling on it. Euler's formula makes twelve pentagons
-// mandatory on any closed hexagon tiling — they are where the curvature goes, and
-// ShieldHexMap bakes exactly that lattice (a subdivided icosahedron's Voronoi
-// diagram) into one texture. Per fragment the cost is one texture sample plus a
-// handful of arithmetic, instead of 42..162 dot products.
-//
-// Each cell is shaded flat from its own face normal, so the shell reads as panels
-// rather than as a smooth sphere with a net drawn over it. The silhouette ridge is
-// still the same DomeColor() term, so this style keeps the crisp edge and the exact
-// intercept radius.
-//
-// A panel shell also has to *react* in panels, which is mode 3 and the panel-loss
-// break in mode 5 below. Both need one thing the smooth style does not have: a per-cell
-// identity. The baked map already carries it — RGB is the winning site's direction,
-// constant inside a cell — so "which panel is this" costs nothing. Angular distance
-// from the hit to that direction, divided by the cell centre spacing, counts hops
-// across the lattice, and that is the unit both effects travel in. Because the map is
-// the same texture the surface is drawn from, a wave can only ever light panels that
-// exist, and it stays correct when the density changes.
-//
-// Both lattice surfaces also carry a centre aperture (see CenterAperture below):
-// the static panels/net fade toward the middle so pawns and the emitter the shield
-// is anchored to stay readable. The rim, the scan band and every hit/break event
-// stay at full strength; only the material gets out of the way.
-//
-// ---- the stock-like style (third style) ----------------------------------
-//
-// Vanilla paints a projector dome with Other/ForceField and a personal belt with
-// Other/ShieldBubble: two different textures. The dome is one wide radial blur
-// with a rim soft enough that its glow continues past the radius the game blocks
-// at (which is why vanilla scales that quad by 1.1601562). The belt is a broader
-// gradient that fills most of the disc before a bright edge appears, and then
-// stops just outside it. Both are reproduced analytically below—VanillaDomeColor
-// for the ForceField profile, StockBubbleDomeColor for the ShieldBubble one—never
-// by sampling the game's textures.
-//
-// Neither is a variation of the crisp ridge. The crisp style asks "how thick is
-// the edge"; these ask "how soft is the falloff". The dome keeps its middle
-// nearly clear, with a small base fill so a selected shield is not a hollow ring;
-// the belt keeps a visible haze so it reads as a filled sphere. Both express
-// every dimension as a fraction of the radius rather than a screen-space
-// derivative, so the same shield looks the same at any zoom. The stock surfaces
-// are the only ones allowed past r == 1, and the renderer enlarges the quad for
-// that.
-//
-// The break reuses the smooth style's noise-driven tear deliberately: there is no
-// per-panel identity here, because there are no panels.
-//
-// Hit reactions are chosen independently of the surface (see the renderer): the
-// painted flare (mode 1), the sector brightening (mode 4), or the panel wave (mode 3,
-// which only means anything on the shell). Vanilla's cone is an additive *sector of
-// the same dome*, so the stock-like style defaults to mode 4; the flare stays
-// available for every surface and ends inside the visual rim so it cannot float
-// outside a soft edge.
+// Hex shell — a screen-space grid never reads as a dome, so ShieldHexMap bakes a
+// spherical lattice (a subdivided icosahedron's Voronoi diagram) into one
+// texture: one sample plus a few arithmetic ops per fragment, and it carries a
+// per-cell identity (rgb = face normal, a = distance to the wall) used by the
+// panel hit/break effects. It also supplies the twelve pentagons Euler's formula
+// requires; they are not drawn differently. Both lattice styles carry a centre
+// aperture (CenterAperture) so pawns and the emitter stay readable; events are
+// exempt.
 
 layout(location = 0) in vec2 vWorld;
 
@@ -181,9 +70,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
 } u;
 
 // RGB = winning site's direction (the flat face normal, constant inside a cell).
-// A   = edgeDistance: 0 on a cell wall, 1 at its centre. No pentagon flag: the
-//       twelve five-sided cells are just what a spherical lattice produces and are
-//       deliberately not drawn any differently from the hexagons.
+// A   = edgeDistance: 0 on a cell wall, 1 at its centre.
 layout(set = 2, binding = 1) uniform sampler2D _HexMap; // @default = black
 
 // Per-draw hex color switches, carried in the free _Params4.w component.
@@ -199,33 +86,19 @@ float HexFacesFollowColor()
     return step(1.5, u._Params4.w);
 }
 
-// Where to read the baked lattice for a disc position p.
-//
-// The bake writes row 0 at p.y == -1 (Unity's SetPixels lays rows out bottom-up), but
-// the engine samples v with 0 at the TOP of the stored rows. So p.y has to be flipped
-// before the lookup. This is invisible in the dome itself — a mirrored Voronoi is still
-// a Voronoi, and the per-face lighting does not care — and shows up only where a value
-// read from the map is compared against a world-space direction: the hit flash and the
-// break origin then land on the opposite (vertically mirrored) side of the shield.
+// Disc position -> lattice uv. p.y must be flipped: the bake writes row 0 at
+// p.y == -1, but sampling puts v == 0 at the top of the stored rows. Only
+// world-space comparisons (hit flash, break origin) can notice the mirror.
 vec2 HexUv(vec2 p)
 {
     return vec2(p.x, -p.y) * 0.5 + 0.5;
 }
 
-// Deterministic value noise. No texture, so the pattern cannot be stretched or
-// tiled by a different plane10 UV orientation, and the seed is a uniform the CPU
-// can change per break.
-//
-// float32-safe on purpose. The obvious one-liner
-//     p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32);
-// dies on the GPU: value noise feeds it *integer lattice indices*, and once those
-// reach a few thousand, p * 456.21 is large enough that fract() has no fractional
-// bits left to keep. Adjacent cells then hash to the same value and the noise
-// collapses into square blocks. A float64 web preview cannot reproduce this.
-// Wrapping to a small period before a small multiplier fixes it at the source:
-// at |p| < 997, p * 0.1031 stays below 103, where float32 still has plenty of
-// fractional bits. The period is deliberately larger than any lattice index this
-// shader can reach (Fbm's fourth octave peaks around 190), so no octave wraps.
+// Deterministic value noise, no texture, seeded per break. Wrapped to a small
+// period before a small multiplier so float32 keeps enough fractional bits:
+// lattice indices reach ~190 (Fbm's fourth octave), where the usual one-liner
+// collapses into square blocks. The period exceeds anything Fbm can reach, so no
+// octave wraps.
 float Hash21(vec2 p)
 {
     p = mod(p, 997.0);
@@ -260,24 +133,20 @@ float Fbm(vec2 p)
     return v / 0.9375;
 }
 
-// The spherical cell pattern. Returns (flat face shade, cell line).
-//
-// Nothing here is a grid in screen space: the sampled lattice was projected onto
-// the hemisphere before it was baked, so cells naturally compress and bend as they
-// approach the silhouette. That compression is the pseudo-3D cue; the flat per-face
-// shading is the other half.
+// The spherical cell pattern: (flat face shade, cell line). The lattice was
+// projected onto the hemisphere before baking, so cells compress and bend toward
+// the silhouette; the flat per-face shading completes the pseudo-3D read.
 vec2 HexSurface(vec2 p, float aa, float t)
 {
     vec4 baked = texture(_HexMap, HexUv(p));
 
-    // Constant inside a cell, so it doubles as a face normal and a per-cell id.
+    // Constant inside a cell: at once a face normal and a per-cell id.
     vec3 face = baked.rgb * 2.0 - 1.0;
 
-    // True Voronoi SDF: 0 on a cell wall, 1 at the cell centre.
+    // Voronoi SDF: 0 on a wall, 1 at the centre.
     float e = baked.a;
 
-    // Surface normal of the hemisphere this disc is standing in for. nz -> 0 at
-    // the silhouette, exactly where a real dome turns away from the viewer.
+    // Hemisphere normal; nz -> 0 at the silhouette.
     float nz = sqrt(max(1.0 - dot(p, p), 0.0));
 
     vec3 light = normalize(vec3(
@@ -287,51 +156,29 @@ vec2 HexSurface(vec2 p, float aa, float t)
     float diffuse = clamp(dot(face, light), 0.0, 1.0);
     float fresnel = 1.0 - nz;
 
-    // Deliberately low contrast between neighbouring faces. A faint cell line
-    // next to two differently-shaded panels reads as *two* bright edges welded
-    // together; the line has to be unambiguously the brightest thing at a wall.
-    // Hash21 is the float32-safe one above; face.xy stays inside [-1, 1].
+    // Low face-to-face contrast, so the cell line stays the brightest thing at
+    // a wall and does not read as two bright edges welded together.
     float jitter = Hash21(face.xy * 37.0) - 0.5;
     float shade = 0.42 + 0.40 * diffuse + 0.28 * fresnel + 0.05 * jitter;
 
-    // The field gradient, analytically — NOT fwidth(e).
-    //
-    // e = clamp(angularDistance / eRef, 0, 1), and the distance is measured on
-    // the unit hemisphere, so |grad_p e| = 1/(eRef * nz) exactly, where nz is the
-    // Jacobian of the orthographic projection. That term is why a cell near the
-    // silhouette carries a much steeper field than one at the centre.
-    //
-    // fwidth(e) was used here and failed in two opposite ways at once, which made
-    // the drawn width depend on zoom: it collapses in the V-shaped valley along a
-    // wall (neighbours sit on opposite slopes, so the derivative cancels), and it
-    // explodes under minification, when one pixel spans several cells and e jumps
-    // between 0 and 1. A constant floor cannot fix both, because the true
-    // gradient varies by 1/nz across the dome. This does.
-    //
-    // _Params6.w is 1/eRef. 2.2 is the line width in screen pixels.
+    // Analytic field gradient: |grad e| = 1/(eRef * nz), nz being the Jacobian
+    // of the projection. fwidth() was tried and failed both ways — it cancels in
+    // the V valley along a wall and explodes under minification — so the drawn
+    // width depended on zoom. _Params6.w is 1/eRef.
     float eGrad = u._Params6.w / max(nz, 0.12);
     float slope = aa * eGrad;
 
-    // One cell spans 2*eRef in r here, i.e. 2*nz/(eRef*aa) pixels.
+    // One cell spans this many pixels.
     float cellPixels = 2.0 * nz / max(u._Params6.w * aa, 1e-6);
 
-    // Width as a SHARE of the cell, not a fixed pixel count.
-    //
-    // A constant 2.2 px was right physically and wrong visually: zoomed in, cells
-    // grow and a 2.2 px line covers ~2% of a cell (reads as a hairline); zoomed
-    // out, cells shrink and the same line covers ~15% (reads as thick grout).
-    // Scaling with the cell keeps the *visual weight* constant, which is what a
-    // lattice of panels should do.
-    //
-    // Clamped in absolute pixels at both ends. Below 1 px the line only aliases;
-    // above 6 px a single cell stops reading as a panel and starts reading as a
-    // frame. Inside the clamps the share is exact, so the two ends of the zoom
-    // range look like the same drawing.
+    // Width as a share of a cell, clamped in pixels: a fixed pixel count reads as
+    // a hairline zoomed in and as thick grout zoomed out. Below 1 px it only
+    // aliases; above 6 px a cell stops reading as a panel.
     float lineWidthPx = clamp(cellPixels * 0.055, 1.0, 6.0);
     float line = 1.0 - smoothstep(0.0, lineWidthPx * slope, e);
 
-    // Below ~5 px per cell the lattice aliases into moire, so the lines fade while
-    // the panel shading stays — a distant dome reads as a shell, not as a grid.
+    // Below ~5 px per cell the lattice aliases into moire, so fade the lines and
+    // keep the panel shading.
     line *= smoothstep(2.0, 5.0, cellPixels);
 
     return vec2(clamp(shade, 0.0, 1.5), line);
@@ -339,31 +186,10 @@ vec2 HexSurface(vec2 p, float aa, float t)
 
 // ---- the centre aperture (the two lattice styles) -------------------------
 //
-// A dome that covers a pawn or the emitter it is anchored to is at its most
-// obstructive exactly where it is least visible in the real thing: head-on, the
-// surface normal points at the viewer, so a glass/energy shell is clearest there
-// and only turns bright toward the grazing silhouette. The glow and fresnel terms
-// already tell the second half of that story; this aperture tells the first.
-//
-// It is a pure alpha weight, because the surface is drawn additively
-// (SrcAlpha * src + dst): scaling the alpha of the static material down to zero
-// adds no light at all, so whatever is underneath shows through completely. The
-// clear radius alone controls the shape: the alpha at the exact centre is always
-// zero, and a wider radius simply reaches full brightness later.
-//
-// The ridge and core are never scaled, whatever the radius: they are the
-// silhouette, and on a small belt at low zoom the ridge's inner shoulder reaches
-// far enough inward that a final alpha multiply at r == 1 would soften the edge.
-// Style 1 therefore apertures its fill terms individually rather than `sum`.
-// Style 4 can scale the whole bubble because its rim is a narrow gaussian whose
-// peak sits at r == 1, where the aperture is already 1.
-//
-// Only the *material* is apertured. Hit reactions and break fronts are events:
-// they stay at full strength wherever they land, including the centre. The one
-// exception is the hex bubble's scan band, which is deliberately left outside
-// the aperture as well — it is the surface's signature motion, not a static fill.
-// The static net floor, however, is scaled, because that is what sits over a
-// pawn at all times.
+// A pure alpha weight: the surface is additive, so scaling alpha down just lets
+// what is underneath show through. The centre is always clear and a wider clear
+// radius simply reaches full brightness later. Ridge, core, hit reactions and
+// break fronts are never apertured; only static fills and the net floor are.
 float CenterAperture(float r)
 {
     float end = clamp(u._Params9.x, 0.0, 1.0);
@@ -377,121 +203,78 @@ float CenterAperture(float r)
 
 // ---- the two stock-like surfaces -----------------------------------------
 //
-// "Stock-like" is not one profile. Vanilla uses different textures for a
-// projector dome (Other/ForceField) and a personal belt (Other/ShieldBubble),
-// and the difference is visible: the dome is a narrow ring on a broad but faint
-// haze, while the belt is a much wider gradient that only becomes a bright edge
-// near the silhouette, so its interior reads as a filled sphere rather than a
-// clear disc. Both are rebuilt analytically here; nothing is sampled from the
-// game.
-//
-// _Params6.x selects the profile: 2 is the ForceField stock-like, 3 the
-// ShieldBubble stock-like. A belt's regular stock choice is 3; a dome can pick
-// either.
+// The projector dome (Other/ForceField) is a narrow ring on a broad faint haze;
+// the belt (Other/ShieldBubble) is a wider gradient that reads as a filled
+// sphere. Both are rebuilt analytically; nothing is sampled from the game.
+// _Params6.x selects the profile: 2 is ForceField, 3 is ShieldBubble.
 
-// The ShieldBubble profile: the belt's stock surface, also selectable on a dome.
-//
-// The reference is not a thin ring with haze behind it: its brightness climbs
-// steadily from the centre, and the last tenth of the radius adds a bright edge
-// on top of that climb. So the profile has two terms — a broad r^3.5 body that
-// fills the sphere, and a gaussian rim on top — unlike the dome's rim plus r^3.5
-// haze, where the body term is the faint one. The rim's inner shoulder is also
-// twice the dome's (sigma 0.090R vs 0.045R), and the whole profile stops just
-// past r == 1 instead of trailing through the quad margin.
+// The ShieldBubble profile: a broad r^3.5 body filling the sphere plus a
+// gaussian rim (sigma 0.090R inside, 0.030R outside) that stops just past r == 1.
 vec4 StockBubbleDomeColor(float r)
 {
     float rr = clamp(r, 0.0, 1.2);
     float d = rr - 1.0;
 
-    // Short outer tail on purpose: the reference has no wide bloom outside its
-    // bright edge. The inner sigma is where the body and rim blend together.
+    // Short outer tail: the reference has no wide bloom outside its bright edge.
     float sigma = d < 0.0 ? 0.090 : 0.030;
     float rim = 0.55 * exp(-(d * d) / (2.0 * sigma * sigma));
 
-    // The filled-sphere term. r^3.5 keeps the middle translucent while rising
-    // steadily toward the edge; a pure gaussian rim left the 0.7..0.9R band too
-    // dark and then jumped, which read as a ring rather than a bubble.
+    // The filled-sphere term: translucent middle, rising toward the edge.
     float body = 0.35 * pow(clamp(r, 0.0, 1.0), 3.5);
 
-    // A low gray floor. A belt bubble is translucent but never clear.
+    // A translucent bubble is never clear.
     float haze = 0.030 + 0.030 * pow(clamp(r, 0.0, 1.0), 1.5);
 
-    // The stock bubble stops just past its bright edge. Unlike the dome's
-    // ForceField there is no long outer bloom to fade through the quad margin:
-    // 1.045 is where the reference has fallen to a few percent of the peak.
+    // No long outer bloom: down to a few percent of the peak by 1.045R.
     float outer = 1.0 - smoothstep(1.0, 1.045, r);
 
-    // The stock texture is white and takes the def colour directly, exactly like
-    // the dome's: no white-hot core, and no separate tint for the edge.
+    // White texture, def colour applied directly: no white-hot core.
     return vec4(u._Color.rgb, (rim + body + haze) * outer);
 }
 
 // The stock-like dome, as (tint.rgb, unmultiplied alpha).
 //
-// A narrow feathered highlight sits on the rim, with a long gaussian tail on both
-// sides so the light appears to spill off the surface instead of being drawn on
-// it. Inside that highlight the disc carries a broad gradient: the stock texture
-// is nearly clear at the centre and fills in steadily toward the edge. Every width
-// here is a fraction of the radius, not a pixel count, because the stock texture
-// is stretched with the shield.
-//
-// There is no noise and no derivative-based width: the stock look is static and
-// smooth, and both properties are what make it read as a soft glow rather than as
-// material. The only motion it gets is the alpha pulse supplied by the caller.
+// A narrow gaussian rim with a long tail on both sides over a faint interior
+// gradient. Every width is a fraction of the radius, not a pixel count, because
+// the stock texture is stretched with the shield. No noise and no derivative
+// width: the look is static and smooth, and the only motion is the caller's
+// alpha pulse.
 vec4 VanillaDomeColor(float r)
 {
-    // The ShieldBubble profile is a different texture and a different shape; see
-    // StockBubbleDomeColor above.
+    // Style 3 has a different texture and shape; see above.
     if (u._Params6.x > 2.5)
     {
         return StockBubbleDomeColor(r);
     }
 
-    // Slightly past the rim: the outer tail is meant to fade through r == 1.
+    // Slightly past the rim, so the outer tail fades through r == 1.
     float rr = clamp(r, 0.0, 1.2);
 
-    // One gaussian band, not two smoothsteps. Its tails are what the stock
-    // texture's blur has and what a pair of smoothsteps does not: a slope that
-    // keeps easing for a long way on both sides instead of starting at a visible
-    // corner. The peak sits on the intercept radius, the inner shoulder is the
-    // much wider of the two (the stock ring fades a long way inward before the
-    // disc is clear), and both sigmas are fractions of the radius, so the band
-    // keeps its proportion at every shield size and zoom.
-    //
-    // These numbers were fitted against the radial brightness profile of the
-    // reference screenshot by Tools/shield_vanilla_compare.py: a very narrow
-    // highlight (inner sigma 0.045R, outer 0.018R) on top of a long interior
-    // gradient. A symmetric, wider ring looks plausible on its own but reads as a
-    // glowing tube next to the stock shield, which is a narrow edge with a broad
-    // body.
+    // Fitted to the reference radial profile with Tools/shield_vanilla_compare.py:
+    // peak on the intercept radius, a much wider inner shoulder, a very narrow
+    // outer one. One gaussian, not two smoothsteps — the tails are the point.
     float d = rr - 1.0;
     float sigma = d < 0.0 ? 0.045 : 0.018;
     float rim = 0.72 * exp(-(d * d) / (2.0 * sigma * sigma));
 
-    // Interior haze: a base fill plus a rise toward the rim. Fitted to the same
-    // profile (0.03 + 0.19 r^3.5): the stock disc is almost clear at the centre
-    // and fills in steadily before the rim. The term clamps at r == 1, so beyond
-    // the rim it becomes a flat glow faded out only by `edge` — the outer bloom.
+    // Interior haze: 0.03 + 0.19 r^3.5, nearly clear at the centre and filling in
+    // toward the rim. Clamps past r == 1, so there it becomes a flat outer bloom.
     float haze = 0.03 + 0.19 * pow(clamp(r, 0.0, 1.0), 3.5);
 
-    // The stock material applies the def colour straight to its white texture:
-    // no white-hot core, and the haze and the rim share one tint. Doing anything
-    // else here would make a modded shield's colour drift from vanilla's.
+    // The stock material applies the def colour straight to a white texture:
+    // haze and rim share one tint.
     return vec4(u._Color.rgb, rim + haze);
 }
 
 // ---- the hex bubble surface ----------------------------------------------
 //
-// A ShieldBubble profile plus a transparent spherical hex net. The net is not
-// lit cell by cell: ONE continuous mask, a function of p.y and time, scales the
-// whole layer. Nothing here knows how many cells there are, so the cost is one
-// texture sample and a few smoothsteps regardless of lattice density. That is
-// the whole reason this style is cheap next to the per-panel hit / break modes.
-//
-// The band is deliberately narrow (0.06 half width) with a much wider feather
-// (0.20 by default): a fine bright line dragging a long gradient, not a solid
-// stripe. Extra stripes repeat the band at equal spacing along the sweep and
-// take the max, so adding a stripe never changes the shape of one band.
+// A ShieldBubble body plus a transparent spherical hex net. The net is ONE
+// continuous mask scaled by p.y and time, not lit cell by cell, so the cost is a
+// sample and a few smoothsteps regardless of lattice density.
+
+// The scan band: a narrow bright line with a much wider feather, repeated up to
+// three times at equal spacing along the sweep; stripes take the max, so adding
+// one never changes the shape of a band.
 float HexBubbleScanMask(float py, float t)
 {
     float halfW = u._Params8.y;
@@ -503,10 +286,8 @@ float HexBubbleScanMask(float py, float t)
     float lo = -1.0 - halfW - feather;
     float span = 2.0 + 2.0 * (halfW + feather);
 
-    // mod() rather than fract(t / period): realtimeSinceStartup grows without
-    // bound, and dividing first throws away most of the float32 mantissa after
-    // a long session, which would freeze the scan. Taking the remainder first
-    // keeps the phase inside 0..period at any uptime.
+    // mod first: t grows without bound and dividing first would exhaust the
+    // float32 mantissa after a long session and freeze the scan.
     float phase = mod(t, period) / period;
     float head = lo + (dir > 0.0 ? phase : 1.0 - phase) * span;
 
@@ -521,21 +302,18 @@ float HexBubbleScanMask(float py, float t)
         }
     }
 
-    // Leading-edge strength was tuned to zero in the preview. Keeping a gaussian
-    // per stripe would cost work for a term that is always off.
+    // No leading-edge term: it was tuned to zero in the preview.
     return best;
 }
 
-// (tint.rgb, unmultiplied alpha), the same contract as DomeColor. The net only
-// exists on the intact surface (mode 0) and the two break surfaces (2, 5).
-// Hit reactions are separate additive quads; letting them draw the net again
-// would double its brightness inside the lit sector.
+// (tint.rgb, unmultiplied alpha), the same contract as DomeColor. The net exists
+// only on the intact and break surfaces; hit reactions are separate quads.
 vec4 HexBubbleDomeColor(float r, vec2 p, float aa, float t)
 {
     float aperture = CenterAperture(r);
 
-    // The bubble body and its haze are static material, so they take the
-    // aperture. Scaling the alpha (not the rgb) is what additive blending reads.
+    // The static body and haze take the aperture; scaling alpha, not rgb, is what
+    // additive blending reads.
     vec4 bubble = StockBubbleDomeColor(r);
     bubble.a *= aperture;
 
@@ -548,25 +326,22 @@ vec4 HexBubbleDomeColor(float r, vec2 p, float aa, float t)
         return bubble;
     }
 
-    // A fixed light (t = 0) so the sampled lattice cannot introduce any motion:
-    // the only animation on this surface is the scan band. Only .y — the SDF
-    // line — is used; .x is the per-panel shade a transparent net has no use for.
+    // Fixed light (t = 0) so the lattice cannot introduce motion; only the SDF
+    // line (.y) is used.
     float net = u._Params6.z * HexSurface(p, aa, 0.0).y;
 
-    // Only the net's static floor is apertured; the scan band keeps full
-    // strength so the sweep still crosses the centre. With baseline scaled to
-    // zero this collapses to the scan alone, which is the intended extreme.
+    // Only the net's static floor is apertured, so the sweep still crosses the
+    // centre. A zero baseline collapses to the scan alone.
     float baseline = u._Params7.w * aperture;
     float mask = baseline
         + (1.0 - baseline) * HexBubbleScanMask(p.y, t);
 
-    // _Params4.z is the per-draw hold, computed on the CPU from hit / break
-    // progress. 1 forces the whole net opaque for that animation, with a short
-    // fade at each end so the switch is never a hard cut.
+    // _Params4.z is the CPU-side hold: 1 forces the whole net opaque for an
+    // animation, with a short fade so the switch is never a hard cut.
     mask = mix(mask, 1.0, clamp(u._Params4.z, 0.0, 1.0));
 
-    // Clip the net at r == 1. The bubble's soft edge runs out to 1.16R, and a
-    // lattice painted into that margin reads as a shield larger than it is.
+    // Clip the net at r == 1; the bubble's body fades out by 1.045R and the quad
+    // runs to 1.16R, so a lattice in that margin reads as a larger shield.
     float netA = net * mask * (1.0 - smoothstep(1.0 - 2.0 * aa, 1.0, r));
 
     float sum = bubble.a + netA;
@@ -580,20 +355,16 @@ vec4 HexBubbleDomeColor(float r, vec2 p, float aa, float t)
 }
 
 // The intact dome, as (tint.rgb, unmultiplied alpha). Shared by mode 0 and mode 2
-// so a dissolving shield is literally the same surface with pieces removed, not a
-// second effect that happens to look similar. The style switch lives here for the
-// same reason: breaking a panel shell tears the same panels it was showing.
+// so a dissolving shield is the same surface with pieces removed.
 vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
 {
-    // Style 4 has to be answered before the generic stock-like test: 4 > 1.5
-    // would otherwise fall into VanillaDomeColor and lose the net entirely.
+    // Style 4 and the stock-like styles answer first: they share none of the
+    // ridge/core/glow machinery below (and 4 > 1.5 would lose the net).
     if (u._Params6.x > 3.5)
     {
         return HexBubbleDomeColor(r, p, aa, t);
     }
 
-    // The stock-like surface shares none of the ridge/core/glow machinery below
-    // and must not compute a derivative-based width, so it answers first.
     if (u._Params6.x > 1.5)
     {
         return VanillaDomeColor(r);
@@ -620,10 +391,8 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
     float coreTerm = u._Params2.y * core * coreDrift;
     float glowTerm = u._Params2.z * glow;
 
-    // Only the interior fill changes between crisp and hexagonal. Ridge, core and
-    // fresnel glow are identical, so the silhouette stays as crisp and as exactly
-    // on the intercept radius whichever of those two is chosen. (The stock-like
-    // style returned above and uses none of them.)
+    // Only the interior fill differs between crisp and hexagonal; ridge, core and
+    // glow are identical, so the silhouette stays exact either way.
     float hexLine = 0.0;
     float bodyTerm;
     if (u._Params6.x > 0.5 && u._Params6.x < 1.5)
@@ -637,11 +406,8 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
         bodyTerm = u._Params2.w * body;
     }
 
-    // The panel shell is the other lattice surface. Only its static fill is
-    // apertured; ridge and core are left exactly as they were, because they ARE
-    // the silhouette. Scaling the final sum instead would soften the ridge's
-    // inner shoulder on a small belt once clearRadius approaches 1. Crisp keeps
-    // its full interior.
+    // Only the panel shell's static fill is apertured; ridge and core ARE the
+    // silhouette and must not be softened on a small belt.
     float aperture = (u._Params6.x > 0.5 && u._Params6.x < 1.5)
         ? CenterAperture(r)
         : 1.0;
@@ -664,19 +430,13 @@ vec4 DomeColor(float r, vec2 p, float aa, float ang, float t)
     return vec4(tint, sum * drift);
 }
 
-// Where a break animation is allowed to paint, as opposed to where the idle dome
-// is. The stock-like styles deliberately let the idle haze run into the enlarged
-// quad margin, but a break must stay on the surface it is tearing: an unmasked hot
-// front there reads as a detached arc floating outside the shield. The hit
-// reactions already use this same 1.04..1.05R convention (flareEdge,
-// brightenEdge); the break follows it, so crisp and panel keep their exact rim and
-// the stock-like styles lose only the long outer tail.
+// Where a break may paint, as opposed to where the idle dome is. A break must
+// stay on the surface it is tearing: an unmasked hot front reads as a detached
+// arc. Crisp and panel keep r == 1; the stock-like profiles stop at 1.05R; the
+// hex bubble at 1.0R, because its idle haze already trails out past 1.0R (to
+// 1.045R) inside a quad that runs to 1.16R.
 float BreakEdge(float r, float edge)
 {
-    // The hex bubble is tighter than the other stock-like surfaces. Its idle
-    // haze reaches 1.16R, and at 1.05R the white-hot tear front still reads as
-    // an arc floating a little outside the bubble's bright rim. 1.0R keeps the
-    // break visibly inside the intact silhouette.
     if (u._Params6.x > 3.5)
     {
         return 1.0 - smoothstep(0.985, 1.015, r);
@@ -695,38 +455,24 @@ void main()
     vec2 d = vWorld - u._Params4.xy;
     float radius = max(u._Params.w, 0.01);
 
-    // 1.0 exactly on the collision rim — the number the whole effect is built
-    // around. The crisp and panel styles therefore scale their quad to exactly
-    // 2 * radius; only the stock-like style adds vanilla's 1.1601562 margin, so
-    // its soft tail has room to fade instead of being sliced off.
+    // 1.0 exactly on the collision rim.
     float r = length(d) / radius;
 
-    // Normalised disc coordinates, used by both the hexagonal style and the
-    // dissolve. Radius-relative, so a 2-cell bubble and a 25-cell gravship dome
-    // show the same number of panels and break into the same number of pieces.
+    // Normalised disc coordinates, radius-relative, so every shield shows the
+    // same number of panels and breaks into the same number of pieces.
     vec2 p = d / radius;
 
-    // Unit direction from the centre. Guarded because the pixel under the exact
-    // centre has none, and atan(0, 0) is undefined — the drift below would
-    // propagate a NaN into the fragment before it could be discarded.
+    // Unit direction from the centre; guarded because atan(0, 0) is undefined
+    // and would spread a NaN through the drift.
     vec2 n = d / max(length(d), 1e-4);
 
-    // One pixel, expressed in units of r. Computed unconditionally, before any
-    // branching, so the derivative is taken in uniform control flow. Every width
-    // in this shader is a multiple of it.
+    // One pixel in units of r, taken before any branching so the derivative is
+    // in uniform control flow.
     float aa = max(fwidth(r), 1e-4);
 
-    // The silhouette. The crisp and panel styles use a one-pixel fade placed
-    // *inside* r == 1, so the edge antialiases without the drawn shape ever
-    // growing past what the shield actually blocks.
-    //
-    // The stock-like style is the one exception, and on purpose: its whole point is
-    // a glow that continues past the collision radius the way vanilla's texture
-    // does. Its falloff is measured in fractions of the radius and is deliberately
-    // longer than the rim's own outer tail: the rim has already reached zero by the
-    // time this fades, so it only tapers the haze that clamps past r == 1. It ends
-    // before the enlarged quad edge, leaving no hard square behind. The renderer
-    // scales that quad by vanilla's own 1.1601562 margin for this style only.
+    // Silhouette. Crisp and panel fade inside r == 1 so the drawn shape never
+    // grows past the intercept radius. The stock-like styles may glow past it on
+    // purpose, ending inside the quad the renderer enlarged by 1.1601562.
     float edge;
     if (u._Params6.x > 1.5)
     {
@@ -751,38 +497,25 @@ void main()
     {
         // ---- interception flare (crisp style) -----------------------------
         //
-        // One quad per impact. Angular profile and radial falloff are both soft,
-        // so two flares from neighbouring directions blend into a brighter patch
-        // instead of stacking into an opaque slice. The stock-like style does not
-        // use this branch; it uses mode 4, where the dome itself brightens.
+        // One quad per impact; the angular profile and radial falloff are both
+        // soft, so neighbouring flares blend into a brighter patch instead of
+        // stacking into an opaque slice.
         float cosHalf = u._Params3.z;
 
-        // 0 at the side of the flare, 1 on its axis. Feathering the top of this
-        // range (below) is what keeps overlapping flares from showing a seam.
+        // 0 at the side of the flare, 1 on its axis.
         float axis = clamp(
             (dot(n, u._Params3.xy) - cosHalf) / max(1.0 - cosHalf, 1e-3),
             0.0,
             1.0);
         float profile = smoothstep(0.0, 0.8, axis);
 
-        // Linear-with-a-floor radial ramp rather than a squared one: a squared
-        // ramp keeps only the last few pixels bright, and on a small shield those
-        // are the same few pixels the dome's own ridge occupies, so the flare
-        // disappears into the rim it is supposed to disturb.
+        // Linear ramp with a floor: a squared one keeps only the last few pixels,
+        // which are the ones the dome's ridge already occupies.
         float radial = smoothstep(u._Params3.w, 1.0, r);
         float flare = radial * (0.55 + 0.45 * radial);
 
-        // Clip the flare to the visual rim, not to the dome's own edge. The
-        // stock-like surface deliberately lets `edge` continue past r == 1, but a
-        // wedge whose radial ramp is already saturated there would keep its full
-        // strength through that margin — the detached band this style used to show.
-        //
-        // The stock-like rim is a soft band whose visible edge reaches a few percent
-        // past the peak, so its flare fades through that band instead of being cut
-        // exactly at 1.0 (which would slice a chord across the bright ring). 1.05R
-        // is the outer half of the rim in the reference profile. The crisp and panel
-        // surfaces still end at r == 1 with one pixel of AA, because that is their
-        // silhouette contract.
+        // Clip to the visual rim: 1.05R through the stock-like soft band, r == 1
+        // with AA for crisp and panel.
         float flareEdge;
         if (u._Params6.x > 1.5)
         {
@@ -810,20 +543,10 @@ void main()
 
         vec4 dome = DomeColor(r, p, aa, ang, t);
 
-        // Continuous dissolve: the surface tears along a noise-driven front. This is
-        // the "Dissolve" break option on every surface. The panel shell has a second
-        // option (mode 5) that loses whole panels; choosing this one on the shell
-        // cuts the same soft hole a continuous surface would, which is exactly the
-        // difference the player is choosing between.
-        //
-        // Tear front: distance from the point that failed, perturbed by
-        // low-frequency noise so it splits into fingers instead of sweeping across
-        // as a clean circle.
-        //
-        // The origin is a point in the disc, not necessarily on its edge: a wound on
-        // the rim has 2R of surface to cross, a break from the centre has 1R, and
-        // the division is what gives both the same pace. Without it a centred tear
-        // reaches the rim at half the clock and the rest of the animation is empty.
+        // Continuous tear, the "Dissolve" option on every surface. Distance from
+        // the failure point, perturbed by low-frequency noise, so it splits into
+        // fingers. The origin is a point in the disc, and dividing by
+        // 1 + |origin| gives a rim wound and a centred break the same pace.
         float noise = Fbm(p * 3.5 + vec2(seed, seed * 1.37));
         float spread = length(p - originDir) / (1.0 + length(originDir));
         float field = clamp(spread + (noise - 0.5) * 0.42, 0.0, 1.0);
@@ -834,42 +557,29 @@ void main()
         float fw = max(fwidth(field), 0.006);
         float remaining = smoothstep(threshold - fw, threshold + fw, field);
 
-        // White-hot line riding the tear. Only on the surviving side — the dead
-        // side must stay empty or the dissolve reads as a bright overlay rather
-        // than as material being removed.
+        // White-hot line on the surviving side only; the dead side must stay
+        // empty or the dissolve reads as an overlay.
         float front = exp(-pow((field - threshold) / (fw * 3.0 + 0.022), 2.0))
             * remaining;
 
-        // Cracks: ridges of a finer noise over the strip of surface that is
-        // about to go. Zero at progress 0 so the shield does not come pre-cracked.
-        //
-        // This is the original look, restored. The nested square rings in the
-        // first in-game screenshot were NOT this pattern: they were a float32
-        // hash collapse in Hash21 feeding the same lattice index to many cells.
-        // A float64 web preview could not show it.
+        // Cracks: a finer noise ridge on the strip about to go. Zero at progress
+        // 0, so the shield does not come pre-cracked.
         float crackNoise = ValueNoise(p * 19.0 + vec2(seed * 2.1, seed * 0.7));
         float crackRidge = 1.0 - smoothstep(0.0, 0.10, abs(crackNoise - 0.5));
         float nearFront =
             (1.0 - smoothstep(0.0, 0.26, field - threshold)) * remaining;
         float crack = crackRidge * nearFront * smoothstep(0.0, 0.06, progress);
 
-        // Only `remaining` scales the surface. An earlier version also hollowed each
-        // panel toward its seams (0.55 at the walls), which dimmed the whole shield
-        // that was still standing - the surviving half looked like it had lost power
-        // rather than like the other half was coming apart. The seams are already
-        // readable from the dome's own line term.
+        // Only `remaining` scales the surface; hollowing panels toward the seams
+        // dimmed shields that were still standing.
         float baseA = dome.a * remaining;
         float frontA = front * 0.75;
         float crackA = crack * 0.30;
 
-        // A short energy release at the instant of failure. Decays over the first
-        // tenth of the animation, so the break reads as a flash rather than as
-        // the whole dissolve being uniformly brighter.
+        // Short energy release at the instant of failure.
         float surge = 1.0 + 0.55 * exp(-progress * 9.0);
 
-        // The last surviving sliver would otherwise wink out the instant the
-        // threshold crosses it. Fading the final stretch makes the end of the
-        // animation coincide with the end of the clock, with no dead tail.
+        // Fade the last sliver so the animation ends with the clock.
         float endFade = 1.0 - smoothstep(0.85, 1.0, progress);
 
         vec3 hot = mix(u._Color.rgb, vec3(1.0), 0.88);
@@ -877,15 +587,11 @@ void main()
         vec3 tint = (dome.rgb * baseA + hot * (frontA + crackA))
             / max(total, 1e-4);
 
-        // Clip to the surface's own silhouette, not to the enlarged stock-like quad.
-        // The crisp/panel branch returns `edge` unchanged (already r == 1 with AA).
+        // Clip to the surface's own silhouette.
         float breakEdge = BreakEdge(r, edge);
 
-        // Surge the tear, not the surface it is tearing. Multiplying the surviving
-        // body as well made the first frames brighter than the shield had ever been
-        // intact (additive blending) and lit the stock-like margin into a visible
-        // halo. Here the body keeps the configured brightness and only the hot line
-        // and cracks carry the initial flash.
+        // Surge the tear, not the body: brightening the body lit the stock-like
+        // margin into a visible halo.
         float bodyA = baseA * u._Params.y * breakEdge * endFade;
         float hotA = (frontA + crackA) * u._Params.y * breakEdge * surge * endFade;
 
@@ -895,26 +601,17 @@ void main()
     {
         // ---- hexagonal impact flash ---------------------------------------
         //
-        // Mode 3, the panel style's answer to a hit. The smooth style paints a wedge
-        // on the surface because a surface is what it is; a set of tiles is struck at
-        // the tiles, so the ones around the impact light up white and the light then
-        // walks outward ring by ring, fading as it goes.
-        //
-        // The quantisation is free: the hex map already carries a per-cell id, so the
-        // flash is automatically made of panels without any mask, and it can only
-        // light panels that exist. One quad per impact, same count as the flare it
-        // replaces.
+        // Mode 3, the panel style's answer to a hit: the tiles around the impact
+        // light up and the light walks outward. The hex map's per-cell id
+        // quantises the flash into panels for free, and it can only light panels
+        // that exist.
         vec2 od = u._Params3.xy;
         vec2 originDir = od / max(length(od), 1e-4);
         float progress = clamp(u._Params3.z, 0.0, 1.0);
 
-        // _Params3.w is a SHARE of the run from a point to the far rim, not a hop
-        // count, and it is converted to hops here. A hop is one panel spacing, so a
-        // fixed hop count is not a fixed visual size: at k=12 a panel is 2.4x smaller
-        // than at k=5, and four hops covered a fifth of the area - a dense shield
-        // barely reacted to being hit while a sparse one flashed across half the dome.
-        // Anchoring the reach to the dome instead makes the flash the same size on
-        // screen at every density, with more (smaller) panels taking part.
+        // _Params3.w is a share of the run to the far rim, converted to hops so
+        // the flash covers the same screen area at every density instead of
+        // barely reacting on a dense shield.
         float maxHops = 3.14159265 * u._Params6.w * 0.5;
         float reach = clamp(u._Params3.w, 0.05, 0.9) * maxHops;
 
@@ -930,54 +627,29 @@ void main()
 
         float order = max(hops + (Hash21(face.xy * 37.0) - 0.5) * 0.3, 0.0);
 
-        // The front is a position in hops, so it covers the same number of panels per
-        // second on every shield.
-        //
-        // The offset is what makes the hit visible on the first frame. 0.8 hops is the
-        // floor: the panel nearest the impact sits up to ~0.5 hops away (half a cell
-        // spacing) plus up to 0.15 of stagger, so anything smaller left progress 0
-        // completely dark and the flash faded in instead of striking.
-        //
-        // It also grows with the reach, because one panel is not a fixed size: on a
-        // dense lattice the struck panel alone is a speck, so the opening flash takes a
-        // small share of the reach with it. max() rather than a fixed share keeps the
-        // reference density exactly as it was - there 0.8 hops is already the larger
-        // term.
+        // Front position in hops. The 0.8 floor (growing with the reach on a
+        // dense lattice) makes the nearest panel light on the first frame instead
+        // of the flash fading in.
         float front = max(0.8, reach * 0.12) + progress * reach;
         float since = front - order;
 
-        // Brightness falls with hops BEHIND the front, which is the same thing as
-        // falling with the time since that panel lit. That equivalence is the whole
-        // effect: it makes a travelling wave with a fading tail.
-        //
-        // Without the distance term (a plain exp on time, 0.4, was tried) every panel
-        // in range sat at full brightness as the front passed, so the result was a
-        // bright disc that kept growing instead of a ring that faded: the outer edge
-        // never looked dimmer than the middle because it was not dimmer.
-        //
-        // Measured in units of the reach, not in hops, for the same reason the reach
-        // itself is: 3.2 is 0.8 per hop at the density this was tuned at, and keeping
-        // it in reach units means the ring is the same angular width at k=2 and k=12.
-        // In hops it would have been a fat band on a sparse shield and a hairline on a
-        // dense one.
+        // Brightness falls with hops behind the front, measured in reach units so
+        // the ring has the same angular width at any density.
         float behind = since / max(reach, 1e-4);
         float lit = smoothstep(0.0, 0.025, behind) * exp(-max(behind, 0.0) * 3.2);
 
-        // The last ring would otherwise still be at full strength on the final frame
-        // and vanish with the draw. Fade the whole effect out instead.
+        // Fade the last ring instead of letting it vanish with the draw.
         lit *= 1.0 - smoothstep(0.70, 1.0, progress);
 
-        // Panels, not pixels: the interior lights and the seams stay dim, so the
-        // flash is visibly made of tiles.
+        // Panels, not pixels: seams stay dim, so the flash is made of tiles.
         float panel = 0.6 + 0.4 * smoothstep(0.0, 0.25, e);
 
         vec3 hot = mix(
             u._Color.rgb,
             vec3(1.0),
             0.9 * (1.0 - HexFacesFollowColor()));
-        // The hex bubble's idle soft edge reaches 1.16R, but a lattice flash
-        // must not paint outside the shield it belongs to. Every other style
-        // keeps its own edge untouched.
+        // The hex bubble's idle body trails out past 1.0R (to 1.045R); a lattice
+        // flash must not paint outside the shield it belongs to.
         float waveEdge = u._Params6.x > 3.5
             ? 1.0 - smoothstep(0.985, 1.015, r)
             : edge;
@@ -987,39 +659,25 @@ void main()
     {
         // ---- brighten impact: the dome itself lights up in a sector -------
         //
-        // Mode 4, selectable for every surface. Vanilla's ForceFieldCone is not a
-        // separate wedge laid over the shield: it is an additive sector of the same
-        // soft surface. What the eye sees is the shield inside that sector becoming
-        // more opaque, with the sector's outer edge following the chosen surface's
-        // silhouette instead of crossing it. The stock-like style defaults to this;
-        // the crisp and panel surfaces can select it as well.
-        //
-        // So the extra light here is the dome's own shade and silhouette, masked to
-        // the impact's angular sector. Rim and haze brighten together because they
-        // are the same surface. Nothing about the radial profile is re-drawn: it is
-        // the dome's alpha multiplied by the sector, including the stock dome's own
-        // soft `edge`. That is what keeps the hit attached to the visual rim — an
-        // independent radial ramp (the old flare) reached outward at full strength
-        // and read as a wedge hovering outside the soft edge.
+        // Mode 4, for every surface. Vanilla's ForceFieldCone is an additive
+        // sector of the same soft surface, so the extra light here is the dome's
+        // own shade masked to the sector — rim and haze brighten together, and
+        // the sector follows the chosen silhouette instead of crossing it.
         float cosHalf = u._Params3.z;
         float axis = clamp(
             (dot(n, u._Params3.xy) - cosHalf) / max(1.0 - cosHalf, 1e-3),
             0.0,
             1.0);
 
-        // Mostly flat inside the sector, feathered only near its two sides. A long
-        // ramp (mode 1's 0.8) makes a beam with a bright axis; vanilla's cone reads
-        // as a region that lit up, not as a searchlight.
+        // Mostly flat inside, feathered only near the two sides. A long ramp
+        // reads as a searchlight rather than a region that lit up.
         float sector = smoothstep(0.0, 0.45, axis);
 
         vec4 dome = DomeColor(r, p, aa, ang, t);
 
-        // Radial contraction. Adding the dome's full soft edge doubles the outer
-        // half of the rim as well, which makes the struck sector of the stock-like
-        // shield look thicker than the rest of it. Vanilla's cone does not widen the
-        // band: its extra light is concentrated on the rim and stops at the visual
-        // peak. So the stock-like surface fades the extra out over 1.0..1.04R; the
-        // crisp and panel surfaces already have a one-pixel edge and use it as is.
+        // Contract the stock-like edge to 1.04R so the struck sector does not
+        // read thicker than the rest of the band; crisp and panel already have a
+        // one-pixel edge.
         float brightenEdge;
         if (u._Params6.x > 1.5)
         {
@@ -1030,15 +688,11 @@ void main()
             brightenEdge = edge;
         }
 
-        // The whole sector brightens, but the extra light thins toward the centre
-        // and reaches zero only at the centre. A constant full-strength wedge reads
-        // as a separate object; cutting it off at 0.5R was the opposite problem — it
-        // left almost nothing visible. The full-radius ramp keeps the interior
-        // readable while still leaving the centre untouched.
+        // Thin the extra light toward the centre: a full-strength wedge reads as
+        // a separate object.
         float innerFade = smoothstep(0.0, 1.0, r);
 
-        // Additive, exactly like the dome: the same surface written a second time
-        // inside the sector. Strong hits and overlapping directions accumulate.
+        // Additive, like the dome: the same surface written twice in the sector.
         outColor = vec4(
             dome.rgb,
             dome.a * sector * innerFade * u._Params.y * brightenEdge);
@@ -1047,11 +701,9 @@ void main()
     {
         // ---- hex break: lose panels ---------------------------------------
         //
-        // Mode 5, the panel shell's own break option. A continuous surface tears
-        // along a noise front (mode 2); a shell of discrete objects instead *loses
-        // panels*: each is entirely there or entirely gone. Running the noise front
-        // over the panels would cut a soft hole through them, which reads as a
-        // rendering mistake rather than as structural failure.
+        // Mode 5, the panel shell's break. A shell of discrete objects fails by
+        // losing whole panels; running a noise front over them would cut a soft
+        // hole, which reads as a rendering mistake.
         vec2 od = u._Params3.xy;
         vec2 originDir = od / max(length(od), 1e-4);
         float progress = clamp(u._Params3.z, 0.0, 1.0);
@@ -1060,88 +712,50 @@ void main()
         vec4 baked = texture(_HexMap, HexUv(p));
         vec3 face = baked.rgb * 2.0 - 1.0;
 
-        // Distance in panels. The baked lattice is uniform in solid angle, so
-        // angular distance divided by the centre spacing counts hops; that is what
-        // makes the wave cross the same number of panels per second on a 3-cell
-        // bubble and on a 25-cell gravship dome.
+        // Distance in panels: the lattice is uniform in solid angle, so angular
+        // distance over the centre spacing counts hops.
         float cellStep = 2.0 / max(u._Params6.w, 1e-4);
         vec3 originOnSphere = vec3(
             originDir,
             sqrt(max(1.0 - dot(originDir, originDir), 0.0)));
         float hops = acos(clamp(dot(face, originOnSphere), -1.0, 1.0)) / cellStep;
 
-        // The same per-cell id the shading jitter uses, so a panel keeps one
-        // identity while it dies.
+        // A per-cell hash, with a different multiplier from the shading jitter's
+        // so the two are uncorrelated.
         float panelId = Hash21(face.xy * 53.0);
 
-        // When this panel lets go, as a share of the whole animation.
-        //
-        // Enough hops to cover the farthest panel from the origin, plus a margin so
-        // progress 1 really does leave nothing. Scales with k: a denser lattice has
-        // more panels between the break point and the far rim.
-        //
-        // The farthest panel is π away for a wound on the rim but only π/2 away for
-        // a break from the centre, hence the 1 + |origin| scaling — the same one
-        // `spread` uses in mode 2, and for the same reason: without it a centred
-        // break runs out of panels halfway through its clock.
+        // The farthest panel is π away for a rim wound but only π/2 from the
+        // centre, hence the 1 + |origin| factor (as in mode 2).
         float maxHops = 3.14159265 * u._Params6.w * 0.25
             * (1.0 + length(originDir));
         float span = maxHops + 1.5;
 
-        // The ORDER is distance from the wound, always: the shell empties as a
-        // ring travelling outward, and that is what makes the animation read as a
-        // structure failing from a hit rather than as a surface dissolving. The
-        // 0.45 stagger only keeps the ring itself from being a perfect circle.
+        // Order is always radial: the shell empties as a ring travelling outward
+        // from the wound; the stagger only keeps that ring from being a circle.
         float radial = (hops + panelId * 0.45 + 0.6) / (span + 1.2);
 
-        // What _Params9.y adds is *timing*, not order: each panel draws its own
-        // delay, so the ring arrives as a broad ragged band instead of a clean
-        // line and two panels the same distance from the wound rarely go on the
-        // same frame. The sweep still has one direction — this is the difference
-        // between a wave with a noisy front and a noise field that happens to be
-        // drawn on a sphere. Ordering the panels by a noise field instead (which
-        // is what "make it look random" sounds like) does read as the continuous
-        // dissolve, because then nothing travels.
-        //
-        // The width is a share of the animation, applied as ±half of it. 0 disables
-        // it; the expression is then the pre-existing one, term for term.
-        //
-        // 0.90 is not arbitrary either: the fade below lasts 0.09, so the last
-        // panel finishes just as the clock runs out instead of being cut off
-        // mid-transition.
+        // _Params9.y adds timing, not order: each panel draws its own delay, so
+        // the ring arrives as a ragged band. Ordering by noise instead would
+        // remove the sweep and read as mode 2. 0.90 leaves room for the 0.09 fade.
         float start = radial * 0.90;
         float jitter = clamp(u._Params9.y, 0.0, 0.5);
         if (jitter > 0.001)
         {
-            // A second hash, deliberately not the panelId above: adding two
-            // copies of one value would correlate a panel's delay with its place
-            // in the sweep, tilting the band instead of roughening it.
-            //
-            // Held back near the wound, and the hold-back grows with the width. A
-            // break's first frame is the untouched dome at progress 0, and a delay
-            // of ±half the width there would have eaten the panels around the
-            // impact before the animation began. The 0.6 is what keeps that true at
-            // every width: a fully delayed panel at the ramp's end starts at
-            // 0.9 * 0.6 * width - width / 2, which is still positive.
+            // A second hash, not panelId, so the delay does not correlate with
+            // the sweep. Held back near the wound so the first frame stays intact.
             float ramp = smoothstep(0.0, max(0.12, jitter * 0.6), radial);
             start += (Hash21(face.xy * 91.0) - 0.5) * jitter * ramp;
         }
 
-        // dt is the panel's own clock: negative while intact, 0 at the moment it
-        // starts to give way, 1 once it is gone. The 9% fade is the same width the
-        // continuous tear uses. With the jitter on, the band of panels caught
-        // mid-fade is that 9% plus the jitter's own width, which is what gives the
-        // front its thickness.
+        // The panel's own clock: negative while intact, 1 once gone.
         float dt = (progress - start) * (1.0 / 0.09);
         float remaining = 1.0 - smoothstep(0.0, 1.0, dt);
 
-        // Panels do brighten as they fail, but only a little and only briefly: a
-        // strong surge turns the transition band into a white stripe travelling
-        // across the shield, and a wide one brightens a whole region at once.
+        // Panels brighten only a little and briefly as they fail; a strong surge
+        // turns the front into a white stripe.
         float dying = exp(-dt * dt * 6.0) * remaining * 0.3;
 
-        // No cracks: a crack belongs to a continuous surface. Here the panel
-        // seams already are the cracks.
+        // No cracks: the seams already are the cracks.
         float baseA = dome.a * remaining;
         float frontA = dying * 0.75;
         float surge = 1.0 + 0.55 * exp(-progress * 9.0);
