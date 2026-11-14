@@ -272,6 +272,10 @@
   <VisualTweaks_ShieldDome_VanishTime>Vanish duration</VisualTweaks_ShieldDome_VanishTime>
   <VisualTweaks_ShieldDome_VanishTimeTip>Ticks from the start of the fade to fully gone; 60 ticks = 1 second.</VisualTweaks_ShieldDome_VanishTimeTip>
   <VisualTweaks_ShieldDome_VanishNote>For shields that stop on their own: charge cycles, timed expiry, manual deactivation, EMP stun, dormancy. A shield destroyed by damage is handled by the break animation above; the two never play at once.</VisualTweaks_ShieldDome_VanishNote>
+  <VisualTweaks_ShieldDome_PersonalVanishDisplay>Play the vanish animation when the bubble hides itself</VisualTweaks_ShieldDome_PersonalVanishDisplay>
+  <VisualTweaks_ShieldDome_PersonalVanishDisplayTip>Vanilla only draws the bubble for a drafted, hostile or recently-in-combat wearer. Undrafting, going down, capture or 16s out of combat hides it while the shield still works. On makes those cases fade or shrink out instead of popping. </VisualTweaks_ShieldDome_PersonalVanishDisplayTip>
+  <VisualTweaks_ShieldDome_PersonalRestoreDisplay>Play the restore animation when the bubble reappears</VisualTweaks_ShieldDome_PersonalRestoreDisplay>
+  <VisualTweaks_ShieldDome_PersonalRestoreDisplayTip>When the bubble returns (re-draft, standing up, or back on screen after recharging), on makes it fade or grow in instead of popping.</VisualTweaks_ShieldDome_PersonalRestoreDisplayTip>
   <VisualTweaks_ShieldDome_RestoreGroup>Restore animation</VisualTweaks_ShieldDome_RestoreGroup>
   <VisualTweaks_ShieldDome_RestoreNone>None</VisualTweaks_ShieldDome_RestoreNone>
   <VisualTweaks_ShieldDome_RestoreNoneTip>No animation: the shield appears at its normal size and opacity when it comes back online.</VisualTweaks_ShieldDome_RestoreNoneTip>

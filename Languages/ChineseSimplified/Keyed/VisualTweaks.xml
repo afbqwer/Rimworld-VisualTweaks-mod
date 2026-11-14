@@ -272,6 +272,10 @@
   <VisualTweaks_ShieldDome_VanishTime>消失时长</VisualTweaks_ShieldDome_VanishTime>
   <VisualTweaks_ShieldDome_VanishTimeTip>从开始变暗到完全消失的 tick 数，60 tick = 1 秒。</VisualTweaks_ShieldDome_VanishTimeTip>
   <VisualTweaks_ShieldDome_VanishNote>用于护盾自己关掉或失效的情况：充能周期、定时到期、手动停用、EMP 眩晕、休眠。被击破的护盾由上面的「破裂动画」负责，两者不会同时播放。</VisualTweaks_ShieldDome_VanishNote>
+  <VisualTweaks_ShieldDome_PersonalVanishDisplay>气泡自动隐藏时照常播放消失动画</VisualTweaks_ShieldDome_PersonalVanishDisplay>
+  <VisualTweaks_ShieldDome_PersonalVanishDisplayTip>原版气泡只在征召、敌对或刚交火时显示；未征召、倒地、被俘或脱战 16 秒后隐藏，但护盾仍在工作。开启后这些情况会淡出或缩小，而不是直接不见。</VisualTweaks_ShieldDome_PersonalVanishDisplayTip>
+  <VisualTweaks_ShieldDome_PersonalRestoreDisplay>气泡自动出现时照常播放恢复动画</VisualTweaks_ShieldDome_PersonalRestoreDisplay>
+  <VisualTweaks_ShieldDome_PersonalRestoreDisplayTip>重新征召、起身或气泡在屏幕外回满后重新出现时，开启后从淡入或放大开始，而不是凭空冒出。</VisualTweaks_ShieldDome_PersonalRestoreDisplayTip>
   <VisualTweaks_ShieldDome_RestoreGroup>恢复动画</VisualTweaks_ShieldDome_RestoreGroup>
   <VisualTweaks_ShieldDome_RestoreNone>无</VisualTweaks_ShieldDome_RestoreNone>
   <VisualTweaks_ShieldDome_RestoreNoneTip>不播放恢复动画：护盾恢复可用时直接以正常大小和不透明度出现。</VisualTweaks_ShieldDome_RestoreNoneTip>

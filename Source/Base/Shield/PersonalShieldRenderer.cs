@@ -234,6 +234,22 @@ namespace VisualTweaks
             // its own — visibility is the gate — so "shown" is what decides whether
             // anything was on screen to fade, and the alpha passed here is only the
             // log's "was it opaque enough to bother" marker.
+            //
+            // Which edge counts is a setting. A belt is drawn while it is Active *and*
+            // its wearer is worth showing it on: drafted, hostile, in an aggro mental
+            // state, or recently in combat. Undrafting, going down, being captured or
+            // letting the 1000-tick display window run out stops the draw without
+            // touching the shield at all, and on screen that is a disappearance like
+            // any other. By default the animations follow the surface; switched off,
+            // they follow the shield's own state and those cases pop instead. The
+            // restore switch is the same question asked in the other direction.
+            bool vanishPresent = VisualTweaksSettings.personalShieldVanishFollowDisplay
+                ? visible
+                : active;
+            bool restorePresent = VisualTweaksSettings.personalShieldRestoreFollowDisplay
+                ? visible
+                : active;
+
             ShieldVanishStyle vanishStyle = style.Vanish;
             ShieldVanishLog.State? vanish = null;
             bool vanishWanted = vanishStyle != ShieldVanishStyle.None;
@@ -241,7 +257,7 @@ namespace VisualTweaks
             {
                 vanish = ShieldVanishLog.Observe(
                     comp,
-                    active,
+                    vanishPresent,
                     visible,
                     1f,
                     drawnSize,
@@ -254,7 +270,7 @@ namespace VisualTweaks
                 }
             }
 
-            ShieldRestoreLog.Observe(comp, active, restoreTicks);
+            ShieldRestoreLog.Observe(comp, restorePresent, restoreTicks);
 
             // Break wins. A tear that starts underneath a fade takes the frame over.
             if (dissolve != null && vanish != null)
@@ -280,8 +296,12 @@ namespace VisualTweaks
                     PersonalShieldDissolveLog.Cancel(comp);
                     dissolve = null;
 
+                    // A belt whose state returned while it was off screen gets no
+                    // restore now: the clock would run out before anyone saw it. The
+                    // up edge that fires when it becomes visible again starts one.
                     if (age > ShieldRestoreLog.InstantRecoveryTicks
-                        && restoreStyle != ShieldRestoreStyle.None)
+                        && restoreStyle != ShieldRestoreStyle.None
+                        && restorePresent)
                     {
                         ShieldRestoreLog.Begin(comp, restoreTicks);
                     }
@@ -299,6 +319,7 @@ namespace VisualTweaks
             // the belt did go down; use it as the reactivation signal.
             if (dissolve == null
                 && active
+                && restorePresent
                 && customBreak
                 && restoreStyle != ShieldRestoreStyle.None
                 && PersonalShieldDissolveLog.TryConsumeFinished(comp))

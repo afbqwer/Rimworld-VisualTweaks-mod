@@ -420,6 +420,17 @@ namespace VisualTweaks
         public static float largeShieldVanishTicks = 45f;
         public static float personalShieldVanishTicks = 45f;
 
+        // Personal shields are the one family with a display rule of their own: a belt
+        // is only drawn while its wearer is drafted, hostile, in an aggro state or
+        // recently in combat. Undrafting, going down, being captured or letting the
+        // 1000-tick window expire hides the bubble without changing the shield, and on
+        // screen that is a disappearance / reappearance like any other. These switches
+        // decide whether the two animations follow the surface (on, default) or only
+        // the shield's own state (off). They do nothing for projector domes, which have
+        // no such rule.
+        public static bool personalShieldVanishFollowDisplay = true;
+        public static bool personalShieldRestoreFollowDisplay = true;
+
         /// <summary>The break animation that belongs to the selected dome style.</summary>
         public static ShieldBreakStyle CurrentShieldBreakStyle =>
             ShieldStyle.Global(ShieldHexTarget.Large).Break;
@@ -1021,6 +1032,14 @@ namespace VisualTweaks
                 ref personalShieldVanishTicks,
                 "personalShieldVanishTicks",
                 45f);
+            Scribe_Values.Look(
+                ref personalShieldVanishFollowDisplay,
+                "personalShieldVanishFollowDisplay",
+                true);
+            Scribe_Values.Look(
+                ref personalShieldRestoreFollowDisplay,
+                "personalShieldRestoreFollowDisplay",
+                true);
 
             Scribe_Values.Look(
                 ref largeShieldHexFaceStrength,

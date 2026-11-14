@@ -1237,6 +1237,15 @@ namespace VisualTweaks
                 listing,
                 "VisualTweaks_ShieldDome_VanishNote".Translate());
 
+            // The belt's own display rule: the bubble is only drawn for a drafted,
+            // hostile or recently-in-combat wearer, so leaving that set hides the
+            // surface without changing the shield. Off, the fade only follows the
+            // shield state.
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_PersonalVanishDisplay".Translate(),
+                ref VisualTweaksSettings.personalShieldVanishFollowDisplay,
+                "VisualTweaks_ShieldDome_PersonalVanishDisplayTip".Translate());
+
             SettingsLayout.SubHeader(
                 listing,
                 "VisualTweaks_ShieldDome_RestoreGroup".Translate());
@@ -1246,6 +1255,15 @@ namespace VisualTweaks
             {
                 DrawRestoreSlider(listing, true);
             }
+
+            // The same rule in the other direction. On, a bubble that reappears after
+            // an undraft or a wake-up animates instead of popping, and a shield that
+            // came back while hidden gets its animation when it becomes visible rather
+            // than having it run out unseen.
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_PersonalRestoreDisplay".Translate(),
+                ref VisualTweaksSettings.personalShieldRestoreFollowDisplay,
+                "VisualTweaks_ShieldDome_PersonalRestoreDisplayTip".Translate());
 
             SettingsLayout.SubHeader(
                 listing,
