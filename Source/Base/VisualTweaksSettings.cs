@@ -402,8 +402,8 @@ namespace VisualTweaks
             ShieldRestoreStyle.Grow;
         public static ShieldRestoreStyle personalShieldRestoreStyle =
             ShieldRestoreStyle.Grow;
-        public static float largeShieldRestoreTicks = 60f;
-        public static float personalShieldRestoreTicks = 60f;
+        public static float largeShieldRestoreTicks = 45f;
+        public static float personalShieldRestoreTicks = 30f;
 
         // How a shield goes away when it was not broken: a charging cycle starting, a
         // timed activation expiring, a stun, dormancy, a repulsor switched off between
@@ -418,7 +418,7 @@ namespace VisualTweaks
         public static ShieldVanishStyle personalShieldVanishStyle =
             ShieldVanishStyle.Shrink;
         public static float largeShieldVanishTicks = 45f;
-        public static float personalShieldVanishTicks = 45f;
+        public static float personalShieldVanishTicks = 30f;
 
         // Personal shields are the one family with a display rule of their own: a belt
         // is only drawn while its wearer is drafted, hostile, in an aggro state or
@@ -583,7 +583,7 @@ namespace VisualTweaks
         // the duration they were tuned with; 60 ticks is one in-game second.
         public const float MinPersonalShieldJitterTicks = 2f;
         public const float MaxPersonalShieldJitterTicks = 30f;
-        public static float personalShieldJitterTicks = 8f;
+        public static float personalShieldJitterTicks = 10f;
 
         // Brighten: peak extra opacity of the struck sector, and the sector's full
         // width. Independent of the dome's own sliders because a belt is small enough
@@ -593,19 +593,19 @@ namespace VisualTweaks
         public static float personalShieldBrightenStrength = 0.55f;
 
         public const float MinPersonalShieldBrightenAngle = 5f;
-        public const float MaxPersonalShieldBrightenAngle = 90f;
-        public static float personalShieldBrightenAngle = 30f;
+        public const float MaxPersonalShieldBrightenAngle = 180f;
+        public static float personalShieldBrightenAngle = 90f;
 
         // HexSpread: peak brightness of the lit panels and how far the wave travels,
         // as a share of the run to the far rim. The belt's lattice is sparser than
         // the dome's, so both defaults sit above the dome's values.
         public const float MinPersonalShieldHexImpactStrength = 0f;
         public const float MaxPersonalShieldHexImpactStrength = 0.8f;
-        public static float personalShieldHexImpactStrength = 0.12f;
+        public static float personalShieldHexImpactStrength = 0.25f;
 
         public const float MinPersonalShieldHexImpactShare = 0.12f;
         public const float MaxPersonalShieldHexImpactShare = 0.6f;
-        public static float personalShieldHexImpactShare = 0.4f;
+        public static float personalShieldHexImpactShare = 0.5f;
 
         // The panel style answers a hit differently from the smooth one - a flash that
         // spreads across the lattice instead of a wedge painted on the surface - so it
@@ -1011,11 +1011,11 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref largeShieldRestoreTicks,
                 "largeShieldRestoreTicks",
-                60f);
+                45f);
             Scribe_Values.Look(
                 ref personalShieldRestoreTicks,
                 "personalShieldRestoreTicks",
-                60f);
+                30f);
             Scribe_Values.Look(
                 ref largeShieldVanishStyle,
                 "largeShieldVanishStyle",
@@ -1031,7 +1031,7 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref personalShieldVanishTicks,
                 "personalShieldVanishTicks",
-                45f);
+                30f);
             Scribe_Values.Look(
                 ref personalShieldVanishFollowDisplay,
                 "personalShieldVanishFollowDisplay",
@@ -1133,7 +1133,7 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref personalShieldJitterTicks,
                 "personalShieldJitterTicks",
-                8f);
+                10f);
             Scribe_Values.Look(
                 ref personalShieldBrightenStrength,
                 "personalShieldBrightenStrength",
@@ -1141,15 +1141,15 @@ namespace VisualTweaks
             Scribe_Values.Look(
                 ref personalShieldBrightenAngle,
                 "personalShieldBrightenAngle",
-                30f);
+                90f);
             Scribe_Values.Look(
                 ref personalShieldHexImpactStrength,
                 "personalShieldHexImpactStrength",
-                0.12f);
+                0.25f);
             Scribe_Values.Look(
                 ref personalShieldHexImpactShare,
                 "personalShieldHexImpactShare",
-                0.4f);
+                0.5f);
             Scribe_Values.Look(
                 ref largeShieldRidgeWidth,
                 "largeShieldRidgeWidth",
