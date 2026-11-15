@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Verse;
@@ -198,46 +197,21 @@ namespace VisualTweaks
     }
 
     /// <summary>
-    /// Owns the per-object style overrides of one save, and moves the per-type records
-    /// of older saves into the mod settings while that save is being deserialized.
+    /// Owns the per-object style overrides of one save.
     ///
     /// A GameComponent is the smallest vanilla container that is created automatically,
     /// survives a save, and needs no def surgery on the shield comps themselves. It is
     /// the right home for a record keyed by <see cref="Thing.thingIDNumber"/>, which
     /// only means something inside the save that issued it. Type styles are not that:
     /// they are keyed by a def, they are a preference, and they live in
-    /// <see cref="VisualTweaksSettings"/> so every colony shares them.
-    ///
-    /// No type data is kept here. A published build scribed it in this component; the
-    /// node is read once during deserialization, handed to the settings, and never
-    /// written back, so saves made by this build contain only the object layer.
-    ///
-    /// TODO 1.8: delete the type-style migration entirely -- the legacy read in
-    /// ExposeData, ImportLegacyTypeStyles, FlushImportedTypeStyles and the
-    /// importedTypeStyles flag. Only saves written by 1.7.x still carry that node,
-    /// and by 1.8 they are old enough to drop.
-    ///
-    /// Threading contract: every reader is a main-thread draw callback
-    /// (Thing.PostDraw, MapComponentDraw or the style window) and every writer is
-    /// the same thread (window edits, Thing.Destroy cleanup, save/load). The
-    /// lookup and its cache are therefore intentionally lock-free. Do not call
-    /// these from a background worker without adding synchronization.
+    /// <see cref="VisualTweaksSettings"/> so every colony shares them -- which is why
+    /// this class stores none of them.
     /// </summary>
     internal sealed class ShieldOverrideGameComponent : GameComponent
     {
         private List<ShieldStyleOverride> entries = new List<ShieldStyleOverride>();
         private readonly Dictionary<int, ShieldStyleOverride> lookup =
             new Dictionary<int, ShieldStyleOverride>();
-
-        /// <summary>
-        /// Set while deserializing a save that still carried type styles. The records
-        /// themselves are handed to the mod settings right there; this only remembers
-        /// that the settings file still has to be written, which cannot be done inside
-        /// ExposeData without clobbering the save's scribe state.
-        ///
-        /// TODO 1.8: remove together with the rest of the type-style migration.
-        /// </summary>
-        private static bool importedTypeStyles;
 
         // GameComponent subclasses are instantiated reflectively by Verse.Game with
         // the Game as the single constructor argument.
@@ -386,44 +360,15 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Bakes any lattice a saved override will draw, then flushes the settings file
-        /// if deserializing moved type styles into it. Loading is the last point before
+        /// Bakes any lattice a saved override will draw. Loading is the last point before
         /// play where that cost can land on a loading screen instead of the first frame
         /// that happens to show the shield.
         /// </summary>
         public override void LoadedGame()
         {
             base.LoadedGame();
-            FlushImportedTypeStyles();
+            ShieldTypeMigration.FlushPendingWrite();
             EnsureOverrideLattices();
-        }
-
-        /// <summary>
-        /// Writes the settings file after a migration. Kept out of ExposeData on purpose:
-        /// writing it there would switch Scribe's mode and saver out from under the save
-        /// that is being read.
-        ///
-        /// The records are already live in memory by this point, so a failed write only
-        /// means they reach disk later; the flag stays set so the next load tries again.
-        ///
-        /// TODO 1.8: remove along with the migration; nothing else sets the flag.
-        /// </summary>
-        private static void FlushImportedTypeStyles()
-        {
-            if (!importedTypeStyles)
-            {
-                return;
-            }
-
-            if (VisualTweaksSettings.PersistShieldTypeOverrides())
-            {
-                importedTypeStyles = false;
-                return;
-            }
-
-            Log.Warning(
-                "[Visual Tweaks] Could not write the settings file after moving shield"
-                    + " type styles out of a save; retrying on the next load.");
         }
 
         public override void ExposeData()
@@ -431,67 +376,9 @@ namespace VisualTweaks
             base.ExposeData();
             Scribe_Collections.Look(ref entries, "shieldStyleOverrides", LookMode.Deep);
 
-            // A save written by a build that kept type styles here still carries them.
-            // Read that node into a temporary and hand the records to the mod settings
-            // before it goes out of scope, so this component holds no type data at all
-            // and the next save writes no such node.
-            //
-            // Types the settings already style are left alone: the settings are the
-            // single source of truth, and opening an old colony must not silently
-            // rewrite a preference set since upgrading.
-            //
-            // TODO 1.8: drop this call and the legacy node with it.
-            if (Scribe.mode == LoadSaveMode.LoadingVars)
-            {
-                ImportLegacyTypeStyles();
-            }
+            ShieldTypeMigration.ReadFromSave();
 
             RebuildLookup();
-        }
-
-        /// <summary>
-        /// TODO 1.8: delete. Reads the node a 1.7.x build wrote and moves it into the
-        /// mod settings; no save written from 1.8 on can contain it.
-        /// </summary>
-        private static void ImportLegacyTypeStyles()
-        {
-            try
-            {
-                List<ShieldTypeStyleOverride>? legacy = null;
-                Scribe_Collections.Look(
-                    ref legacy,
-                    "shieldTypeStyleOverrides",
-                    LookMode.Deep);
-
-                if (legacy == null || legacy.Count == 0)
-                {
-                    return;
-                }
-
-                int imported = VisualTweaksSettings.ImportShieldTypeOverrides(legacy);
-                if (imported > 0)
-                {
-                    importedTypeStyles = true;
-                    VisualTweaksLog.Info(
-                        "Moved " + imported + " shield type style(s) out of the save and"
-                            + " into the mod settings.");
-                }
-                else
-                {
-                    VisualTweaksLog.Info(
-                        "Dropped " + legacy.Count + " shield type style record(s) found"
-                            + " in a save; the mod settings already style them.");
-                }
-            }
-            catch (Exception ex)
-            {
-                // A corrupt node must not stop a colony from loading. The settings keep
-                // whatever they already had, and the save is clean on the next write.
-                Log.ErrorOnce(
-                    "[Visual Tweaks] Could not move shield type styles out of a save: "
-                        + ex,
-                    typeof(ShieldOverrideGameComponent).GetHashCode() ^ 0x5B);
-            }
         }
 
         private ShieldStyleOverride? Find(int thingId)

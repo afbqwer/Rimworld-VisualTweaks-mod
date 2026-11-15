@@ -385,48 +385,32 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Moves type records found in a save's game component into the settings. Only
-        /// called for saves written before type styles moved here.
-        ///
-        /// A type the settings already style is left alone: the settings are the single
-        /// source now, and a player who edited a type after upgrading should not have it
-        /// silently rewritten by an old colony they open later. Returns how many records
-        /// were taken, which is what the caller logs and persists on.
+        /// The record stored for a key, empty ones included.
+        /// <see cref="GetShieldTypeOverride"/> treats an empty record as unset; callers
+        /// that need to tell "no record" from "a record that overrides nothing" use this.
         /// </summary>
-        internal static int ImportShieldTypeOverrides(
-            IReadOnlyList<ShieldTypeStyleOverride> records)
+        internal static ShieldTypeStyleOverride? FindShieldTypeOverrideRecord(
+            ShieldHexTarget target,
+            string? defName)
         {
-            if (records == null || records.Count == 0)
+            if (defName.NullOrEmpty())
             {
-                return 0;
+                return null;
             }
 
-            int imported = 0;
-            for (int i = 0; i < records.Count; i++)
-            {
-                ShieldTypeStyleOverride record = records[i];
-                if (record == null || record.DefName.NullOrEmpty() || record.IsEmpty)
-                {
-                    continue;
-                }
+            return FindShieldTypeOverride(new TypeKey(target, defName!));
+        }
 
-                if (FindShieldTypeOverride(new TypeKey(record.Target, record.DefName))
-                    != null)
-                {
-                    continue;
-                }
-
-                shieldTypeOverrides ??= new List<ShieldTypeStyleOverride>();
-                shieldTypeOverrides.Add(record);
-                imported++;
-            }
-
-            if (imported > 0)
-            {
-                RebuildShieldTypeLookup();
-            }
-
-            return imported;
+        /// <summary>
+        /// Adopts a record that was read from somewhere else, registering it in the index
+        /// as it goes so a duplicate key later in the same batch sees it. The caller
+        /// checks for an existing key first; this does not look.
+        /// </summary>
+        internal static void AddShieldTypeOverride(ShieldTypeStyleOverride record)
+        {
+            shieldTypeOverrides ??= new List<ShieldTypeStyleOverride>();
+            shieldTypeOverrides.Add(record);
+            shieldTypeLookup[new TypeKey(record.Target, record.DefName)] = record;
         }
 
         /// <summary>
@@ -434,12 +418,26 @@ namespace VisualTweaks
         /// from the in-game style window would otherwise only reach disk when the mod
         /// settings dialog is closed.
         ///
-        /// Returns false when the file could not be written. The migration uses that to
-        /// keep its records in the save for another attempt instead of dropping the only
-        /// copy.
+        /// Returns false when the file was not written, so a caller that has an
+        /// in-memory copy the file is the only other copy of can retry instead of
+        /// assuming it is on disk.
+        ///
+        /// Refuses to run unless Scribe is idle. <c>ScribeSaver.InitSaving</c> responds
+        /// to a non-Inactive mode by calling <c>Scribe.ForceStop()</c>, which closes the
+        /// active writer and resets the loader -- during a real save that truncates the
+        /// save file, during a load it throws away the cross-ref and post-load queues.
+        /// The callers here are the style window and LoadedGame, both of which are
+        /// normally idle, but neither controls what else is running on the main thread.
+        /// Deferring costs nothing: the records are already in memory and any later
+        /// settings write persists them.
         /// </summary>
         internal static bool PersistShieldTypeOverrides()
         {
+            if (Scribe.mode != LoadSaveMode.Inactive)
+            {
+                return false;
+            }
+
             try
             {
                 VisualTweaksMod? mod = LoadedModManager.GetMod<VisualTweaksMod>();
@@ -1214,9 +1212,9 @@ namespace VisualTweaks
                 ref shieldOverrideGizmo,
                 "shieldOverrideGizmo",
                 true);
-            // Per-type styles are settings, not save state. They used to be scribed by
-            // ShieldOverrideGameComponent; a save written by that build still carries
-            // them, and the component moves them here once on load.
+            // Per-type styles are settings, not save state: one record serves every
+            // colony, whereas per-object records stay in the save because a
+            // thingIDNumber only means something to the save that issued it.
             Scribe_Collections.Look(
                 ref shieldTypeOverrides,
                 "shieldTypeOverrides",
