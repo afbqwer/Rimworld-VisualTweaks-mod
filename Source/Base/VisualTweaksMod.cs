@@ -958,22 +958,26 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Counts and clears the per-object overrides. Kept next to the gizmo switch
+        /// Counts and clears the overrides, both layers. Kept next to the gizmo switch
         /// because both answer the same question: how much customisation is
         /// currently on screen.
         /// </summary>
         private static void DrawShieldOverrideManagement(Listing_Standard listing)
         {
             int count = ShieldOverrideGameComponent.CountActive();
+            int typeCount = ShieldOverrideGameComponent.CountActiveTypes();
             SettingsLayout.SubHeader(
                 listing,
                 "VisualTweaks_ShieldOverride_ManageGroup".Translate());
             SettingsLayout.Note(
                 listing,
                 "VisualTweaks_ShieldOverride_Count".Translate(count));
+            SettingsLayout.Note(
+                listing,
+                "VisualTweaks_ShieldOverride_TypeCount".Translate(typeCount));
 
             bool previous = GUI.enabled;
-            GUI.enabled = previous && count > 0;
+            GUI.enabled = previous && (count > 0 || typeCount > 0);
             Rect button = listing.GetRect(SettingsLayout.ButtonRowHeight);
             if (Widgets.ButtonText(
                     button,

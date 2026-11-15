@@ -13,6 +13,10 @@ namespace VisualTweaks
     /// from the settings while the impact and break choices resolved theirs from
     /// yet another helper, so the three could disagree about which surface was on
     /// screen.
+    ///
+    /// Three layers feed it, highest priority first: the object's own record, its
+    /// shield type's record, and the global settings. Each field resolves on its own,
+    /// so a type-wide color and a per-pawn surface compose instead of cancelling.
     /// </summary>
     internal readonly struct ShieldStyle
     {
@@ -88,19 +92,40 @@ namespace VisualTweaks
 
         /// <summary>The global choices, with the family surface as the entry point.</summary>
         internal static ShieldStyle Global(ShieldHexTarget target) =>
-            Build(target, null);
+            Build(target, default);
 
         /// <summary>
-        /// The choices that apply to one shield. <paramref name="host"/> is the pawn
-        /// for personal shields and the building for projector domes, so an override
-        /// set through the gizmo follows the object that owns the shield rather than
-        /// the comp or apparel that happens to draw it.
+        /// The choices that apply to one shield, resolving the two override layers in
+        /// order: the record for this object, then the record for this shield's type,
+        /// then the global settings. <paramref name="host"/> is the pawn for personal
+        /// shields and the building for projector domes, so an override set through
+        /// the gizmo follows the object that owns the shield rather than the comp or
+        /// apparel that happens to draw it.
+        ///
+        /// <paramref name="source"/> is the def that owns the shield being drawn, which
+        /// every caller can name for free from the comp it is about to draw. That keeps
+        /// the type lookup to a field read instead of walking comps and apparel every
+        /// frame, and it makes the answer exact when one host carries two shields of
+        /// the same family -- the drawn comp says which one this is.
         /// </summary>
-        internal static ShieldStyle For(ShieldHexTarget target, Thing? host)
+        internal static ShieldStyle For(
+            ShieldHexTarget target,
+            Thing? host,
+            Def source)
         {
             try
             {
-                return Build(target, ShieldOverrideGameComponent.Get(host));
+                ShieldStyleOverride? local = ShieldOverrideGameComponent.Get(host);
+
+                // Nothing below runs until a type record exists: no type overrides means
+                // the whole type layer is a single count check.
+                ShieldTypeStyleOverride? typed = null;
+                if (ShieldOverrideGameComponent.HasTypeOverrides)
+                {
+                    typed = ShieldOverrideGameComponent.GetType(target, source.defName);
+                }
+
+                return Build(target, new ShieldStyleLayers(local, typed));
             }
             catch (System.Exception ex)
             {
@@ -110,19 +135,30 @@ namespace VisualTweaks
                     "[Visual Tweaks] Per-shield style resolution failed; using"
                         + " the global style: " + ex,
                     typeof(ShieldStyle).GetHashCode());
-                return Build(target, null);
+                return Build(target, default);
             }
         }
 
+        /// <summary>
+        /// The style a pair of records resolves to, without asking the game for them.
+        /// The editor uses this to show what a type record actually produces, and to
+        /// show an object record on top of the type layer its shield really has.
+        /// </summary>
+        internal static ShieldStyle ForLayers(
+            ShieldHexTarget target,
+            ShieldStyleFields? local,
+            ShieldStyleFields? typed) =>
+            Build(target, new ShieldStyleLayers(local, typed));
+
         private static ShieldStyle Build(
             ShieldHexTarget target,
-            ShieldStyleOverride? selection)
+            in ShieldStyleLayers layers)
         {
             ShieldDomeStyle globalSurface =
                 VisualTweaksSettings.ShieldDomeStyleFor(target);
 
-            ShieldDomeStyle surface = selection != null && selection.OverrideSurface
-                ? selection.Surface
+            ShieldDomeStyle surface = layers.OverrideSurface
+                ? layers.Surface
                 : globalSurface;
             if (!IsKnownSurface(surface))
             {
@@ -141,42 +177,40 @@ namespace VisualTweaks
             ShieldImpactStyle impact = target == ShieldHexTarget.Personal
                 ? ShieldImpactStyle.Flare
                 : ResolveImpact(
-                    selection != null && selection.OverrideImpact
-                        ? selection.Impact
-                        : (ShieldImpactStyle?)null,
+                    layers.OverrideImpact
+                        ? (ShieldImpactStyle?)layers.Impact
+                        : null,
                     surface);
 
             ShieldBreakStyle breakStyle = ResolveBreak(
-                selection != null && selection.OverrideBreak
-                    ? selection.Break
-                    : (ShieldBreakStyle?)null,
+                layers.OverrideBreak
+                    ? (ShieldBreakStyle?)layers.Break
+                    : null,
                 target,
                 surface);
 
             ShieldRestoreStyle restore = ResolveRestore(
-                selection != null && selection.OverrideRestore
-                    ? selection.Restore
-                    : (ShieldRestoreStyle?)null,
+                layers.OverrideRestore
+                    ? (ShieldRestoreStyle?)layers.Restore
+                    : null,
                 target);
 
             ShieldVanishStyle vanish = ResolveVanish(
-                selection != null && selection.OverrideVanish
-                    ? selection.Vanish
-                    : (ShieldVanishStyle?)null,
+                layers.OverrideVanish
+                    ? (ShieldVanishStyle?)layers.Vanish
+                    : null,
                 target);
 
             PersonalShieldHitStyle personalHit = ResolvePersonalHit(
-                selection != null && selection.OverridePersonalHit
-                    ? selection.PersonalHit
-                    : (PersonalShieldHitStyle?)null);
+                layers.OverridePersonalHit
+                    ? (PersonalShieldHitStyle?)layers.PersonalHit
+                    : null);
 
-            Color? tint = selection != null && selection.OverrideColor
-                ? selection.ShieldColor
+            Color? tint = layers.OverrideColor
+                ? layers.ShieldColor
                 : (Color?)null;
 
-            float opacityMultiplier = selection != null
-                ? selection.OpacityMultiplier
-                : 1f;
+            float opacityMultiplier = layers.OpacityMultiplier;
             if (float.IsNaN(opacityMultiplier))
             {
                 opacityMultiplier = 1f;
@@ -187,11 +221,11 @@ namespace VisualTweaks
                 VisualTweaksSettings.MinShieldOpacityMultiplier,
                 VisualTweaksSettings.MaxShieldOpacityMultiplier);
 
-            bool lineFollows = selection != null && selection.OverrideHexLineColor
-                ? selection.HexLineFollowsShield
+            bool lineFollows = layers.OverrideHexLineColor
+                ? layers.HexLineFollowsShield
                 : VisualTweaksSettings.hexLineFollowsShieldColor;
-            bool facesFollow = selection != null && selection.OverrideHexFaceColor
-                ? selection.HexFacesFollowShield
+            bool facesFollow = layers.OverrideHexFaceColor
+                ? layers.HexFacesFollowShield
                 : VisualTweaksSettings.hexImpactFacesFollowShieldColor;
 
             return new ShieldStyle(
@@ -423,5 +457,152 @@ namespace VisualTweaks
 
             return PersonalShieldHitStyle.Jitter;
         }
+    }
+
+    /// <summary>
+    /// The two override records that apply to one shield, highest priority first:
+    /// the object's own record and its type's record. Absent layers are null, and a
+    /// field unset in both falls through to the global settings.
+    ///
+    /// Resolution is per field, not per record: a type record that only sets the
+    /// color still tints every shield of that type even though individual pawns may
+    /// override their surface. That is what makes the layers composable -- adding a
+    /// per-pawn override cannot silently drop the type's color.
+    ///
+    /// A struct over two references so the whole resolution allocates nothing; this
+    /// runs once per shield per frame.
+    /// </summary>
+    internal readonly struct ShieldStyleLayers
+    {
+        private readonly ShieldStyleFields? primary;
+        private readonly ShieldStyleFields? secondary;
+
+        internal ShieldStyleLayers(
+            ShieldStyleFields? primary,
+            ShieldStyleFields? secondary)
+        {
+            this.primary = primary;
+            this.secondary = secondary;
+        }
+
+        internal bool OverrideSurface =>
+            (primary != null && primary.OverrideSurface)
+            || (secondary != null && secondary.OverrideSurface);
+
+        internal ShieldDomeStyle Surface =>
+            primary != null && primary.OverrideSurface
+                ? primary.Surface
+                : secondary != null && secondary.OverrideSurface
+                    ? secondary.Surface
+                    : ShieldDomeStyle.Vanilla;
+
+        internal bool OverrideImpact =>
+            (primary != null && primary.OverrideImpact)
+            || (secondary != null && secondary.OverrideImpact);
+
+        internal ShieldImpactStyle Impact =>
+            primary != null && primary.OverrideImpact
+                ? primary.Impact
+                : secondary != null && secondary.OverrideImpact
+                    ? secondary.Impact
+                    : ShieldImpactStyle.Flare;
+
+        internal bool OverrideBreak =>
+            (primary != null && primary.OverrideBreak)
+            || (secondary != null && secondary.OverrideBreak);
+
+        internal ShieldBreakStyle Break =>
+            primary != null && primary.OverrideBreak
+                ? primary.Break
+                : secondary != null && secondary.OverrideBreak
+                    ? secondary.Break
+                    : ShieldBreakStyle.Dissolve;
+
+        internal bool OverrideRestore =>
+            (primary != null && primary.OverrideRestore)
+            || (secondary != null && secondary.OverrideRestore);
+
+        internal ShieldRestoreStyle Restore =>
+            primary != null && primary.OverrideRestore
+                ? primary.Restore
+                : secondary != null && secondary.OverrideRestore
+                    ? secondary.Restore
+                    : ShieldRestoreStyle.Grow;
+
+        internal bool OverrideVanish =>
+            (primary != null && primary.OverrideVanish)
+            || (secondary != null && secondary.OverrideVanish);
+
+        internal ShieldVanishStyle Vanish =>
+            primary != null && primary.OverrideVanish
+                ? primary.Vanish
+                : secondary != null && secondary.OverrideVanish
+                    ? secondary.Vanish
+                    : ShieldVanishStyle.Fade;
+
+        internal bool OverridePersonalHit =>
+            (primary != null && primary.OverridePersonalHit)
+            || (secondary != null && secondary.OverridePersonalHit);
+
+        internal PersonalShieldHitStyle PersonalHit =>
+            primary != null && primary.OverridePersonalHit
+                ? primary.PersonalHit
+                : secondary != null && secondary.OverridePersonalHit
+                    ? secondary.PersonalHit
+                    : PersonalShieldHitStyle.Jitter;
+
+        internal bool OverrideColor =>
+            (primary != null && primary.OverrideColor)
+            || (secondary != null && secondary.OverrideColor);
+
+        internal Color ShieldColor =>
+            primary != null && primary.OverrideColor
+                ? primary.ShieldColor
+                : secondary != null && secondary.OverrideColor
+                    ? secondary.ShieldColor
+                    : Color.white;
+
+        /// <summary>
+        /// A multiplier of exactly 1 counts as "not set" rather than as a value, so a
+        /// type-wide multiplier still applies to a pawn whose own record never touched
+        /// the slider. A real multiplier on the object wins outright instead of
+        /// multiplying with the type's: stacking them would turn two mild choices into
+        /// an almost invisible shield.
+        /// </summary>
+        internal float OpacityMultiplier
+        {
+            get
+            {
+                if (primary != null
+                    && Mathf.Abs(primary.OpacityMultiplier - 1f) > 0.0001f)
+                {
+                    return primary.OpacityMultiplier;
+                }
+
+                return secondary != null ? secondary.OpacityMultiplier : 1f;
+            }
+        }
+
+        internal bool OverrideHexLineColor =>
+            (primary != null && primary.OverrideHexLineColor)
+            || (secondary != null && secondary.OverrideHexLineColor);
+
+        internal bool HexLineFollowsShield =>
+            primary != null && primary.OverrideHexLineColor
+                ? primary.HexLineFollowsShield
+                : secondary != null && secondary.OverrideHexLineColor
+                    ? secondary.HexLineFollowsShield
+                    : true;
+
+        internal bool OverrideHexFaceColor =>
+            (primary != null && primary.OverrideHexFaceColor)
+            || (secondary != null && secondary.OverrideHexFaceColor);
+
+        internal bool HexFacesFollowShield =>
+            primary != null && primary.OverrideHexFaceColor
+                ? primary.HexFacesFollowShield
+                : secondary != null && secondary.OverrideHexFaceColor
+                    ? secondary.HexFacesFollowShield
+                    : true;
     }
 }

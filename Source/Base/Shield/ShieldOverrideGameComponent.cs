@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Verse;
@@ -5,27 +6,19 @@ using Verse;
 namespace VisualTweaks
 {
     /// <summary>
-    /// A per-shield appearance choice, set from the gizmo on the pawn or building
-    /// that owns the shield. Every field is optional: an unset field follows the
-    /// global setting, so turning a global style knob still moves every shield that
-    /// was never explicitly overridden.
+    /// One layer of the shield style stack: the fields a single record can override.
     ///
-    /// Stored by <see cref="Thing.thingIDNumber"/> rather than by comp reference so
-    /// it survives a save/load. For a personal shield the number belongs to the
-    /// pawn, which deliberately covers every belt, bubble and hediff shield worn by
-    /// that pawn with one entry.
+    /// Two kinds of record exist and both are this shape, because the style window
+    /// draws the same rows for both and <see cref="ShieldStyle"/> resolves a field
+    /// the same way whoever set it: a per-object record (a pawn or a building) and
+    /// a per-type record (every shield drawn by one def).
+    ///
+    /// Every field is optional. An unset field falls through to the layer below --
+    /// object to type, type to the global settings -- so moving a global knob still
+    /// moves every shield nobody explicitly overrode.
     /// </summary>
-    internal sealed class ShieldStyleOverride : IExposable
+    internal abstract class ShieldStyleFields : IExposable
     {
-        public int ThingId;
-
-        /// <summary>
-        /// The family this record was opened for. Only used to choose which baked
-        /// lattice to prepare at load; the actual style resolution follows the
-        /// drawing family.
-        /// </summary>
-        public ShieldHexTarget Target = ShieldHexTarget.Large;
-
         public bool OverrideSurface;
         public ShieldDomeStyle Surface = ShieldDomeStyle.Vanilla;
 
@@ -49,8 +42,8 @@ namespace VisualTweaks
 
         /// <summary>
         /// Multiplier on the family's resolved opacity. 1 means no override.
-        /// Unlike a replacement value this keeps the global opacity setting
-        /// meaningful: moving that slider still moves this shield.
+        /// Unlike a replacement value this keeps the lower layer meaningful:
+        /// moving that slider still moves this shield.
         /// </summary>
         public float OpacityMultiplier = 1f;
 
@@ -72,13 +65,8 @@ namespace VisualTweaks
             && !OverrideHexFaceColor
             && Mathf.Abs(OpacityMultiplier - 1f) <= 0.0001f;
 
-        public void ExposeData()
+        public virtual void ExposeData()
         {
-            Scribe_Values.Look(ref ThingId, "thingId", 0);
-            Scribe_Values.Look(
-                ref Target,
-                "target",
-                ShieldHexTarget.Large);
             Scribe_Values.Look(ref OverrideSurface, "overrideSurface", false);
             Scribe_Values.Look(ref Surface, "surface", ShieldDomeStyle.Vanilla);
             Scribe_Values.Look(ref OverrideImpact, "overrideImpact", false);
@@ -148,9 +136,70 @@ namespace VisualTweaks
     }
 
     /// <summary>
-    /// Owns every per-shield style override in one save. A GameComponent is the
-    /// smallest vanilla container that is created automatically, survives a save,
-    /// and needs no def surgery on the shield comps themselves.
+    /// A per-shield appearance choice, set from the gizmo on the pawn or building
+    /// that owns the shield. This is the highest layer: it wins over the shield's
+    /// type record, which in turn wins over the global settings.
+    ///
+    /// Stored by <see cref="Thing.thingIDNumber"/> rather than by comp reference so
+    /// it survives a save/load. For a personal shield the number belongs to the
+    /// pawn, which deliberately covers every belt, bubble and hediff shield worn by
+    /// that pawn with one entry.
+    /// </summary>
+    internal sealed class ShieldStyleOverride : ShieldStyleFields
+    {
+        public int ThingId;
+
+        /// <summary>
+        /// The family this record was opened for. Only used to choose which baked
+        /// lattice to prepare at load; the actual style resolution follows the
+        /// drawing family.
+        /// </summary>
+        public ShieldHexTarget Target = ShieldHexTarget.Large;
+
+        public override void ExposeData()
+        {
+            base.ExposeData();
+            Scribe_Values.Look(ref ThingId, "thingId", 0);
+            Scribe_Values.Look(
+                ref Target,
+                "target",
+                ShieldHexTarget.Large);
+        }
+    }
+
+    /// <summary>
+    /// A per-type appearance choice: every shield drawn by one def shares it.
+    ///
+    /// The key is the def that owns the shield, not the thing wearing it: a shield
+    /// belt is <c>Apparel_ShieldBelt</c> whichever colonist wears it, a mech's built
+    /// in shield is the mech's race def, and a projector dome is the building def.
+    /// That is what the player means by "this kind of shield", and it keeps one
+    /// record useful across a whole colony instead of one per pawn.
+    ///
+    /// The family is part of the key, so the same def appearing in both stacks cannot
+    /// make two records collide.
+    /// </summary>
+    internal sealed class ShieldTypeStyleOverride : ShieldStyleFields
+    {
+        public string DefName = string.Empty;
+
+        public ShieldHexTarget Target = ShieldHexTarget.Large;
+
+        public override void ExposeData()
+        {
+            base.ExposeData();
+            Scribe_Values.Look(ref DefName, "defName", string.Empty);
+            Scribe_Values.Look(
+                ref Target,
+                "target",
+                ShieldHexTarget.Large);
+        }
+    }
+
+    /// <summary>
+    /// Owns every per-shield and per-type style override in one save. A GameComponent
+    /// is the smallest vanilla container that is created automatically, survives a
+    /// save, and needs no def surgery on the shield comps themselves.
     ///
     /// Threading contract: every reader is a main-thread draw callback
     /// (Thing.PostDraw, MapComponentDraw or the style window) and every writer is
@@ -163,6 +212,37 @@ namespace VisualTweaks
         private List<ShieldStyleOverride> entries = new List<ShieldStyleOverride>();
         private readonly Dictionary<int, ShieldStyleOverride> lookup =
             new Dictionary<int, ShieldStyleOverride>();
+
+        // Keyed by the family plus the owning def. A value-type key so the per-draw
+        // lookup allocates nothing, and includes the family so one def appearing in
+        // both stacks cannot make two records overwrite each other.
+        private List<ShieldTypeStyleOverride> typeEntries =
+            new List<ShieldTypeStyleOverride>();
+        private readonly Dictionary<TypeKey, ShieldTypeStyleOverride> typeLookup =
+            new Dictionary<TypeKey, ShieldTypeStyleOverride>();
+
+        private readonly struct TypeKey : IEquatable<TypeKey>
+        {
+            private readonly ShieldHexTarget target;
+            private readonly string defName;
+
+            internal TypeKey(ShieldHexTarget target, string defName)
+            {
+                this.target = target;
+                this.defName = defName;
+            }
+
+            public bool Equals(TypeKey other) =>
+                target == other.target
+                && string.Equals(defName, other.defName, StringComparison.Ordinal);
+
+            public override bool Equals(object? obj) =>
+                obj is TypeKey other && Equals(other);
+
+            public override int GetHashCode() =>
+                ((int)target * 397)
+                ^ (defName == null ? 0 : StringComparer.Ordinal.GetHashCode(defName));
+        }
 
         // GameComponent subclasses are instantiated reflectively by Verse.Game with
         // the Game as the single constructor argument.
@@ -208,6 +288,35 @@ namespace VisualTweaks
             return entry != null && !entry.IsEmpty ? entry : null;
         }
 
+        /// <summary>
+        /// True when at least one type record exists. The shield draw code asks this
+        /// before it resolves which def owns the shield, because that resolution is a
+        /// comp and apparel walk the vast majority of saves never need to pay for.
+        /// </summary>
+        internal static bool HasTypeOverrides
+        {
+            get
+            {
+                ShieldOverrideGameComponent? component = GetCurrent();
+                return component != null && component.typeLookup.Count > 0;
+            }
+        }
+
+        internal static ShieldTypeStyleOverride? GetType(
+            ShieldHexTarget target,
+            string? defName)
+        {
+            if (defName.NullOrEmpty())
+            {
+                return null;
+            }
+
+            ShieldOverrideGameComponent? component = GetCurrent();
+            ShieldTypeStyleOverride? entry = component?.FindType(
+                new TypeKey(target, defName!));
+            return entry != null && !entry.IsEmpty ? entry : null;
+        }
+
         internal static ShieldStyleOverride GetOrCreate(
             Thing thing,
             ShieldHexTarget target)
@@ -236,6 +345,31 @@ namespace VisualTweaks
             };
         }
 
+        internal static ShieldTypeStyleOverride GetOrCreateType(
+            ShieldHexTarget target,
+            string defName)
+        {
+            ShieldOverrideGameComponent? component = GetCurrent();
+            if (component != null)
+            {
+                return component.CreateType(target, defName);
+            }
+
+            if (Current.Game != null)
+            {
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Per-shield override component is missing;"
+                        + " style changes will not be saved.",
+                    typeof(ShieldOverrideGameComponent).GetHashCode() ^ 0x7A);
+            }
+
+            return new ShieldTypeStyleOverride
+            {
+                DefName = defName,
+                Target = target,
+            };
+        }
+
         internal static void Remove(Thing? thing)
         {
             if (thing == null || thing.thingIDNumber == 0)
@@ -244,6 +378,53 @@ namespace VisualTweaks
             }
 
             GetCurrent()?.Remove(thing.thingIDNumber);
+        }
+
+        /// <summary>
+        /// Drops this object's record if nothing is set in it. Opening the style window
+        /// creates a record per host, and a record the player closed without touching
+        /// is pure save bloat (it is already ignored by <see cref="Get"/>).
+        /// </summary>
+        internal static void Prune(Thing? thing)
+        {
+            if (thing == null || thing.thingIDNumber == 0)
+            {
+                return;
+            }
+
+            ShieldOverrideGameComponent? component = GetCurrent();
+            ShieldStyleOverride? entry = component?.Find(thing.thingIDNumber);
+            if (entry == null || !entry.IsEmpty)
+            {
+                return;
+            }
+
+            component!.lookup.Remove(thing.thingIDNumber);
+            component.entries?.Remove(entry);
+        }
+
+        /// <summary>
+        /// Drops a type record that ended up with nothing set. The editor creates one
+        /// as soon as the type scope is opened, and a record the player cleared again
+        /// would otherwise be saved and keep the per-draw def lookup switched on.
+        /// </summary>
+        internal static void PruneType(ShieldHexTarget target, string? defName)
+        {
+            if (defName.NullOrEmpty())
+            {
+                return;
+            }
+
+            ShieldOverrideGameComponent? component = GetCurrent();
+            TypeKey key = new TypeKey(target, defName!);
+            ShieldTypeStyleOverride? entry = component?.FindType(key);
+            if (entry == null || !entry.IsEmpty)
+            {
+                return;
+            }
+
+            component!.typeLookup.Remove(key);
+            component.typeEntries?.Remove(entry);
         }
 
         /// <summary>
@@ -271,7 +452,34 @@ namespace VisualTweaks
             return count;
         }
 
-        /// <summary>Drops every per-object override, including empty records.</summary>
+        /// <summary>
+        /// Number of shield types with at least one active override. Empty records
+        /// made by merely opening the type scope are not counted.
+        /// </summary>
+        internal static int CountActiveTypes()
+        {
+            ShieldOverrideGameComponent? component = GetCurrent();
+            if (component?.typeEntries == null)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            for (int i = 0; i < component.typeEntries.Count; i++)
+            {
+                ShieldTypeStyleOverride? entry = component.typeEntries[i];
+                if (entry != null && !entry.IsEmpty)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Drops every override at both layers, including empty records.
+        /// </summary>
         internal static void ClearAll()
         {
             ShieldOverrideGameComponent? component = GetCurrent();
@@ -282,6 +490,8 @@ namespace VisualTweaks
 
             component.entries?.Clear();
             component.lookup.Clear();
+            component.typeEntries?.Clear();
+            component.typeLookup.Clear();
         }
 
         /// <summary>
@@ -299,7 +509,12 @@ namespace VisualTweaks
         {
             base.ExposeData();
             Scribe_Collections.Look(ref entries, "shieldStyleOverrides", LookMode.Deep);
+            Scribe_Collections.Look(
+                ref typeEntries,
+                "shieldTypeStyleOverrides",
+                LookMode.Deep);
             RebuildLookup();
+            RebuildTypeLookup();
         }
 
         private ShieldStyleOverride? Find(int thingId)
@@ -349,6 +564,48 @@ namespace VisualTweaks
             return entry;
         }
 
+        private ShieldTypeStyleOverride? FindType(TypeKey key)
+        {
+            if (typeLookup.Count == 0)
+            {
+                if (typeEntries != null && typeEntries.Count > 0)
+                {
+                    RebuildTypeLookup();
+                }
+
+                if (typeLookup.Count == 0)
+                {
+                    return null;
+                }
+            }
+
+            return typeLookup.TryGetValue(key, out ShieldTypeStyleOverride? entry)
+                ? entry
+                : null;
+        }
+
+        private ShieldTypeStyleOverride CreateType(
+            ShieldHexTarget target,
+            string defName)
+        {
+            TypeKey key = new TypeKey(target, defName);
+            ShieldTypeStyleOverride? existing = FindType(key);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            typeEntries ??= new List<ShieldTypeStyleOverride>();
+            ShieldTypeStyleOverride entry = new ShieldTypeStyleOverride
+            {
+                DefName = defName,
+                Target = target,
+            };
+            typeEntries.Add(entry);
+            typeLookup[key] = entry;
+            return entry;
+        }
+
         private void Remove(int thingId)
         {
             if (lookup.Count == 0)
@@ -380,42 +637,48 @@ namespace VisualTweaks
             }
         }
 
+        private void RebuildTypeLookup()
+        {
+            typeLookup.Clear();
+            typeEntries ??= new List<ShieldTypeStyleOverride>();
+            for (int i = typeEntries.Count - 1; i >= 0; i--)
+            {
+                ShieldTypeStyleOverride? entry = typeEntries[i];
+                if (entry == null || entry.DefName.NullOrEmpty())
+                {
+                    typeEntries.RemoveAt(i);
+                    continue;
+                }
+
+                typeLookup[new TypeKey(entry.Target, entry.DefName)] = entry;
+            }
+        }
+
         private void EnsureOverrideLattices()
         {
             bool large = false;
             bool personal = false;
-            if (entries == null)
+            if (entries != null)
             {
-                return;
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    ShieldStyleOverride? entry = entries[i];
+                    if (entry != null)
+                    {
+                        NeedsLattice(entry, entry.Target, ref large, ref personal);
+                    }
+                }
             }
 
-            for (int i = 0; i < entries.Count; i++)
+            if (typeEntries != null)
             {
-                ShieldStyleOverride? entry = entries[i];
-                if (entry == null)
+                for (int i = 0; i < typeEntries.Count; i++)
                 {
-                    continue;
-                }
-
-                if (entry.OverrideSurface
-                    && (entry.Surface == ShieldDomeStyle.Hex
-                        || entry.Surface == ShieldDomeStyle.HexBubble))
-                {
-                    if (entry.Target == ShieldHexTarget.Personal)
+                    ShieldTypeStyleOverride? entry = typeEntries[i];
+                    if (entry != null)
                     {
-                        personal = true;
+                        NeedsLattice(entry, entry.Target, ref large, ref personal);
                     }
-                    else
-                    {
-                        large = true;
-                    }
-                }
-
-                if (entry.Target == ShieldHexTarget.Personal
-                    && entry.OverridePersonalHit
-                    && entry.PersonalHit == PersonalShieldHitStyle.HexWave)
-                {
-                    personal = true;
                 }
             }
 
@@ -427,6 +690,39 @@ namespace VisualTweaks
             if (personal)
             {
                 ShieldHexMap.EnsureBaked(ShieldHexTarget.Personal);
+            }
+        }
+
+        private static void NeedsLattice(
+            ShieldStyleFields? entry,
+            ShieldHexTarget target,
+            ref bool large,
+            ref bool personal)
+        {
+            if (entry == null)
+            {
+                return;
+            }
+
+            if (entry.OverrideSurface
+                && (entry.Surface == ShieldDomeStyle.Hex
+                    || entry.Surface == ShieldDomeStyle.HexBubble))
+            {
+                if (target == ShieldHexTarget.Personal)
+                {
+                    personal = true;
+                }
+                else
+                {
+                    large = true;
+                }
+            }
+
+            if (target == ShieldHexTarget.Personal
+                && entry.OverridePersonalHit
+                && entry.PersonalHit == PersonalShieldHitStyle.HexWave)
+            {
+                personal = true;
             }
         }
     }

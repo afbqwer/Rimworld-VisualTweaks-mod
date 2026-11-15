@@ -160,7 +160,7 @@ namespace VisualTweaks
                 alpha,
                 comp.Active,
                 Find.Selector.IsSelected(parent),
-                ShieldStyle.For(ShieldHexTarget.Large, parent));
+                ShieldStyle.For(ShieldHexTarget.Large, parent, comp.parent.def));
         }
 
         /// <summary>
@@ -186,7 +186,7 @@ namespace VisualTweaks
                 alpha,
                 present,
                 selected: false,
-                ShieldStyle.For(ShieldHexTarget.Large, host));
+                ShieldStyle.For(ShieldHexTarget.Large, host, comp.parent.def));
         }
 
         private static bool DrawCore(

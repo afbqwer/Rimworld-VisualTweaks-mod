@@ -23,11 +23,18 @@ namespace VisualTweaks
     /// <summary>
     /// Shield style editor, opened from the gizmo on a pawn or building.
     ///
-    /// A multi-selection is edited as one set: each row writes its choice to every
-    /// selected shield, so picking a style does not have to be repeated per object.
-    /// Rows only become an override when the player touches them; when the
-    /// selection disagrees a row is drawn with nothing selected, and picking a
-    /// value makes it uniform again.
+    /// Two scopes share one set of rows. <see cref="EditScope.Object"/> edits the
+    /// record of the selected shields themselves; <see cref="EditScope.Type"/> edits
+    /// the record of the def that draws them, which every shield of that kind picks
+    /// up. The object record wins over the type record, which wins over the global
+    /// settings, so a player can restyle a whole shield type and still special-case
+    /// one pawn.
+    ///
+    /// Inside a scope a multi-selection is edited as one set: each row writes its
+    /// choice to every record in the scope, so picking a style does not have to be
+    /// repeated per object. Rows only become an override when the player touches
+    /// them; when the selection disagrees a row is drawn with nothing selected, and
+    /// picking a value makes it uniform again.
     ///
     /// The impact animation is the one exception: personal and large shields use
     /// different enums, so each family present gets its own impact row (the label
@@ -43,6 +50,12 @@ namespace VisualTweaks
         /// </summary>
         private const float InitialSingleHeight = 820f;
         private const float InitialBothFamiliesHeight = 1000f;
+
+        private enum EditScope
+        {
+            Object,
+            Type,
+        }
 
         // Every option either surface family can draw. Only used when the
         // selection holds both hex and non-hex shields, so a value is never
@@ -65,8 +78,8 @@ namespace VisualTweaks
         {
             internal readonly ShieldHexTarget Target;
             internal readonly List<ThingWithComps> Hosts = new List<ThingWithComps>();
-            internal readonly List<ShieldStyleOverride> Entries =
-                new List<ShieldStyleOverride>();
+            internal readonly List<ShieldStyleFields> Entries =
+                new List<ShieldStyleFields>();
 
             internal bool AnyHex;
             internal bool AllHex;
@@ -78,17 +91,45 @@ namespace VisualTweaks
         }
 
         private readonly int hostCount;
+        private readonly List<ShieldHost> hosts = new List<ShieldHost>();
         private readonly List<FamilyGroup> groups = new List<FamilyGroup>();
-        private readonly List<ShieldStyleOverride> allEntries =
-            new List<ShieldStyleOverride>();
+        private readonly List<ShieldStyleFields> allEntries =
+            new List<ShieldStyleFields>();
         private readonly Listing_Standard listing = new Listing_Standard();
         private float contentHeight;
         private Vector2 scroll;
 
+        private EditScope scope = EditScope.Object;
+
+        // Every shield the selected hosts actually carry, deduplicated by family and
+        // def. A pawn wearing a belt and a psycast shield has two; nothing on a pawn
+        // can be selected on its own, so the type scope offers these as a choice.
+        private readonly List<ShieldSource> typeSources = new List<ShieldSource>();
+        private int typeSourceIndex;
+
+        /// <summary>
+        /// The type record of <see cref="typeSourceIndex"/>, created the first time the
+        /// type scope is opened. Null until then, so a player who only edits objects
+        /// never leaves one behind.
+        /// </summary>
+        private ShieldTypeStyleOverride? typeEntry;
+
         internal Window_ShieldStyleOverride(IReadOnlyList<ShieldHost> hosts)
         {
-            hostCount = hosts.Count;
-            BuildGroups(hosts);
+            for (int i = 0; i < hosts.Count; i++)
+            {
+                ShieldHost host = hosts[i];
+                if (host.Thing == null || ContainsHost(host.Thing))
+                {
+                    continue;
+                }
+
+                this.hosts.Add(host);
+            }
+
+            hostCount = this.hosts.Count;
+            ResolveTypeSources();
+            BuildGroups();
 
             doCloseX = true;
             closeOnCancel = true;
@@ -103,25 +144,136 @@ namespace VisualTweaks
 
         public override Vector2 InitialSize => new Vector2(620f, 660f);
 
-        private void BuildGroups(IReadOnlyList<ShieldHost> hosts)
+        /// <summary>
+        /// A type record is created the moment the type scope is opened. If the player
+        /// ends up clearing it again, drop it: an empty record would be written to the
+        /// save and would keep the per-draw def lookup switched on for nothing.
+        /// </summary>
+        public override void PostClose()
+        {
+            base.PostClose();
+            try
+            {
+                for (int i = 0; i < hosts.Count; i++)
+                {
+                    ShieldOverrideGameComponent.Prune(hosts[i].Thing);
+                }
+
+                PruneCurrentTypeEntry();
+            }
+            catch (Exception ex)
+            {
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Could not drop an unused shield type record: " + ex,
+                    typeof(Window_ShieldStyleOverride).GetHashCode() ^ 0x63);
+            }
+        }
+
+        private bool ContainsHost(ThingWithComps thing)
         {
             for (int i = 0; i < hosts.Count; i++)
             {
-                ShieldHost host = hosts[i];
-                if (host.Thing == null)
+                if (ReferenceEquals(hosts[i].Thing, thing))
                 {
-                    continue;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Collects the shields the hosts carry. Their records are only looked up, never
+        /// created: opening the window must not add a record the player never asked for.
+        /// </summary>
+        private void ResolveTypeSources()
+        {
+            typeSources.Clear();
+            typeSourceIndex = 0;
+            typeEntry = null;
+
+            for (int i = 0; i < hosts.Count; i++)
+            {
+                ShieldType.CollectSources(hosts[i].Thing, typeSources);
+            }
+
+            if (typeSources.Count > 0)
+            {
+                ShieldSource first = typeSources[0];
+                typeEntry = ShieldOverrideGameComponent.GetType(first.Target, first.DefName);
+            }
+        }
+
+        private ShieldSource CurrentSource => typeSources[typeSourceIndex];
+
+        /// <summary>
+        /// Switches which carried shield the type scope edits. The record of the type
+        /// just left is dropped if the player never set anything in it, so browsing the
+        /// list does not fill the save with empty records.
+        /// </summary>
+        private void SelectTypeSource(int index)
+        {
+            if (index < 0 || index >= typeSources.Count || index == typeSourceIndex)
+            {
+                return;
+            }
+
+            PruneCurrentTypeEntry();
+            typeSourceIndex = index;
+            ShieldSource source = CurrentSource;
+            typeEntry = ShieldOverrideGameComponent.GetType(source.Target, source.DefName);
+            BuildGroups();
+        }
+
+        private void PruneCurrentTypeEntry()
+        {
+            if (typeEntry == null || !typeEntry.IsEmpty)
+            {
+                return;
+            }
+
+            ShieldOverrideGameComponent.PruneType(
+                CurrentSource.Target,
+                CurrentSource.DefName);
+            typeEntry = null;
+        }
+
+        /// <summary>
+        /// Fills the active scope's groups. Called once at open and again whenever the
+        /// scope changes; the rows themselves read <see cref="allEntries"/>.
+        /// </summary>
+        private void BuildGroups()
+        {
+            groups.Clear();
+            allEntries.Clear();
+
+            if (scope == EditScope.Type && typeSources.Count > 0)
+            {
+                FamilyGroup group = new FamilyGroup(CurrentSource.Target);
+                for (int i = 0; i < hosts.Count; i++)
+                {
+                    group.Hosts.Add(hosts[i].Thing);
                 }
 
-                FamilyGroup group = GroupFor(host.Target);
-                if (group.Hosts.Contains(host.Thing))
+                group.Entries.Add(TypeEntry());
+                groups.Add(group);
+            }
+            else
+            {
+                scope = EditScope.Object;
+                for (int i = 0; i < hosts.Count; i++)
                 {
-                    continue;
-                }
+                    ShieldHost host = hosts[i];
+                    FamilyGroup group = GroupFor(host.Target);
+                    if (group.Hosts.Contains(host.Thing))
+                    {
+                        continue;
+                    }
 
-                group.Hosts.Add(host.Thing);
-                group.Entries.Add(
-                    ShieldOverrideGameComponent.GetOrCreate(host.Thing, host.Target));
+                    group.Hosts.Add(host.Thing);
+                    group.Entries.Add(
+                        ShieldOverrideGameComponent.GetOrCreate(host.Thing, host.Target));
+                }
             }
 
             // Personal first keeps the shared rows stable regardless of the order
@@ -130,6 +282,42 @@ namespace VisualTweaks
             {
                 allEntries.AddRange(groups[i].Entries);
             }
+        }
+
+        private ShieldTypeStyleOverride TypeEntry()
+        {
+            if (typeEntry == null)
+            {
+                ShieldSource source = CurrentSource;
+                typeEntry = ShieldOverrideGameComponent.GetOrCreateType(
+                    source.Target,
+                    source.DefName);
+            }
+
+            return typeEntry;
+        }
+
+        /// <summary>
+        /// The type layer an object record sits on, for previewing its rows. This asks
+        /// the component rather than the in-progress record, so the object scope shows
+        /// what the shield really draws with no matter which source the type scope was
+        /// last left on. Only a host with two shields of one family can make those
+        /// differ, and the first source is the one the player sees most.
+        /// </summary>
+        private ShieldStyleFields? TypeLayerOf(ShieldHexTarget target)
+        {
+            for (int i = 0; i < typeSources.Count; i++)
+            {
+                ShieldSource source = typeSources[i];
+                if (source.Target == target)
+                {
+                    return ShieldOverrideGameComponent.GetType(
+                        source.Target,
+                        source.DefName);
+                }
+            }
+
+            return null;
         }
 
         private FamilyGroup GroupFor(ShieldHexTarget target)
@@ -184,6 +372,9 @@ namespace VisualTweaks
                 listing.maxOneColumn = true;
                 listing.Begin(viewRect);
 
+                // The scope is chosen before the records are resolved: switching it
+                // rebuilds the groups, and every row below reads them in this pass.
+                DrawScopeRows(listing);
                 RefreshGroups();
                 bool anyHex = AnyHex();
                 bool allHex = AllHex();
@@ -245,19 +436,174 @@ namespace VisualTweaks
             }
         }
 
+        /// <summary>
+        /// Object or type, and -- when the host carries more than one shield -- which of
+        /// them the type scope edits. Both rows sit at the top because they decide what
+        /// every row below is reading, which is also why they are drawn before the
+        /// records are resolved.
+        /// </summary>
+        private void DrawScopeRows(Listing_Standard listing)
+        {
+            if (typeSources.Count == 0)
+            {
+                SettingsLayout.Note(
+                    listing,
+                    "VisualTweaks_ShieldOverride_TypeUnknown".Translate());
+                return;
+            }
+
+            string[] labels =
+            {
+                "VisualTweaks_ShieldOverride_ScopeObject".Translate(),
+                "VisualTweaks_ShieldOverride_ScopeType".Translate(CurrentSource.Label),
+            };
+            string[] tips =
+            {
+                "VisualTweaks_ShieldOverride_ScopeObjectTip".Translate(),
+                "VisualTweaks_ShieldOverride_ScopeTypeTip".Translate(),
+            };
+
+            listing.Label("VisualTweaks_ShieldOverride_Scope".Translate());
+            int picked = SettingsLayout.RadioRow(
+                listing,
+                labels,
+                scope == EditScope.Type ? 1 : 0,
+                tips);
+            SetScope(picked == 1 ? EditScope.Type : EditScope.Object);
+
+            if (scope != EditScope.Type || typeSources.Count < 2)
+            {
+                return;
+            }
+
+            // Two shields of one pawn cannot be selected separately -- the click always
+            // lands on the pawn -- so this is the only place the choice can be made.
+            string[] sourceLabels = new string[typeSources.Count];
+            for (int i = 0; i < typeSources.Count; i++)
+            {
+                sourceLabels[i] = SourceLabel(typeSources[i]);
+            }
+
+            listing.Label("VisualTweaks_ShieldOverride_TypePick".Translate());
+            int source = SettingsLayout.RadioRows(
+                listing,
+                sourceLabels,
+                typeSourceIndex,
+                null,
+                2);
+            SelectTypeSource(source);
+        }
+
+        /// <summary>
+        /// The type's label, with the family in front when the host carries both kinds,
+        /// because a belt and a dome can share a label.
+        /// </summary>
+        private string SourceLabel(ShieldSource source)
+        {
+            bool bothFamilies = false;
+            for (int i = 0; i < typeSources.Count; i++)
+            {
+                if (typeSources[i].IsPersonal != source.IsPersonal)
+                {
+                    bothFamilies = true;
+                    break;
+                }
+            }
+
+            if (!bothFamilies)
+            {
+                return source.Label;
+            }
+
+            string family = source.IsPersonal
+                ? "VisualTweaks_ShieldOverride_FamilyPersonal".Translate()
+                : "VisualTweaks_ShieldOverride_FamilyLarge".Translate();
+            return family + " · " + source.Label;
+        }
+
+        private void SetScope(EditScope next)
+        {
+            if (scope == next)
+            {
+                return;
+            }
+
+            scope = next;
+            BuildGroups();
+        }
+
+        /// <summary>
+        /// What the object's own record means, in the layered order. Saying "uses the
+        /// global style" while a type record is in force would be wrong, and the player
+        /// needs to know which scope to open to move a value.
+        ///
+        /// A host carrying two shields falls through to both their types, so the note
+        /// names every type the object's unset rows would follow.
+        /// </summary>
+        private string ObjectStateNote(ShieldStyleFields entry)
+        {
+            if (!entry.IsEmpty)
+            {
+                return "VisualTweaks_ShieldOverride_UsingLocal".Translate();
+            }
+
+            string labels = TypedLayerLabels();
+            if (!labels.NullOrEmpty())
+            {
+                return "VisualTweaks_ShieldOverride_UsingType".Translate(labels);
+            }
+
+            return "VisualTweaks_ShieldOverride_UsingGlobal".Translate();
+        }
+
+        /// <summary>
+        /// The labels of every carried shield whose type record is set, joined for a
+        /// note, or an empty string when the type layer contributes nothing.
+        /// </summary>
+        private string TypedLayerLabels()
+        {
+            string separator = "VisualTweaks_ShieldOverride_TypeJoin".Translate();
+            string labels = string.Empty;
+            for (int i = 0; i < typeSources.Count; i++)
+            {
+                ShieldSource source = typeSources[i];
+                ShieldTypeStyleOverride? record =
+                    ShieldOverrideGameComponent.GetType(source.Target, source.DefName);
+                if (record == null)
+                {
+                    continue;
+                }
+
+                if (labels.Length > 0)
+                {
+                    labels += separator;
+                }
+
+                labels += source.Label;
+            }
+
+            return labels;
+        }
+
         private void DrawHeader(
             Listing_Standard listing,
             bool anyHex,
             bool allHex)
         {
-            if (hostCount == 1 && allEntries.Count == 1)
+            if (scope == EditScope.Type)
             {
-                listing.Label(groups[0].Hosts[0].LabelShortCap);
+                ShieldSource source = CurrentSource;
+                listing.Label(source.Label);
                 SettingsLayout.Note(
                     listing,
-                    allEntries[0].IsEmpty
-                        ? "VisualTweaks_ShieldOverride_UsingGlobal".Translate()
-                        : "VisualTweaks_ShieldOverride_UsingLocal".Translate());
+                    "VisualTweaks_ShieldOverride_TypeNote".Translate(
+                        source.Label,
+                        source.DefName));
+            }
+            else if (hostCount == 1 && allEntries.Count == 1)
+            {
+                listing.Label(groups[0].Hosts[0].LabelShortCap);
+                SettingsLayout.Note(listing, ObjectStateNote(allEntries[0]));
             }
             else
             {
@@ -335,22 +681,32 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Resolves the effective style for every host. Stale impact/break
-        /// overrides are folded back to what each entry's own surface can draw,
-        /// and the hex flags tell the shared rows whether to appear.
+        /// Resolves the effective style for every record in the active scope. Stale
+        /// impact/break overrides are folded back to what each record's own surface
+        /// can draw, and the hex flags tell the shared rows whether to appear.
+        ///
+        /// The rows are resolved from the records, not by asking the game again: the
+        /// editor already holds them, and in the object scope each record is previewed
+        /// on top of the type layer it really draws on.
         /// </summary>
         private void RefreshGroups()
         {
             for (int g = 0; g < groups.Count; g++)
             {
                 FamilyGroup group = groups[g];
+                ShieldStyleFields? lower = scope == EditScope.Type
+                    ? null
+                    : TypeLayerOf(group.Target);
                 bool anyHex = false;
                 bool allHex = true;
 
-                for (int i = 0; i < group.Hosts.Count; i++)
+                for (int i = 0; i < group.Entries.Count; i++)
                 {
-                    ShieldStyle style = ShieldStyle.For(group.Target, group.Hosts[i]);
-                    NormalizeImpactAndBreak(group.Entries[i], style);
+                    ShieldStyleFields entry = group.Entries[i];
+                    ShieldStyle style = scope == EditScope.Type
+                        ? ShieldStyle.ForLayers(group.Target, null, entry)
+                        : ShieldStyle.ForLayers(group.Target, entry, lower);
+                    NormalizeImpactAndBreak(entry, style);
 
                     bool hex = ShieldStyle.IsHexSurface(style.Surface);
                     anyHex |= hex;
@@ -418,7 +774,7 @@ namespace VisualTweaks
 
             for (int i = 0; i < allEntries.Count; i++)
             {
-                ShieldStyleOverride entry = allEntries[i];
+                ShieldStyleFields entry = allEntries[i];
                 if (picked == 0)
                 {
                     entry.OverrideSurface = false;
@@ -452,7 +808,7 @@ namespace VisualTweaks
 
             for (int i = 0; i < allEntries.Count; i++)
             {
-                ShieldStyleOverride entry = allEntries[i];
+                ShieldStyleFields entry = allEntries[i];
                 if (!entry.OverrideColor)
                 {
                     allOverridden = false;
@@ -481,7 +837,7 @@ namespace VisualTweaks
                     Color start = anyOverridden ? shown : BaseColor();
                     for (int i = 0; i < allEntries.Count; i++)
                     {
-                        ShieldStyleOverride entry = allEntries[i];
+                        ShieldStyleFields entry = allEntries[i];
                         entry.OverrideColor = true;
                         entry.ShieldColor = start;
                     }
@@ -530,7 +886,7 @@ namespace VisualTweaks
                             Color rgb = new Color(picked.r, picked.g, picked.b, 1f);
                             for (int i = 0; i < allEntries.Count; i++)
                             {
-                                ShieldStyleOverride entry = allEntries[i];
+                                ShieldStyleFields entry = allEntries[i];
                                 entry.OverrideColor = true;
                                 entry.ShieldColor = rgb;
                             }
@@ -637,7 +993,7 @@ namespace VisualTweaks
             bool have = false;
             for (int i = 0; i < allEntries.Count; i++)
             {
-                ShieldStyleOverride entry = allEntries[i];
+                ShieldStyleFields entry = allEntries[i];
                 bool overridden = line
                     ? entry.OverrideHexLineColor
                     : entry.OverrideHexFaceColor;
@@ -667,7 +1023,7 @@ namespace VisualTweaks
 
             for (int i = 0; i < allEntries.Count; i++)
             {
-                ShieldStyleOverride entry = allEntries[i];
+                ShieldStyleFields entry = allEntries[i];
                 bool overridden = picked > 0;
                 bool value = picked == 1;
                 if (line)
@@ -737,7 +1093,7 @@ namespace VisualTweaks
 
             for (int i = 0; i < group.Entries.Count; i++)
             {
-                ShieldStyleOverride entry = group.Entries[i];
+                ShieldStyleFields entry = group.Entries[i];
                 if (picked == 0)
                 {
                     entry.OverrideImpact = false;
@@ -774,7 +1130,7 @@ namespace VisualTweaks
 
             for (int i = 0; i < group.Entries.Count; i++)
             {
-                ShieldStyleOverride entry = group.Entries[i];
+                ShieldStyleFields entry = group.Entries[i];
                 if (picked == 0)
                 {
                     entry.OverridePersonalHit = false;
@@ -837,7 +1193,7 @@ namespace VisualTweaks
 
             for (int i = 0; i < allEntries.Count; i++)
             {
-                ShieldStyleOverride entry = allEntries[i];
+                ShieldStyleFields entry = allEntries[i];
                 if (picked == 0)
                 {
                     entry.OverrideBreak = false;
@@ -871,7 +1227,7 @@ namespace VisualTweaks
 
             for (int i = 0; i < allEntries.Count; i++)
             {
-                ShieldStyleOverride entry = allEntries[i];
+                ShieldStyleFields entry = allEntries[i];
                 if (picked == 0)
                 {
                     entry.OverrideRestore = false;
@@ -905,7 +1261,7 @@ namespace VisualTweaks
 
             for (int i = 0; i < allEntries.Count; i++)
             {
-                ShieldStyleOverride entry = allEntries[i];
+                ShieldStyleFields entry = allEntries[i];
                 if (picked == 0)
                 {
                     entry.OverrideVanish = false;
@@ -923,9 +1279,16 @@ namespace VisualTweaks
             SettingsLayout.Header(
                 listing,
                 "VisualTweaks_ShieldOverride_GroupReset".Translate());
+
+            // The wording follows the scope: "clear and follow global" is wrong in the
+            // type scope, where clearing means the objects fall back to the type's
+            // other record and then to the global settings.
+            string reset = scope == EditScope.Type
+                ? "VisualTweaks_ShieldOverride_TypeReset".Translate()
+                : "VisualTweaks_ShieldOverride_ResetAll".Translate();
             int clicked = SettingsLayout.ButtonRow(
                 listing,
-                new string[] { "VisualTweaks_ShieldOverride_ResetAll".Translate() });
+                new string[] { reset });
             if (clicked != 0)
             {
                 return;
@@ -942,9 +1305,9 @@ namespace VisualTweaks
         /// disagree. RadioRows already renders -1 as "nothing selected".
         /// </summary>
         private static int CommonChoice<T>(
-            List<ShieldStyleOverride> entries,
-            Func<ShieldStyleOverride, bool> overridden,
-            Func<ShieldStyleOverride, T> value,
+            List<ShieldStyleFields> entries,
+            Func<ShieldStyleFields, bool> overridden,
+            Func<ShieldStyleFields, T> value,
             T[] order)
         {
             if (entries.Count == 0)
@@ -986,10 +1349,10 @@ namespace VisualTweaks
             // selection. Hex flags only matter, and are only shown, when at least
             // one selected shield actually draws the lattice.
             bool anyHex = AnyHex();
-            ShieldStyleOverride first = allEntries[0];
+            ShieldStyleFields first = allEntries[0];
             for (int i = 1; i < allEntries.Count; i++)
             {
-                ShieldStyleOverride entry = allEntries[i];
+                ShieldStyleFields entry = allEntries[i];
                 if (Differs(first.OverrideSurface, first.Surface, entry.OverrideSurface, entry.Surface)
                     || Differs(first.OverrideBreak, first.Break, entry.OverrideBreak, entry.Break)
                     || Differs(first.OverrideRestore, first.Restore, entry.OverrideRestore, entry.Restore)
@@ -1019,10 +1382,10 @@ namespace VisualTweaks
                     continue;
                 }
 
-                ShieldStyleOverride head = group.Entries[0];
+                ShieldStyleFields head = group.Entries[0];
                 for (int i = 1; i < group.Entries.Count; i++)
                 {
-                    ShieldStyleOverride entry = group.Entries[i];
+                    ShieldStyleFields entry = group.Entries[i];
                     bool differs = group.Target == ShieldHexTarget.Large
                         ? Differs(head.OverrideImpact, head.Impact, entry.OverrideImpact, entry.Impact)
                         : Differs(head.OverridePersonalHit, head.PersonalHit, entry.OverridePersonalHit, entry.PersonalHit);
@@ -1098,7 +1461,7 @@ namespace VisualTweaks
         /// of showing a row whose selected value is never used.
         /// </summary>
         private static void NormalizeImpactAndBreak(
-            ShieldStyleOverride entry,
+            ShieldStyleFields entry,
             in ShieldStyle effective)
         {
             if (entry.OverrideImpact && entry.Impact != effective.Impact)

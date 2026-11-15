@@ -434,7 +434,7 @@ namespace VisualTweaks
                 : comp.parent as Pawn;
             if (fatal
                 || !ShieldDomeBridge.ShouldReplace(comp)
-                || ShieldStyle.For(ShieldHexTarget.Personal, pawn).Break
+                || ShieldStyle.For(ShieldHexTarget.Personal, pawn, comp.parent.def).Break
                     == ShieldBreakStyle.Vanilla)
             {
                 return;

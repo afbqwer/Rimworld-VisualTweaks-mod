@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
+using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -68,12 +69,19 @@ namespace VisualTweaks
         /// True when any hediff on this pawn carries VEF's shield comp. Used only by
         /// the per-shield style gizmo, so a missing VEF costs one type check.
         /// </summary>
-        internal static bool PawnHasShield(Pawn? pawn)
+        internal static bool PawnHasShield(Pawn? pawn) => ShieldHediffOf(pawn) != null;
+
+        /// <summary>
+        /// The hediff that owns this pawn's VEF shield, or null. The per-type style
+        /// layer keys on the def of whichever hediff grants the shield; the walk is
+        /// the same one <see cref="PawnHasShield"/> needs, so both share it.
+        /// </summary>
+        internal static Hediff? ShieldHediffOf(Pawn? pawn)
         {
             Type? type = compType;
             if (pawn == null || type == null || pawn.health?.hediffSet == null)
             {
-                return false;
+                return null;
             }
 
             List<Hediff> hediffs = pawn.health.hediffSet.hediffs;
@@ -90,13 +98,16 @@ namespace VisualTweaks
                 {
                     if (type.IsInstanceOfType(comps[j]))
                     {
-                        return true;
+                        return hediffs[i];
                     }
                 }
             }
 
-            return false;
+            return null;
         }
+
+        /// <summary>The def of the hediff that owns this pawn's shield, or null.</summary>
+        internal static HediffDef? ShieldHediffDefOf(Pawn? pawn) => ShieldHediffOf(pawn)?.def;
 
         internal static void Apply(Harmony harmony)
         {
@@ -369,7 +380,8 @@ namespace VisualTweaks
                 {
                     if (ShieldStyle.For(
                             ShieldHexTarget.Personal,
-                            __instance.Pawn).Break
+                            __instance.Pawn,
+                            __instance.Def).Break
                         != ShieldBreakStyle.Vanilla)
                     {
                         PersonalShieldDissolveLog.Begin(
@@ -452,7 +464,8 @@ namespace VisualTweaks
                         size,
                         active,
                         active,
-                        data.color))
+                        data.color,
+                        __instance.Def))
                 {
                     return false;
                 }

@@ -199,7 +199,7 @@ namespace VisualTweaks
                 return;
             }
 
-            ShieldStyle style = ShieldStyle.For(ShieldHexTarget.Large, host);
+            ShieldStyle style = ShieldStyle.For(ShieldHexTarget.Large, host, host.def);
             ShieldBreakStyle breakStyle = style.Break;
             if (breakStyle == ShieldBreakStyle.Vanilla)
             {
@@ -418,7 +418,10 @@ namespace VisualTweaks
             if (fatal
                 || comp == null
                 || !ShieldDomeBridge.ShouldReplace(comp)
-                || ShieldStyle.For(ShieldHexTarget.Large, comp.parent).Break
+                || ShieldStyle.For(
+                    ShieldHexTarget.Large,
+                    comp.parent,
+                    comp.parent.def).Break
                     == ShieldBreakStyle.Vanilla)
             {
                 return;

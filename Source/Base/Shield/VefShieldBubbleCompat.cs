@@ -402,7 +402,10 @@ namespace VisualTweaks
                         host = apparel.Wearer;
                     }
 
-                    if (ShieldStyle.For(ShieldHexTarget.Personal, host).Break
+                    if (ShieldStyle.For(
+                            ShieldHexTarget.Personal,
+                            host,
+                            __instance.parent.def).Break
                         != ShieldBreakStyle.Vanilla)
                     {
                         PersonalShieldDissolveLog.Begin(

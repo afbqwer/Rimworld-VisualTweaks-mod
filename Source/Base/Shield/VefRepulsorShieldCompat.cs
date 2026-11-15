@@ -1127,7 +1127,10 @@ namespace VisualTweaks
         {
             if (signalsBroken
                 || !ShouldRecord(__instance)
-                || ShieldStyle.For(ShieldHexTarget.Large, __instance.parent).Break
+                || ShieldStyle.For(
+                    ShieldHexTarget.Large,
+                    __instance.parent,
+                    __instance.parent.def).Break
                     == ShieldBreakStyle.Vanilla)
             {
                 return;

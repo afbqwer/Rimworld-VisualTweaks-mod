@@ -126,7 +126,7 @@ namespace VisualTweaks
                 active,
                 visible,
                 Color.white,
-                ShieldStyle.For(ShieldHexTarget.Personal, pawn));
+                ShieldStyle.For(ShieldHexTarget.Personal, pawn, comp.parent.def));
         }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace VisualTweaks
                 active,
                 visible,
                 color,
-                ShieldStyle.For(ShieldHexTarget.Personal, pawn));
+                ShieldStyle.For(ShieldHexTarget.Personal, pawn, comp.parent.def));
         }
 
         /// <summary>
@@ -176,7 +176,8 @@ namespace VisualTweaks
             float drawnSize,
             bool active,
             bool visible,
-            Color color)
+            Color color,
+            Def source)
         {
             return DrawCore(
                 comp,
@@ -185,7 +186,7 @@ namespace VisualTweaks
                 active,
                 visible,
                 color,
-                ShieldStyle.For(ShieldHexTarget.Personal, host));
+                ShieldStyle.For(ShieldHexTarget.Personal, host, source));
         }
 
         private static bool DrawCore(

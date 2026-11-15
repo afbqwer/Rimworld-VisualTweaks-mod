@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <LanguageData>
   <!-- 设置窗口 -->
   <VisualTweaks_SettingsCategory>更多光影视效</VisualTweaks_SettingsCategory>
@@ -131,27 +131,38 @@
   <VisualTweaks_Shield_PauseWhenPaused>暂停时停止护盾动画</VisualTweaks_Shield_PauseWhenPaused>
   <VisualTweaks_Shield_PauseWhenPausedTip>游戏暂停时冻结护盾表面的扫描、漂移，以及原版常显护盾的明暗呼吸；关闭后这些动画会继续播放。受击与破裂动画本来就随游戏时间暂停。</VisualTweaks_Shield_PauseWhenPausedTip>
   <VisualTweaks_ShieldOverride_Enable>显示护盾覆写gizmo</VisualTweaks_ShieldOverride_Enable>
-  <VisualTweaks_ShieldOverride_EnableTip>开启后，每个拥有护盾的 Pawn 和建筑都会显示一个 gizmo，点击打开本 mod 护盾的样式设置窗口。窗口中的修改只影响选中的对象；多选时会统一应用到所有选中对象；仍选择“跟随全局”的项目会继续跟随本页设置。默认开启；样式窗口里也有同一个开关，可直接在那里关闭。</VisualTweaks_ShieldOverride_EnableTip>
+  <VisualTweaks_ShieldOverride_EnableTip>开启后，拥有护盾的 Pawn 和建筑被单选时会显示一个 gizmo，点击打开本 mod 护盾的样式设置窗口。窗口可以按对象编辑，也可以按护盾类型编辑；同一类型下的所有护盾共用一份设置，对象自己的设置优先，其次才是类型，最后是本页的全局设置。默认开启；样式窗口里也有同一个开关，可直接在那里关闭。</VisualTweaks_ShieldOverride_EnableTip>
   <VisualTweaks_ShieldOverride_GizmoLabel>护盾样式</VisualTweaks_ShieldOverride_GizmoLabel>
-  <VisualTweaks_ShieldOverride_GizmoTip>打开护盾样式设置。同时选中多个有护盾的对象时会一起编辑，每一项修改都会应用到所有选中对象；仍选择“跟随全局”的项目继续使用护盾页签中的设置。窗口中也包含控制是否显示护盾覆写 gizmo 的开关。</VisualTweaks_ShieldOverride_GizmoTip>
+  <VisualTweaks_ShieldOverride_GizmoTip>打开护盾样式设置。可以只修改这个对象，也可以修改它这一类护盾（某种护盾腰带、某个机械族的护盾、某种护盾建筑）；对象设置优先于类型设置，类型设置优先于护盾页签中的全局设置。窗口中也包含控制是否显示护盾覆写 gizmo 的开关。</VisualTweaks_ShieldOverride_GizmoTip>
   <VisualTweaks_ShieldOverride_UsingGlobal>此护盾使用全局护盾样式。</VisualTweaks_ShieldOverride_UsingGlobal>
-  <VisualTweaks_ShieldOverride_UsingLocal>此护盾使用独立样式；选择“跟随全局”的项目仍会跟随全局设置。</VisualTweaks_ShieldOverride_UsingLocal>
+  <VisualTweaks_ShieldOverride_UsingLocal>此护盾使用独立样式；选择“跟随上级”的项目仍会跟随类型和全局设置。</VisualTweaks_ShieldOverride_UsingLocal>
   <VisualTweaks_ShieldOverride_MultiTitle>统一编辑 {0} 个护盾</VisualTweaks_ShieldOverride_MultiTitle>
   <VisualTweaks_ShieldOverride_MultiAllGlobal>所选护盾都使用全局样式。</VisualTweaks_ShieldOverride_MultiAllGlobal>
-  <VisualTweaks_ShieldOverride_MultiSomeLocal>所选护盾中已有独立样式；选择“跟随全局”的项目仍跟随全局设置。</VisualTweaks_ShieldOverride_MultiSomeLocal>
+  <VisualTweaks_ShieldOverride_MultiSomeLocal>所选护盾中已有独立样式；选择“跟随上级”的项目仍跟随类型和全局设置。</VisualTweaks_ShieldOverride_MultiSomeLocal>
   <VisualTweaks_ShieldOverride_MixedNote>所选对象的设置不一致；单选行没有圆点表示值混合，点击选项后会统一设置。</VisualTweaks_ShieldOverride_MixedNote>
   <VisualTweaks_ShieldOverride_MixedSurface>所选对象当前的护盾表面样式不一致，受击/破碎选项会列出两种表面可用的全部动画；某个护盾无法绘制的动画会退回它自己可用的效果。</VisualTweaks_ShieldOverride_MixedSurface>
   <VisualTweaks_ShieldOverride_MixedValue>混合</VisualTweaks_ShieldOverride_MixedValue>
   <VisualTweaks_ShieldOverride_FamilyPersonal>个人护盾</VisualTweaks_ShieldOverride_FamilyPersonal>
   <VisualTweaks_ShieldOverride_FamilyLarge>大型护盾</VisualTweaks_ShieldOverride_FamilyLarge>
   <VisualTweaks_ShieldOverride_ReplacementOff>该护盾类别当前未启用替换，修改要等护盾页签中重新开启后才会显示。</VisualTweaks_ShieldOverride_ReplacementOff>
-  <VisualTweaks_ShieldOverride_FollowGlobal>跟随全局</VisualTweaks_ShieldOverride_FollowGlobal>
-  <VisualTweaks_ShieldOverride_FollowGlobalTip>使用护盾页签中当前为这一项选择的设置。</VisualTweaks_ShieldOverride_FollowGlobalTip>
+  <VisualTweaks_ShieldOverride_FollowGlobal>跟随上级</VisualTweaks_ShieldOverride_FollowGlobal>
+  <VisualTweaks_ShieldOverride_FollowGlobalTip>使用上一级设置：先看该护盾类型的样式，类型没有设置时再使用护盾页签中的全局设置。</VisualTweaks_ShieldOverride_FollowGlobalTip>
+  <VisualTweaks_ShieldOverride_Scope>编辑范围</VisualTweaks_ShieldOverride_Scope>
+  <VisualTweaks_ShieldOverride_ScopeObject>此对象</VisualTweaks_ShieldOverride_ScopeObject>
+  <VisualTweaks_ShieldOverride_ScopeObjectTip>只修改当前选中的护盾。这里没有设置的项目，依次跟随护盾类型的样式和全局设置。</VisualTweaks_ShieldOverride_ScopeObjectTip>
+  <VisualTweaks_ShieldOverride_ScopeType>类型：{0}</VisualTweaks_ShieldOverride_ScopeType>
+  <VisualTweaks_ShieldOverride_ScopeTypeTip>修改这一种护盾的样式：所有使用该类型的护盾都会生效。单个对象自己的设置会覆盖这里的设置。</VisualTweaks_ShieldOverride_ScopeTypeTip>
+  <VisualTweaks_ShieldOverride_TypeNote>这一页保存为“{0}”（{1}）的类型样式，对所有使用该类型的护盾生效。某个对象自己的设置会覆盖这里的设置。</VisualTweaks_ShieldOverride_TypeNote>
+  <VisualTweaks_ShieldOverride_UsingType>此护盾跟随类型样式“{0}”；对象自己设置的项目会覆盖它。</VisualTweaks_ShieldOverride_UsingType>
+  <VisualTweaks_ShieldOverride_TypeUnknown>无法识别这个对象上的护盾来源，只能编辑对象自己的样式。</VisualTweaks_ShieldOverride_TypeUnknown>
+  <VisualTweaks_ShieldOverride_TypePick>要编辑的护盾</VisualTweaks_ShieldOverride_TypePick>
+  <VisualTweaks_ShieldOverride_TypeJoin>、</VisualTweaks_ShieldOverride_TypeJoin>
   <VisualTweaks_ShieldOverride_Surface>表面样式</VisualTweaks_ShieldOverride_Surface>
   <VisualTweaks_ShieldOverride_ManageGroup>护盾覆写管理</VisualTweaks_ShieldOverride_ManageGroup>
   <VisualTweaks_ShieldOverride_Count>已覆写护盾数：{0}</VisualTweaks_ShieldOverride_Count>
+  <VisualTweaks_ShieldOverride_TypeCount>已覆写护盾类型：{0}</VisualTweaks_ShieldOverride_TypeCount>
   <VisualTweaks_ShieldOverride_ClearAll>清除所有覆写</VisualTweaks_ShieldOverride_ClearAll>
-  <VisualTweaks_ShieldOverride_ClearAllConfirm>清除所有护盾的独立样式、颜色和透明度覆写？此操作无法撤销。</VisualTweaks_ShieldOverride_ClearAllConfirm>
+  <VisualTweaks_ShieldOverride_ClearAllConfirm>清除所有对象样式和类型样式的覆写（表面、颜色、透明度和动画）？此操作无法撤销。</VisualTweaks_ShieldOverride_ClearAllConfirm>
   <VisualTweaks_ShieldHexColor_Group>六边形护盾颜色</VisualTweaks_ShieldHexColor_Group>
   <VisualTweaks_ShieldHexColor_LineFollows>格线跟随护盾颜色</VisualTweaks_ShieldHexColor_LineFollows>
   <VisualTweaks_ShieldHexColor_LineFollowsTip>开启：格线使用护盾自身的颜色，不再偏向白色高光。关闭：保留原本接近白色的格线。仅对六边形和六边形气泡表面生效。</VisualTweaks_ShieldHexColor_LineFollowsTip>
@@ -178,7 +189,8 @@
   <VisualTweaks_ShieldOverride_Restore>恢复动画</VisualTweaks_ShieldOverride_Restore>
   <VisualTweaks_ShieldOverride_Vanish>消失动画</VisualTweaks_ShieldOverride_Vanish>
   <VisualTweaks_ShieldOverride_GroupReset>重置</VisualTweaks_ShieldOverride_GroupReset>
-  <VisualTweaks_ShieldOverride_ResetAll>清除覆写并跟随全局</VisualTweaks_ShieldOverride_ResetAll>
+  <VisualTweaks_ShieldOverride_ResetAll>清除覆写并跟随上级</VisualTweaks_ShieldOverride_ResetAll>
+  <VisualTweaks_ShieldOverride_TypeReset>清除此类型的覆写</VisualTweaks_ShieldOverride_TypeReset>
 
   <VisualTweaks_ShieldDome_Group>大型护盾</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldLarge_VanillaOnly>只替换原版护盾</VisualTweaks_ShieldLarge_VanillaOnly>

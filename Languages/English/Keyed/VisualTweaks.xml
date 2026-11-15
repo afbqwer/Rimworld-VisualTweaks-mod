@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <LanguageData>
   <!-- Settings window -->
   <VisualTweaks_SettingsCategory>More Shader Visuals</VisualTweaks_SettingsCategory>
@@ -131,27 +131,38 @@
   <VisualTweaks_Shield_PauseWhenPaused>Pause shield animation when the game is paused</VisualTweaks_Shield_PauseWhenPaused>
   <VisualTweaks_Shield_PauseWhenPausedTip>Freezes the shield surface's scan and drift, plus vanilla's always-show breathing alpha, while the game is paused. Turn it off to keep them playing. Hit and break animations already follow game time and pause either way.</VisualTweaks_Shield_PauseWhenPausedTip>
   <VisualTweaks_ShieldOverride_Enable>Show shield override gizmo</VisualTweaks_ShieldOverride_Enable>
-  <VisualTweaks_ShieldOverride_EnableTip>When on, every pawn and building that owns a shield shows a gizmo that opens a style window for this mod's shield. Changes there apply to the selected objects only; with a multi-selection they apply to every selected shield. Any row left on "Follow global" keeps following this page. On by default; the same switch is available inside the style window.</VisualTweaks_ShieldOverride_EnableTip>
+  <VisualTweaks_ShieldOverride_EnableTip>When on, a singly selected pawn or building that owns a shield shows a gizmo that opens a style window for this mod's shield. The window edits either the object itself or its shield type: every shield of one type shares a record, the object's own record wins over the type's, and the type's wins over this page. On by default; the same switch is available inside the style window.</VisualTweaks_ShieldOverride_EnableTip>
   <VisualTweaks_ShieldOverride_GizmoLabel>Shield style</VisualTweaks_ShieldOverride_GizmoLabel>
-  <VisualTweaks_ShieldOverride_GizmoTip>Opens the shield style settings. With several shielded objects selected they are edited together, and every change applies to all of them; rows left on "Follow global" still use the Shields tab. The window also contains the switch that controls whether shield override gizmos are shown.</VisualTweaks_ShieldOverride_GizmoTip>
+  <VisualTweaks_ShieldOverride_GizmoTip>Opens the shield style settings. You can style this object alone, or its whole shield type (a shield belt, one mechanoid's shield, a projector building); the object's record beats the type's, and the type's beats the global settings on the Shields tab. The window also contains the switch that controls whether shield override gizmos are shown.</VisualTweaks_ShieldOverride_GizmoTip>
   <VisualTweaks_ShieldOverride_UsingGlobal>This shield uses the global shield style.</VisualTweaks_ShieldOverride_UsingGlobal>
-  <VisualTweaks_ShieldOverride_UsingLocal>This shield has its own style. Rows set to "Follow global" still track the global settings.</VisualTweaks_ShieldOverride_UsingLocal>
+  <VisualTweaks_ShieldOverride_UsingLocal>This shield has its own style. Rows set to "Follow parent" still track its type and the global settings.</VisualTweaks_ShieldOverride_UsingLocal>
   <VisualTweaks_ShieldOverride_MultiTitle>Editing {0} shields together</VisualTweaks_ShieldOverride_MultiTitle>
   <VisualTweaks_ShieldOverride_MultiAllGlobal>All selected shields use the global style.</VisualTweaks_ShieldOverride_MultiAllGlobal>
-  <VisualTweaks_ShieldOverride_MultiSomeLocal>Some selected shields have their own style; rows left on "Follow global" still track the global settings.</VisualTweaks_ShieldOverride_MultiSomeLocal>
+  <VisualTweaks_ShieldOverride_MultiSomeLocal>Some selected shields have their own style; rows left on "Follow parent" still track their type and the global settings.</VisualTweaks_ShieldOverride_MultiSomeLocal>
   <VisualTweaks_ShieldOverride_MixedNote>The selected objects differ. A radio row with no dot is mixed; picking a choice applies it to all of them.</VisualTweaks_ShieldOverride_MixedNote>
   <VisualTweaks_ShieldOverride_MixedSurface>The selected shields use different surfaces, so the impact/break lists include every animation either surface can draw; a shield that cannot draw the chosen one falls back to an animation it can.</VisualTweaks_ShieldOverride_MixedSurface>
   <VisualTweaks_ShieldOverride_MixedValue>Mixed</VisualTweaks_ShieldOverride_MixedValue>
   <VisualTweaks_ShieldOverride_FamilyPersonal>Personal shields</VisualTweaks_ShieldOverride_FamilyPersonal>
   <VisualTweaks_ShieldOverride_FamilyLarge>Large shields</VisualTweaks_ShieldOverride_FamilyLarge>
   <VisualTweaks_ShieldOverride_ReplacementOff>This shield family's replacement is currently off, so these changes will not be visible until it is enabled on the Shields tab.</VisualTweaks_ShieldOverride_ReplacementOff>
-  <VisualTweaks_ShieldOverride_FollowGlobal>Follow global</VisualTweaks_ShieldOverride_FollowGlobal>
-  <VisualTweaks_ShieldOverride_FollowGlobalTip>Use whatever the Shields tab currently selects for this row.</VisualTweaks_ShieldOverride_FollowGlobalTip>
+  <VisualTweaks_ShieldOverride_FollowGlobal>Follow parent</VisualTweaks_ShieldOverride_FollowGlobal>
+  <VisualTweaks_ShieldOverride_FollowGlobalTip>Use the layer above: this shield type's style if it sets one, otherwise the global setting on the Shields tab.</VisualTweaks_ShieldOverride_FollowGlobalTip>
+  <VisualTweaks_ShieldOverride_Scope>Edit scope</VisualTweaks_ShieldOverride_Scope>
+  <VisualTweaks_ShieldOverride_ScopeObject>This object</VisualTweaks_ShieldOverride_ScopeObject>
+  <VisualTweaks_ShieldOverride_ScopeObjectTip>Change only the selected shield. Rows left unset follow this shield type's style, then the global settings.</VisualTweaks_ShieldOverride_ScopeObjectTip>
+  <VisualTweaks_ShieldOverride_ScopeType>Type: {0}</VisualTweaks_ShieldOverride_ScopeType>
+  <VisualTweaks_ShieldOverride_ScopeTypeTip>Change this kind of shield: every shield using this type picks the change up. A single object's own settings still override it.</VisualTweaks_ShieldOverride_ScopeTypeTip>
+  <VisualTweaks_ShieldOverride_TypeNote>This page is stored as the style of "{0}" ({1}) and applies to every shield of that type. A single object's own settings override it.</VisualTweaks_ShieldOverride_TypeNote>
+  <VisualTweaks_ShieldOverride_UsingType>This shield follows the style of the type "{0}"; rows this object sets override it.</VisualTweaks_ShieldOverride_UsingType>
+  <VisualTweaks_ShieldOverride_TypeUnknown>Could not tell which defs draw this object's shields, so only the object's own style can be edited.</VisualTweaks_ShieldOverride_TypeUnknown>
+  <VisualTweaks_ShieldOverride_TypePick>Shield to edit</VisualTweaks_ShieldOverride_TypePick>
+  <VisualTweaks_ShieldOverride_TypeJoin>, </VisualTweaks_ShieldOverride_TypeJoin>
   <VisualTweaks_ShieldOverride_Surface>Surface style</VisualTweaks_ShieldOverride_Surface>
   <VisualTweaks_ShieldOverride_ManageGroup>Per-shield overrides</VisualTweaks_ShieldOverride_ManageGroup>
   <VisualTweaks_ShieldOverride_Count>Overridden shields: {0}</VisualTweaks_ShieldOverride_Count>
+  <VisualTweaks_ShieldOverride_TypeCount>Overridden shield types: {0}</VisualTweaks_ShieldOverride_TypeCount>
   <VisualTweaks_ShieldOverride_ClearAll>Clear all overrides</VisualTweaks_ShieldOverride_ClearAll>
-  <VisualTweaks_ShieldOverride_ClearAllConfirm>Clear every per-shield style, color and opacity override? This cannot be undone.</VisualTweaks_ShieldOverride_ClearAllConfirm>
+  <VisualTweaks_ShieldOverride_ClearAllConfirm>Clear every object and type override (surface, color, opacity and animations)? This cannot be undone.</VisualTweaks_ShieldOverride_ClearAllConfirm>
   <VisualTweaks_ShieldHexColor_Group>Hex shield color</VisualTweaks_ShieldHexColor_Group>
   <VisualTweaks_ShieldHexColor_LineFollows>Grid lines follow shield color</VisualTweaks_ShieldHexColor_LineFollows>
   <VisualTweaks_ShieldHexColor_LineFollowsTip>On: the cell lines take the shield's own tint instead of the near-white highlight. Off: keep the original near-white lines. Applies to the hexagonal and hex bubble surfaces.</VisualTweaks_ShieldHexColor_LineFollowsTip>
@@ -178,7 +189,8 @@
   <VisualTweaks_ShieldOverride_Restore>Restore animation</VisualTweaks_ShieldOverride_Restore>
   <VisualTweaks_ShieldOverride_Vanish>Vanish animation</VisualTweaks_ShieldOverride_Vanish>
   <VisualTweaks_ShieldOverride_GroupReset>Reset</VisualTweaks_ShieldOverride_GroupReset>
-  <VisualTweaks_ShieldOverride_ResetAll>Clear overrides and follow global</VisualTweaks_ShieldOverride_ResetAll>
+  <VisualTweaks_ShieldOverride_ResetAll>Clear overrides and follow parent</VisualTweaks_ShieldOverride_ResetAll>
+  <VisualTweaks_ShieldOverride_TypeReset>Clear this type's overrides</VisualTweaks_ShieldOverride_TypeReset>
 
   <VisualTweaks_ShieldDome_Group>Large shields</VisualTweaks_ShieldDome_Group>
   <VisualTweaks_ShieldLarge_VanillaOnly>Vanilla type only</VisualTweaks_ShieldLarge_VanillaOnly>
