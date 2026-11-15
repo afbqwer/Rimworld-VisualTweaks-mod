@@ -611,6 +611,24 @@ namespace VisualTweaks
             return labels;
         }
 
+        /// <summary>
+        /// The comp actually drawing this shield. The def says what the shield is; the
+        /// comp type says which system is behind it, which is the only way to tell a
+        /// mod's interceptor subclass -- or VEF's hediff shield -- from the vanilla one.
+        /// </summary>
+        private static void DrawCompTypeNote(Listing_Standard listing, ShieldSource source)
+        {
+            string name = source.CompTypeName;
+            if (name.NullOrEmpty())
+            {
+                return;
+            }
+
+            SettingsLayout.Note(
+                listing,
+                "VisualTweaks_ShieldOverride_CompType".Translate(name));
+        }
+
         private void DrawHeader(
             Listing_Standard listing,
             bool anyHex,
@@ -625,11 +643,19 @@ namespace VisualTweaks
                     "VisualTweaks_ShieldOverride_TypeNote".Translate(
                         source.Label,
                         source.DefName));
+                DrawCompTypeNote(listing, source);
             }
             else if (hostCount == 1 && allEntries.Count == 1)
             {
                 listing.Label(groups[0].Hosts[0].LabelShortCap);
                 SettingsLayout.Note(listing, ObjectStateNote(allEntries[0]));
+
+                // With one shield there is no ambiguity about which comp draws it, so
+                // the object scope can say it too and save a click.
+                if (typeSources.Count == 1)
+                {
+                    DrawCompTypeNote(listing, typeSources[0]);
+                }
             }
             else
             {

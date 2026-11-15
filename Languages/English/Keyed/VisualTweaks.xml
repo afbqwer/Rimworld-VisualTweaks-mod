@@ -153,6 +153,7 @@
   <VisualTweaks_ShieldOverride_ScopeType>Type: {0}</VisualTweaks_ShieldOverride_ScopeType>
   <VisualTweaks_ShieldOverride_ScopeTypeTip>Change this kind of shield: every shield using this type picks the change up. A single object's own settings still override it.</VisualTweaks_ShieldOverride_ScopeTypeTip>
   <VisualTweaks_ShieldOverride_TypeNote>This page is stored as the style of "{0}" ({1}) and applies to every shield of that type. A single object's own settings override it.</VisualTweaks_ShieldOverride_TypeNote>
+  <VisualTweaks_ShieldOverride_CompType>Shield component: {0}</VisualTweaks_ShieldOverride_CompType>
   <VisualTweaks_ShieldOverride_UsingType>This shield follows the style of the type "{0}"; rows this object sets override it.</VisualTweaks_ShieldOverride_UsingType>
   <VisualTweaks_ShieldOverride_TypeUnknown>Could not tell which defs draw this object's shields, so only the object's own style can be edited.</VisualTweaks_ShieldOverride_TypeUnknown>
   <VisualTweaks_ShieldOverride_TypePick>Shield to edit</VisualTweaks_ShieldOverride_TypePick>

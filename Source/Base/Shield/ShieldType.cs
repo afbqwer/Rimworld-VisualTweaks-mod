@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
@@ -13,10 +14,20 @@ namespace VisualTweaks
         internal readonly ShieldHexTarget Target;
         internal readonly Def Def;
 
-        internal ShieldSource(ShieldHexTarget target, Def def)
+        /// <summary>
+        /// Runtime type of the comp that draws this shield, e.g.
+        /// <c>RimWorld.CompProjectileInterceptor</c> or
+        /// <c>VEF.Hediffs.HediffComp_Shield</c>. The window prints it because the def
+        /// alone cannot say which mod's shield system is behind a given shield, and a
+        /// mod may subclass the vanilla comp.
+        /// </summary>
+        internal readonly Type? CompType;
+
+        internal ShieldSource(ShieldHexTarget target, Def def, Type? compType)
         {
             Target = target;
             Def = def;
+            CompType = compType;
         }
 
         internal string DefName => Def.defName;
@@ -24,6 +35,10 @@ namespace VisualTweaks
         internal string Label => Def.LabelCap.ToString();
 
         internal bool IsPersonal => Target == ShieldHexTarget.Personal;
+
+        /// <summary>Full type name, which is what distinguishes two shield systems.</summary>
+        internal string CompTypeName =>
+            CompType == null ? string.Empty : CompType.FullName ?? CompType.Name;
     }
 
     /// <summary>
@@ -61,9 +76,10 @@ namespace VisualTweaks
 
             // A comp on the thing itself belongs to the thing's own def: a mech race
             // def that ships CompShield, or a modded building that does the same.
-            if (thing.GetComp<CompShield>() != null)
+            CompShield? shield = thing.GetComp<CompShield>();
+            if (shield != null)
             {
-                Add(into, ShieldHexTarget.Personal, thing.def);
+                Add(into, ShieldHexTarget.Personal, thing.def, shield.GetType());
             }
 
             if (VefShieldBubbleCompat.Available)
@@ -73,7 +89,7 @@ namespace VisualTweaks
                 {
                     if (VefShieldBubbleCompat.IsBubble(comps[i]))
                     {
-                        Add(into, ShieldHexTarget.Personal, thing.def);
+                        Add(into, ShieldHexTarget.Personal, thing.def, comps[i].GetType());
                         break;
                     }
                 }
@@ -84,9 +100,11 @@ namespace VisualTweaks
                 CollectWorn(pawn, into);
             }
 
-            if (thing.GetComp<CompProjectileInterceptor>() != null)
+            CompProjectileInterceptor? interceptor =
+                thing.GetComp<CompProjectileInterceptor>();
+            if (interceptor != null)
             {
-                Add(into, ShieldHexTarget.Large, thing.def);
+                Add(into, ShieldHexTarget.Large, thing.def, interceptor.GetType());
             }
 
             if (VefRepulsorShieldCompat.Available)
@@ -96,7 +114,7 @@ namespace VisualTweaks
                 {
                     if (VefRepulsorShieldCompat.IsRepulsor(comps[i]))
                     {
-                        Add(into, ShieldHexTarget.Large, thing.def);
+                        Add(into, ShieldHexTarget.Large, thing.def, comps[i].GetType());
                         break;
                     }
                 }
@@ -121,9 +139,14 @@ namespace VisualTweaks
                         continue;
                     }
 
-                    if (apparel.GetComp<CompShield>() != null)
+                    CompShield? shield = apparel.GetComp<CompShield>();
+                    if (shield != null)
                     {
-                        Add(into, ShieldHexTarget.Personal, apparel.def);
+                        Add(
+                            into,
+                            ShieldHexTarget.Personal,
+                            apparel.def,
+                            shield.GetType());
                     }
 
                     if (VefShieldBubbleCompat.Available)
@@ -133,7 +156,11 @@ namespace VisualTweaks
                         {
                             if (VefShieldBubbleCompat.IsBubble(comps[j]))
                             {
-                                Add(into, ShieldHexTarget.Personal, apparel.def);
+                                Add(
+                                    into,
+                                    ShieldHexTarget.Personal,
+                                    apparel.def,
+                                    comps[j].GetType());
                                 break;
                             }
                         }
@@ -141,17 +168,18 @@ namespace VisualTweaks
                 }
             }
 
-            HediffDef? hediff = VefHediffShieldCompat.ShieldHediffDefOf(pawn);
-            if (hediff != null)
+            Hediff? hediff = VefHediffShieldCompat.ShieldHediffOf(pawn, out Type? compType);
+            if (hediff?.def != null)
             {
-                Add(into, ShieldHexTarget.Personal, hediff);
+                Add(into, ShieldHexTarget.Personal, hediff.def, compType);
             }
         }
 
         private static void Add(
             List<ShieldSource> into,
             ShieldHexTarget target,
-            Def def)
+            Def def,
+            Type? compType)
         {
             for (int i = 0; i < into.Count; i++)
             {
@@ -161,7 +189,7 @@ namespace VisualTweaks
                 }
             }
 
-            into.Add(new ShieldSource(target, def));
+            into.Add(new ShieldSource(target, def, compType));
         }
     }
 }

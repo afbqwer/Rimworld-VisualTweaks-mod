@@ -76,8 +76,17 @@ namespace VisualTweaks
         /// layer keys on the def of whichever hediff grants the shield; the walk is
         /// the same one <see cref="PawnHasShield"/> needs, so both share it.
         /// </summary>
-        internal static Hediff? ShieldHediffOf(Pawn? pawn)
+        internal static Hediff? ShieldHediffOf(Pawn? pawn) =>
+            ShieldHediffOf(pawn, out _);
+
+        /// <summary>
+        /// The hediff that owns this pawn's shield, plus the runtime type of the comp
+        /// doing the drawing. The style window shows that type so a player can tell
+        /// VEF's hediff shield from a mod that subclasses it.
+        /// </summary>
+        internal static Hediff? ShieldHediffOf(Pawn? pawn, out Type? compTypeOf)
         {
+            compTypeOf = null;
             Type? type = compType;
             if (pawn == null || type == null || pawn.health?.hediffSet == null)
             {
@@ -98,6 +107,7 @@ namespace VisualTweaks
                 {
                     if (type.IsInstanceOfType(comps[j]))
                     {
+                        compTypeOf = comps[j].GetType();
                         return hediffs[i];
                     }
                 }
@@ -105,9 +115,6 @@ namespace VisualTweaks
 
             return null;
         }
-
-        /// <summary>The def of the hediff that owns this pawn's shield, or null.</summary>
-        internal static HediffDef? ShieldHediffDefOf(Pawn? pawn) => ShieldHediffOf(pawn)?.def;
 
         internal static void Apply(Harmony harmony)
         {

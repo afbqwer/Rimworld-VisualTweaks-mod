@@ -153,6 +153,7 @@
   <VisualTweaks_ShieldOverride_ScopeType>类型：{0}</VisualTweaks_ShieldOverride_ScopeType>
   <VisualTweaks_ShieldOverride_ScopeTypeTip>修改这一种护盾的样式：所有使用该类型的护盾都会生效。单个对象自己的设置会覆盖这里的设置。</VisualTweaks_ShieldOverride_ScopeTypeTip>
   <VisualTweaks_ShieldOverride_TypeNote>这一页保存为“{0}”（{1}）的类型样式，对所有使用该类型的护盾生效。某个对象自己的设置会覆盖这里的设置。</VisualTweaks_ShieldOverride_TypeNote>
+  <VisualTweaks_ShieldOverride_CompType>护盾组件：{0}</VisualTweaks_ShieldOverride_CompType>
   <VisualTweaks_ShieldOverride_UsingType>此护盾跟随类型样式“{0}”；对象自己设置的项目会覆盖它。</VisualTweaks_ShieldOverride_UsingType>
   <VisualTweaks_ShieldOverride_TypeUnknown>无法识别这个对象上的护盾来源，只能编辑对象自己的样式。</VisualTweaks_ShieldOverride_TypeUnknown>
   <VisualTweaks_ShieldOverride_TypePick>要编辑的护盾</VisualTweaks_ShieldOverride_TypePick>
