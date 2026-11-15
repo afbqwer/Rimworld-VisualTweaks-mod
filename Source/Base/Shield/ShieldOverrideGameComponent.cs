@@ -212,6 +212,11 @@ namespace VisualTweaks
     /// node is read once during deserialization, handed to the settings, and never
     /// written back, so saves made by this build contain only the object layer.
     ///
+    /// TODO 1.8: delete the type-style migration entirely -- the legacy read in
+    /// ExposeData, ImportLegacyTypeStyles, FlushImportedTypeStyles and the
+    /// importedTypeStyles flag. Only saves written by 1.7.x still carry that node,
+    /// and by 1.8 they are old enough to drop.
+    ///
     /// Threading contract: every reader is a main-thread draw callback
     /// (Thing.PostDraw, MapComponentDraw or the style window) and every writer is
     /// the same thread (window edits, Thing.Destroy cleanup, save/load). The
@@ -229,6 +234,8 @@ namespace VisualTweaks
         /// themselves are handed to the mod settings right there; this only remembers
         /// that the settings file still has to be written, which cannot be done inside
         /// ExposeData without clobbering the save's scribe state.
+        ///
+        /// TODO 1.8: remove together with the rest of the type-style migration.
         /// </summary>
         private static bool importedTypeStyles;
 
@@ -398,6 +405,8 @@ namespace VisualTweaks
         ///
         /// The records are already live in memory by this point, so a failed write only
         /// means they reach disk later; the flag stays set so the next load tries again.
+        ///
+        /// TODO 1.8: remove along with the migration; nothing else sets the flag.
         /// </summary>
         private static void FlushImportedTypeStyles()
         {
@@ -430,6 +439,8 @@ namespace VisualTweaks
             // Types the settings already style are left alone: the settings are the
             // single source of truth, and opening an old colony must not silently
             // rewrite a preference set since upgrading.
+            //
+            // TODO 1.8: drop this call and the legacy node with it.
             if (Scribe.mode == LoadSaveMode.LoadingVars)
             {
                 ImportLegacyTypeStyles();
@@ -438,6 +449,10 @@ namespace VisualTweaks
             RebuildLookup();
         }
 
+        /// <summary>
+        /// TODO 1.8: delete. Reads the node a 1.7.x build wrote and moves it into the
+        /// mod settings; no save written from 1.8 on can contain it.
+        /// </summary>
         private static void ImportLegacyTypeStyles()
         {
             try
