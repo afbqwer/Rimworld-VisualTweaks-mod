@@ -24,6 +24,13 @@ namespace VisualTweaks
     /// answer for the whole selection, which keeps that scan at a single object per
     /// frame however large the selection is. A selection whose first object has no
     /// shield shows no gizmo; the player selects a shielded object directly.
+    ///
+    /// Two things about that stamp are load-bearing. Callers that cannot own a
+    /// shield are rejected before it, because anything that asks first would
+    /// otherwise take the frame's single answer (a corpse's inner pawn is the
+    /// vanilla case). And a repeat caller of the same object in the same frame
+    /// replays the stored answer, because the gizmo bar can rebuild its list more
+    /// than once per frame and a dropped second answer is a button that blinks.
     /// </summary>
     internal static class ShieldOverridePatches
     {
@@ -32,10 +39,15 @@ namespace VisualTweaks
         private static bool gizmoIconResolved;
 
         /// <summary>
-        /// The frame this postfix last answered, so the rest of that frame's callers
-        /// leave on an int compare. Same clock <c>GizmoGridDrawer</c> caches on.
+        /// The frame this postfix last answered, and the answer itself. Same clock
+        /// <c>GizmoGridDrawer</c> caches on. Everything after the first call in a
+        /// frame costs an int compare plus, for the same object, one reference
+        /// compare.
         /// </summary>
         private static int answeredFrame = -1;
+        private static ThingWithComps? answeredThing;
+        private static ShieldHexTarget answeredTarget;
+        private static bool answeredShielded;
 
         internal static void Apply(Harmony harmony)
         {
@@ -106,6 +118,22 @@ namespace VisualTweaks
                 return;
             }
 
+            // Cheapest rejection first, and ahead of the frame stamp: an object that
+            // is neither a pawn nor a building can never own a shield, so it must not
+            // consume the frame's single answer. A corpse's inner pawn is the vanilla
+            // case -- Corpse.GetGizmos forwards to it -- and without this it takes the
+            // slot from the thing the player actually selected, which reads as a
+            // blinking button.
+            if (__instance is not Pawn && __instance is not Building)
+            {
+                return;
+            }
+
+            if (__instance is Pawn { Dead: true })
+            {
+                return;
+            }
+
             // Every selected object is asked once per frame. Answering them all
             // means one shield scan each -- the VEF hediff walk is the expensive
             // one -- for commands vanilla then merges down to a single button. One
@@ -115,15 +143,30 @@ namespace VisualTweaks
             int frame = Time.frameCount;
             if (frame == answeredFrame)
             {
+                // The gizmo bar may ask about the same object again in the same frame
+                // (it rebuilds when the selection changes between OnGUI passes, and a
+                // mod can select something while another pane draws). Replaying the
+                // stored answer keeps the button steady without a second scan; the
+                // command is rebuilt rather than shared because vanilla's merge mutates
+                // the commands it is given.
+                if (answeredShielded && ReferenceEquals(answeredThing, __instance))
+                {
+                    __result = Append(__result, CreateGizmo(__instance, answeredTarget));
+                }
+
                 return;
             }
 
             answeredFrame = frame;
+            answeredThing = __instance;
+            answeredShielded = false;
 
             try
             {
                 if (TryGetShieldTarget(__instance, out ShieldHexTarget target))
                 {
+                    answeredTarget = target;
+                    answeredShielded = true;
                     __result = Append(__result, CreateGizmo(__instance, target));
                 }
             }
