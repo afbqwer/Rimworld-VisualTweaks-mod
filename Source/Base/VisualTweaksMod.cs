@@ -958,14 +958,16 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Counts and clears the overrides, both layers. Kept next to the gizmo switch
-        /// because both answer the same question: how much customisation is
-        /// currently on screen.
+        /// Counts and clears both layers, and keeps them visibly separate because they
+        /// live in different places: object records are part of the current save, type
+        /// records are mod settings that apply to every colony. Kept next to the gizmo
+        /// switch because all three answer the same question -- how much customisation
+        /// is currently on screen.
         /// </summary>
         private static void DrawShieldOverrideManagement(Listing_Standard listing)
         {
             int count = ShieldOverrideGameComponent.CountActive();
-            int typeCount = ShieldOverrideGameComponent.CountActiveTypes();
+            int typeCount = VisualTweaksSettings.CountShieldTypeOverrides();
             SettingsLayout.SubHeader(
                 listing,
                 "VisualTweaks_ShieldOverride_ManageGroup".Translate());
@@ -977,16 +979,40 @@ namespace VisualTweaks
                 "VisualTweaks_ShieldOverride_TypeCount".Translate(typeCount));
 
             bool previous = GUI.enabled;
-            GUI.enabled = previous && (count > 0 || typeCount > 0);
-            Rect button = listing.GetRect(SettingsLayout.ButtonRowHeight);
+            float width = (listing.ColumnWidth - SettingsLayout.ButtonRowGap) / 2f;
+            Rect row = listing.GetRect(SettingsLayout.ButtonRowHeight);
+            Rect objects = new Rect(row.x, row.y, width, row.height);
+            Rect types = new Rect(
+                row.xMax - width,
+                row.y,
+                width,
+                row.height);
+
+            GUI.enabled = previous && count > 0;
             if (Widgets.ButtonText(
-                    button,
-                    "VisualTweaks_ShieldOverride_ClearAll".Translate()))
+                    objects,
+                    "VisualTweaks_ShieldOverride_ClearObjects".Translate()))
             {
                 Find.WindowStack?.Add(
                     Dialog_MessageBox.CreateConfirmation(
-                        "VisualTweaks_ShieldOverride_ClearAllConfirm".Translate(),
+                        "VisualTweaks_ShieldOverride_ClearObjectsConfirm".Translate(),
                         delegate { ShieldOverrideGameComponent.ClearAll(); },
+                        destructive: true));
+            }
+
+            GUI.enabled = previous && typeCount > 0;
+            if (Widgets.ButtonText(
+                    types,
+                    "VisualTweaks_ShieldOverride_ClearTypes".Translate()))
+            {
+                Find.WindowStack?.Add(
+                    Dialog_MessageBox.CreateConfirmation(
+                        "VisualTweaks_ShieldOverride_ClearTypesConfirm".Translate(),
+                        delegate
+                        {
+                            VisualTweaksSettings.ClearShieldTypeOverrides();
+                            VisualTweaksSettings.PersistShieldTypeOverrides();
+                        },
                         destructive: true));
             }
 

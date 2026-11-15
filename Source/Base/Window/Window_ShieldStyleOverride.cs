@@ -107,6 +107,10 @@ namespace VisualTweaks
         private readonly List<ShieldSource> typeSources = new List<ShieldSource>();
         private int typeSourceIndex;
 
+        // Set once the type scope is entered; guarantees the settings file is written
+        // on close even if the player only cleared a record.
+        private bool typeScopeTouched;
+
         /// <summary>
         /// The type record of <see cref="typeSourceIndex"/>, created the first time the
         /// type scope is opened. Null until then, so a player who only edits objects
@@ -147,7 +151,12 @@ namespace VisualTweaks
         /// <summary>
         /// A type record is created the moment the type scope is opened. If the player
         /// ends up clearing it again, drop it: an empty record would be written to the
-        /// save and would keep the per-draw def lookup switched on for nothing.
+        /// settings file and would keep the per-draw lookup switched on for nothing.
+        ///
+        /// Type styles are mod settings, so a session that touched them has to write
+        /// that file: RimWorld only writes it on its own when the mod settings dialog
+        /// closes, and this window is not that dialog. Object records need no write --
+        /// they go to the save with the game.
         /// </summary>
         public override void PostClose()
         {
@@ -160,11 +169,16 @@ namespace VisualTweaks
                 }
 
                 PruneCurrentTypeEntry();
+
+                if (typeScopeTouched)
+                {
+                    VisualTweaksSettings.PersistShieldTypeOverrides();
+                }
             }
             catch (Exception ex)
             {
                 Log.ErrorOnce(
-                    "[Visual Tweaks] Could not drop an unused shield type record: " + ex,
+                    "[Visual Tweaks] Could not finish shield style bookkeeping: " + ex,
                     typeof(Window_ShieldStyleOverride).GetHashCode() ^ 0x63);
             }
         }
@@ -200,7 +214,9 @@ namespace VisualTweaks
             if (typeSources.Count > 0)
             {
                 ShieldSource first = typeSources[0];
-                typeEntry = ShieldOverrideGameComponent.GetType(first.Target, first.DefName);
+                typeEntry = VisualTweaksSettings.GetShieldTypeOverride(
+                    first.Target,
+                    first.DefName);
             }
         }
 
@@ -219,9 +235,12 @@ namespace VisualTweaks
             }
 
             PruneCurrentTypeEntry();
+            typeScopeTouched = true;
             typeSourceIndex = index;
             ShieldSource source = CurrentSource;
-            typeEntry = ShieldOverrideGameComponent.GetType(source.Target, source.DefName);
+            typeEntry = VisualTweaksSettings.GetShieldTypeOverride(
+                source.Target,
+                source.DefName);
             BuildGroups();
         }
 
@@ -232,7 +251,7 @@ namespace VisualTweaks
                 return;
             }
 
-            ShieldOverrideGameComponent.PruneType(
+            VisualTweaksSettings.PruneShieldTypeOverride(
                 CurrentSource.Target,
                 CurrentSource.DefName);
             typeEntry = null;
@@ -289,7 +308,7 @@ namespace VisualTweaks
             if (typeEntry == null)
             {
                 ShieldSource source = CurrentSource;
-                typeEntry = ShieldOverrideGameComponent.GetOrCreateType(
+                typeEntry = VisualTweaksSettings.GetOrCreateShieldTypeOverride(
                     source.Target,
                     source.DefName);
             }
@@ -311,7 +330,7 @@ namespace VisualTweaks
                 ShieldSource source = typeSources[i];
                 if (source.Target == target)
                 {
-                    return ShieldOverrideGameComponent.GetType(
+                    return VisualTweaksSettings.GetShieldTypeOverride(
                         source.Target,
                         source.DefName);
                 }
@@ -529,6 +548,11 @@ namespace VisualTweaks
             }
 
             scope = next;
+            if (next == EditScope.Type)
+            {
+                typeScopeTouched = true;
+            }
+
             BuildGroups();
         }
 
@@ -568,7 +592,9 @@ namespace VisualTweaks
             {
                 ShieldSource source = typeSources[i];
                 ShieldTypeStyleOverride? record =
-                    ShieldOverrideGameComponent.GetType(source.Target, source.DefName);
+                    VisualTweaksSettings.GetShieldTypeOverride(
+                        source.Target,
+                        source.DefName);
                 if (record == null)
                 {
                     continue;

@@ -120,9 +120,11 @@ namespace VisualTweaks
                 // Nothing below runs until a type record exists: no type overrides means
                 // the whole type layer is a single count check.
                 ShieldTypeStyleOverride? typed = null;
-                if (ShieldOverrideGameComponent.HasTypeOverrides)
+                if (VisualTweaksSettings.HasShieldTypeOverrides)
                 {
-                    typed = ShieldOverrideGameComponent.GetType(target, source.defName);
+                    typed = VisualTweaksSettings.GetShieldTypeOverride(
+                        target,
+                        source.defName);
                 }
 
                 return Build(target, new ShieldStyleLayers(local, typed));

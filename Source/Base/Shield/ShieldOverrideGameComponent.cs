@@ -176,8 +176,9 @@ namespace VisualTweaks
     /// That is what the player means by "this kind of shield", and it keeps one
     /// record useful across a whole colony instead of one per pawn.
     ///
-    /// The family is part of the key, so the same def appearing in both stacks cannot
-    /// make two records collide.
+    /// Owned by <see cref="VisualTweaksSettings"/>, not by the save: a type style is a
+    /// preference that should hold in every colony. The family is part of the key, so
+    /// the same def appearing in both stacks cannot make two records collide.
     /// </summary>
     internal sealed class ShieldTypeStyleOverride : ShieldStyleFields
     {
@@ -197,9 +198,19 @@ namespace VisualTweaks
     }
 
     /// <summary>
-    /// Owns every per-shield and per-type style override in one save. A GameComponent
-    /// is the smallest vanilla container that is created automatically, survives a
-    /// save, and needs no def surgery on the shield comps themselves.
+    /// Owns the per-object style overrides of one save, and moves the per-type records
+    /// of older saves into the mod settings while that save is being deserialized.
+    ///
+    /// A GameComponent is the smallest vanilla container that is created automatically,
+    /// survives a save, and needs no def surgery on the shield comps themselves. It is
+    /// the right home for a record keyed by <see cref="Thing.thingIDNumber"/>, which
+    /// only means something inside the save that issued it. Type styles are not that:
+    /// they are keyed by a def, they are a preference, and they live in
+    /// <see cref="VisualTweaksSettings"/> so every colony shares them.
+    ///
+    /// No type data is kept here. A published build scribed it in this component; the
+    /// node is read once during deserialization, handed to the settings, and never
+    /// written back, so saves made by this build contain only the object layer.
     ///
     /// Threading contract: every reader is a main-thread draw callback
     /// (Thing.PostDraw, MapComponentDraw or the style window) and every writer is
@@ -213,36 +224,13 @@ namespace VisualTweaks
         private readonly Dictionary<int, ShieldStyleOverride> lookup =
             new Dictionary<int, ShieldStyleOverride>();
 
-        // Keyed by the family plus the owning def. A value-type key so the per-draw
-        // lookup allocates nothing, and includes the family so one def appearing in
-        // both stacks cannot make two records overwrite each other.
-        private List<ShieldTypeStyleOverride> typeEntries =
-            new List<ShieldTypeStyleOverride>();
-        private readonly Dictionary<TypeKey, ShieldTypeStyleOverride> typeLookup =
-            new Dictionary<TypeKey, ShieldTypeStyleOverride>();
-
-        private readonly struct TypeKey : IEquatable<TypeKey>
-        {
-            private readonly ShieldHexTarget target;
-            private readonly string defName;
-
-            internal TypeKey(ShieldHexTarget target, string defName)
-            {
-                this.target = target;
-                this.defName = defName;
-            }
-
-            public bool Equals(TypeKey other) =>
-                target == other.target
-                && string.Equals(defName, other.defName, StringComparison.Ordinal);
-
-            public override bool Equals(object? obj) =>
-                obj is TypeKey other && Equals(other);
-
-            public override int GetHashCode() =>
-                ((int)target * 397)
-                ^ (defName == null ? 0 : StringComparer.Ordinal.GetHashCode(defName));
-        }
+        /// <summary>
+        /// Set while deserializing a save that still carried type styles. The records
+        /// themselves are handed to the mod settings right there; this only remembers
+        /// that the settings file still has to be written, which cannot be done inside
+        /// ExposeData without clobbering the save's scribe state.
+        /// </summary>
+        private static bool importedTypeStyles;
 
         // GameComponent subclasses are instantiated reflectively by Verse.Game with
         // the Game as the single constructor argument.
@@ -288,35 +276,6 @@ namespace VisualTweaks
             return entry != null && !entry.IsEmpty ? entry : null;
         }
 
-        /// <summary>
-        /// True when at least one type record exists. The shield draw code asks this
-        /// before it resolves which def owns the shield, because that resolution is a
-        /// comp and apparel walk the vast majority of saves never need to pay for.
-        /// </summary>
-        internal static bool HasTypeOverrides
-        {
-            get
-            {
-                ShieldOverrideGameComponent? component = GetCurrent();
-                return component != null && component.typeLookup.Count > 0;
-            }
-        }
-
-        internal static ShieldTypeStyleOverride? GetType(
-            ShieldHexTarget target,
-            string? defName)
-        {
-            if (defName.NullOrEmpty())
-            {
-                return null;
-            }
-
-            ShieldOverrideGameComponent? component = GetCurrent();
-            ShieldTypeStyleOverride? entry = component?.FindType(
-                new TypeKey(target, defName!));
-            return entry != null && !entry.IsEmpty ? entry : null;
-        }
-
         internal static ShieldStyleOverride GetOrCreate(
             Thing thing,
             ShieldHexTarget target)
@@ -341,31 +300,6 @@ namespace VisualTweaks
             return new ShieldStyleOverride
             {
                 ThingId = thing.thingIDNumber,
-                Target = target,
-            };
-        }
-
-        internal static ShieldTypeStyleOverride GetOrCreateType(
-            ShieldHexTarget target,
-            string defName)
-        {
-            ShieldOverrideGameComponent? component = GetCurrent();
-            if (component != null)
-            {
-                return component.CreateType(target, defName);
-            }
-
-            if (Current.Game != null)
-            {
-                Log.ErrorOnce(
-                    "[Visual Tweaks] Per-shield override component is missing;"
-                        + " style changes will not be saved.",
-                    typeof(ShieldOverrideGameComponent).GetHashCode() ^ 0x7A);
-            }
-
-            return new ShieldTypeStyleOverride
-            {
-                DefName = defName,
                 Target = target,
             };
         }
@@ -404,30 +338,6 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Drops a type record that ended up with nothing set. The editor creates one
-        /// as soon as the type scope is opened, and a record the player cleared again
-        /// would otherwise be saved and keep the per-draw def lookup switched on.
-        /// </summary>
-        internal static void PruneType(ShieldHexTarget target, string? defName)
-        {
-            if (defName.NullOrEmpty())
-            {
-                return;
-            }
-
-            ShieldOverrideGameComponent? component = GetCurrent();
-            TypeKey key = new TypeKey(target, defName!);
-            ShieldTypeStyleOverride? entry = component?.FindType(key);
-            if (entry == null || !entry.IsEmpty)
-            {
-                return;
-            }
-
-            component!.typeLookup.Remove(key);
-            component.typeEntries?.Remove(entry);
-        }
-
-        /// <summary>
         /// Number of objects with at least one active override. Empty records that
         /// were only created by opening the window are not counted.
         /// </summary>
@@ -453,32 +363,8 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Number of shield types with at least one active override. Empty records
-        /// made by merely opening the type scope are not counted.
-        /// </summary>
-        internal static int CountActiveTypes()
-        {
-            ShieldOverrideGameComponent? component = GetCurrent();
-            if (component?.typeEntries == null)
-            {
-                return 0;
-            }
-
-            int count = 0;
-            for (int i = 0; i < component.typeEntries.Count; i++)
-            {
-                ShieldTypeStyleOverride? entry = component.typeEntries[i];
-                if (entry != null && !entry.IsEmpty)
-                {
-                    count++;
-                }
-            }
-
-            return count;
-        }
-
-        /// <summary>
-        /// Drops every override at both layers, including empty records.
+        /// Drops every per-object override, including empty records. Type styles are
+        /// mod settings and are cleared from the settings page instead.
         /// </summary>
         internal static void ClearAll()
         {
@@ -490,31 +376,107 @@ namespace VisualTweaks
 
             component.entries?.Clear();
             component.lookup.Clear();
-            component.typeEntries?.Clear();
-            component.typeLookup.Clear();
         }
 
         /// <summary>
-        /// Bakes any lattice a saved override will draw. Loading is the last point
-        /// before play where the cost can land on a loading screen instead of the
-        /// first frame that happens to show the shield.
+        /// Bakes any lattice a saved override will draw, then flushes the settings file
+        /// if deserializing moved type styles into it. Loading is the last point before
+        /// play where that cost can land on a loading screen instead of the first frame
+        /// that happens to show the shield.
         /// </summary>
         public override void LoadedGame()
         {
             base.LoadedGame();
+            FlushImportedTypeStyles();
             EnsureOverrideLattices();
+        }
+
+        /// <summary>
+        /// Writes the settings file after a migration. Kept out of ExposeData on purpose:
+        /// writing it there would switch Scribe's mode and saver out from under the save
+        /// that is being read.
+        ///
+        /// The records are already live in memory by this point, so a failed write only
+        /// means they reach disk later; the flag stays set so the next load tries again.
+        /// </summary>
+        private static void FlushImportedTypeStyles()
+        {
+            if (!importedTypeStyles)
+            {
+                return;
+            }
+
+            if (VisualTweaksSettings.PersistShieldTypeOverrides())
+            {
+                importedTypeStyles = false;
+                return;
+            }
+
+            Log.Warning(
+                "[Visual Tweaks] Could not write the settings file after moving shield"
+                    + " type styles out of a save; retrying on the next load.");
         }
 
         public override void ExposeData()
         {
             base.ExposeData();
             Scribe_Collections.Look(ref entries, "shieldStyleOverrides", LookMode.Deep);
-            Scribe_Collections.Look(
-                ref typeEntries,
-                "shieldTypeStyleOverrides",
-                LookMode.Deep);
+
+            // A save written by a build that kept type styles here still carries them.
+            // Read that node into a temporary and hand the records to the mod settings
+            // before it goes out of scope, so this component holds no type data at all
+            // and the next save writes no such node.
+            //
+            // Types the settings already style are left alone: the settings are the
+            // single source of truth, and opening an old colony must not silently
+            // rewrite a preference set since upgrading.
+            if (Scribe.mode == LoadSaveMode.LoadingVars)
+            {
+                ImportLegacyTypeStyles();
+            }
+
             RebuildLookup();
-            RebuildTypeLookup();
+        }
+
+        private static void ImportLegacyTypeStyles()
+        {
+            try
+            {
+                List<ShieldTypeStyleOverride>? legacy = null;
+                Scribe_Collections.Look(
+                    ref legacy,
+                    "shieldTypeStyleOverrides",
+                    LookMode.Deep);
+
+                if (legacy == null || legacy.Count == 0)
+                {
+                    return;
+                }
+
+                int imported = VisualTweaksSettings.ImportShieldTypeOverrides(legacy);
+                if (imported > 0)
+                {
+                    importedTypeStyles = true;
+                    VisualTweaksLog.Info(
+                        "Moved " + imported + " shield type style(s) out of the save and"
+                            + " into the mod settings.");
+                }
+                else
+                {
+                    VisualTweaksLog.Info(
+                        "Dropped " + legacy.Count + " shield type style record(s) found"
+                            + " in a save; the mod settings already style them.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // A corrupt node must not stop a colony from loading. The settings keep
+                // whatever they already had, and the save is clean on the next write.
+                Log.ErrorOnce(
+                    "[Visual Tweaks] Could not move shield type styles out of a save: "
+                        + ex,
+                    typeof(ShieldOverrideGameComponent).GetHashCode() ^ 0x5B);
+            }
         }
 
         private ShieldStyleOverride? Find(int thingId)
@@ -564,48 +526,6 @@ namespace VisualTweaks
             return entry;
         }
 
-        private ShieldTypeStyleOverride? FindType(TypeKey key)
-        {
-            if (typeLookup.Count == 0)
-            {
-                if (typeEntries != null && typeEntries.Count > 0)
-                {
-                    RebuildTypeLookup();
-                }
-
-                if (typeLookup.Count == 0)
-                {
-                    return null;
-                }
-            }
-
-            return typeLookup.TryGetValue(key, out ShieldTypeStyleOverride? entry)
-                ? entry
-                : null;
-        }
-
-        private ShieldTypeStyleOverride CreateType(
-            ShieldHexTarget target,
-            string defName)
-        {
-            TypeKey key = new TypeKey(target, defName);
-            ShieldTypeStyleOverride? existing = FindType(key);
-            if (existing != null)
-            {
-                return existing;
-            }
-
-            typeEntries ??= new List<ShieldTypeStyleOverride>();
-            ShieldTypeStyleOverride entry = new ShieldTypeStyleOverride
-            {
-                DefName = defName,
-                Target = target,
-            };
-            typeEntries.Add(entry);
-            typeLookup[key] = entry;
-            return entry;
-        }
-
         private void Remove(int thingId)
         {
             if (lookup.Count == 0)
@@ -637,27 +557,11 @@ namespace VisualTweaks
             }
         }
 
-        private void RebuildTypeLookup()
-        {
-            typeLookup.Clear();
-            typeEntries ??= new List<ShieldTypeStyleOverride>();
-            for (int i = typeEntries.Count - 1; i >= 0; i--)
-            {
-                ShieldTypeStyleOverride? entry = typeEntries[i];
-                if (entry == null || entry.DefName.NullOrEmpty())
-                {
-                    typeEntries.RemoveAt(i);
-                    continue;
-                }
-
-                typeLookup[new TypeKey(entry.Target, entry.DefName)] = entry;
-            }
-        }
-
         private void EnsureOverrideLattices()
         {
             bool large = false;
             bool personal = false;
+
             if (entries != null)
             {
                 for (int i = 0; i < entries.Count; i++)
@@ -670,15 +574,16 @@ namespace VisualTweaks
                 }
             }
 
-            if (typeEntries != null)
+            // Type records are settings now, and they apply to every colony, so their
+            // lattice is prepared here too rather than waiting for the first draw.
+            IReadOnlyList<ShieldTypeStyleOverride> types =
+                VisualTweaksSettings.ShieldTypeOverrideRecords;
+            for (int i = 0; i < types.Count; i++)
             {
-                for (int i = 0; i < typeEntries.Count; i++)
+                ShieldTypeStyleOverride? entry = types[i];
+                if (entry != null)
                 {
-                    ShieldTypeStyleOverride? entry = typeEntries[i];
-                    if (entry != null)
-                    {
-                        NeedsLattice(entry, entry.Target, ref large, ref personal);
-                    }
+                    NeedsLattice(entry, entry.Target, ref large, ref personal);
                 }
             }
 

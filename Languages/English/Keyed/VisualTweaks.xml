@@ -159,10 +159,12 @@
   <VisualTweaks_ShieldOverride_TypeJoin>, </VisualTweaks_ShieldOverride_TypeJoin>
   <VisualTweaks_ShieldOverride_Surface>Surface style</VisualTweaks_ShieldOverride_Surface>
   <VisualTweaks_ShieldOverride_ManageGroup>Per-shield overrides</VisualTweaks_ShieldOverride_ManageGroup>
-  <VisualTweaks_ShieldOverride_Count>Overridden shields: {0}</VisualTweaks_ShieldOverride_Count>
-  <VisualTweaks_ShieldOverride_TypeCount>Overridden shield types: {0}</VisualTweaks_ShieldOverride_TypeCount>
-  <VisualTweaks_ShieldOverride_ClearAll>Clear all overrides</VisualTweaks_ShieldOverride_ClearAll>
-  <VisualTweaks_ShieldOverride_ClearAllConfirm>Clear every object and type override (surface, color, opacity and animations)? This cannot be undone.</VisualTweaks_ShieldOverride_ClearAllConfirm>
+  <VisualTweaks_ShieldOverride_Count>Overridden shields: {0} (stored in this save)</VisualTweaks_ShieldOverride_Count>
+  <VisualTweaks_ShieldOverride_TypeCount>Overridden shield types: {0} (stored in mod settings, applies to every save)</VisualTweaks_ShieldOverride_TypeCount>
+  <VisualTweaks_ShieldOverride_ClearObjects>Clear object overrides</VisualTweaks_ShieldOverride_ClearObjects>
+  <VisualTweaks_ShieldOverride_ClearObjectsConfirm>Clear every per-object shield style override in this save (surface, color, opacity and animations)? Type overrides are kept. This cannot be undone.</VisualTweaks_ShieldOverride_ClearObjectsConfirm>
+  <VisualTweaks_ShieldOverride_ClearTypes>Clear type overrides</VisualTweaks_ShieldOverride_ClearTypes>
+  <VisualTweaks_ShieldOverride_ClearTypesConfirm>Clear every shield type style override? They are stored in the mod settings and apply to every save; per-object overrides are kept. This cannot be undone.</VisualTweaks_ShieldOverride_ClearTypesConfirm>
   <VisualTweaks_ShieldHexColor_Group>Hex shield color</VisualTweaks_ShieldHexColor_Group>
   <VisualTweaks_ShieldHexColor_LineFollows>Grid lines follow shield color</VisualTweaks_ShieldHexColor_LineFollows>
   <VisualTweaks_ShieldHexColor_LineFollowsTip>On: the cell lines take the shield's own tint instead of the near-white highlight. Off: keep the original near-white lines. Applies to the hexagonal and hex bubble surfaces.</VisualTweaks_ShieldHexColor_LineFollowsTip>

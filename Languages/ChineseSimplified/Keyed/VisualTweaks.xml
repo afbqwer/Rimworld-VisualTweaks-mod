@@ -159,10 +159,12 @@
   <VisualTweaks_ShieldOverride_TypeJoin>、</VisualTweaks_ShieldOverride_TypeJoin>
   <VisualTweaks_ShieldOverride_Surface>表面样式</VisualTweaks_ShieldOverride_Surface>
   <VisualTweaks_ShieldOverride_ManageGroup>护盾覆写管理</VisualTweaks_ShieldOverride_ManageGroup>
-  <VisualTweaks_ShieldOverride_Count>已覆写护盾数：{0}</VisualTweaks_ShieldOverride_Count>
-  <VisualTweaks_ShieldOverride_TypeCount>已覆写护盾类型：{0}</VisualTweaks_ShieldOverride_TypeCount>
-  <VisualTweaks_ShieldOverride_ClearAll>清除所有覆写</VisualTweaks_ShieldOverride_ClearAll>
-  <VisualTweaks_ShieldOverride_ClearAllConfirm>清除所有对象样式和类型样式的覆写（表面、颜色、透明度和动画）？此操作无法撤销。</VisualTweaks_ShieldOverride_ClearAllConfirm>
+  <VisualTweaks_ShieldOverride_Count>已覆写护盾数：{0}（保存在本存档）</VisualTweaks_ShieldOverride_Count>
+  <VisualTweaks_ShieldOverride_TypeCount>已覆写的护盾类型：{0}（保存在 mod 设置，对所有存档生效）</VisualTweaks_ShieldOverride_TypeCount>
+  <VisualTweaks_ShieldOverride_ClearObjects>清除对象覆写</VisualTweaks_ShieldOverride_ClearObjects>
+  <VisualTweaks_ShieldOverride_ClearObjectsConfirm>清除本存档内所有对象自己的护盾样式覆写（表面、颜色、透明度和动画）？类型覆写不受影响。此操作无法撤销。</VisualTweaks_ShieldOverride_ClearObjectsConfirm>
+  <VisualTweaks_ShieldOverride_ClearTypes>清除类型覆写</VisualTweaks_ShieldOverride_ClearTypes>
+  <VisualTweaks_ShieldOverride_ClearTypesConfirm>清除所有护盾类型的样式覆写？这些设置保存在 mod 设置中，对所有存档生效；各对象自己的覆写不受影响。此操作无法撤销。</VisualTweaks_ShieldOverride_ClearTypesConfirm>
   <VisualTweaks_ShieldHexColor_Group>六边形护盾颜色</VisualTweaks_ShieldHexColor_Group>
   <VisualTweaks_ShieldHexColor_LineFollows>格线跟随护盾颜色</VisualTweaks_ShieldHexColor_LineFollows>
   <VisualTweaks_ShieldHexColor_LineFollowsTip>开启：格线使用护盾自身的颜色，不再偏向白色高光。关闭：保留原本接近白色的格线。仅对六边形和六边形气泡表面生效。</VisualTweaks_ShieldHexColor_LineFollowsTip>
