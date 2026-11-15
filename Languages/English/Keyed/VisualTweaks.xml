@@ -216,6 +216,8 @@
   <VisualTweaks_ShieldDome_HexBubbleScanDirection>Scan direction</VisualTweaks_ShieldDome_HexBubbleScanDirection>
   <VisualTweaks_ShieldDome_HexBubbleDirDown>Top to bottom</VisualTweaks_ShieldDome_HexBubbleDirDown>
   <VisualTweaks_ShieldDome_HexBubbleDirUp>Bottom to top</VisualTweaks_ShieldDome_HexBubbleDirUp>
+  <VisualTweaks_ShieldDome_HexBubbleStagger>Staggered scan phase</VisualTweaks_ShieldDome_HexBubbleStagger>
+  <VisualTweaks_ShieldDome_HexBubbleStaggerTip>On, each shield's scan band runs on its own phase, fixed per object (it does not change across loads), so bubbles in one base do not sweep in lockstep. Off puts them back on the one shared clock, sweeping together. Shared by large shields and belts.</VisualTweaks_ShieldDome_HexBubbleStaggerTip>
   <VisualTweaks_ShieldDome_HexBubbleFeather>Feather width</VisualTweaks_ShieldDome_HexBubbleFeather>
   <VisualTweaks_ShieldDome_HexBubbleFeatherTip>Soft transition on both edges of the scan band. Band width is fixed at 0.06 and the leading-edge highlight at 0.</VisualTweaks_ShieldDome_HexBubbleFeatherTip>
   <VisualTweaks_ShieldDome_HexBubbleStripes>Stripe count</VisualTweaks_ShieldDome_HexBubbleStripes>

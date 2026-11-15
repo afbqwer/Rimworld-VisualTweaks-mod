@@ -516,6 +516,20 @@ namespace VisualTweaks
                 style.HexColorFlags);
             float time = ShieldAnimationClock.Time;
 
+            // Every shield reads one clock, so without a per-shield offset every scan
+            // band on the map sweeps in lockstep — which reads worst right after a
+            // load, when they all start from the same t. The offset is a hash of the
+            // thing id: no save data, and the same shield gets the same phase on every
+            // load. Only the HexBubble surface has a scan, and its t reaches nothing
+            // else (the lattice is sampled with a fixed t), so the shift cannot move
+            // any other animation on this or on another style.
+            if (hexBubble)
+            {
+                time += ShieldHexBubble.ScanPhase(
+                    host.thingIDNumber,
+                    VisualTweaksSettings.hexBubbleScanPeriod);
+            }
+
             // Pulse off replaces vanilla's GetCurrentAlpha() entirely: one fixed,
             // lower value, with no sin term left anywhere in the surface. Pulse on
             // keeps vanilla's own pulsing alpha as-is. A fade overrides both: it

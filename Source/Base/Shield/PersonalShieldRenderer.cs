@@ -121,6 +121,7 @@ namespace VisualTweaks
 
             return DrawCore(
                 comp,
+                pawn.thingIDNumber,
                 pawn.Drawer.DrawPos,
                 size,
                 active,
@@ -156,6 +157,7 @@ namespace VisualTweaks
 
             return DrawCore(
                 comp,
+                pawn.thingIDNumber,
                 pawn.Drawer.DrawPos,
                 drawnSize,
                 active,
@@ -181,6 +183,7 @@ namespace VisualTweaks
         {
             return DrawCore(
                 comp,
+                host?.thingIDNumber ?? 0,
                 center,
                 drawnSize,
                 active,
@@ -191,6 +194,7 @@ namespace VisualTweaks
 
         private static bool DrawCore(
             object comp,
+            int hostId,
             Vector3 baseCenter,
             float drawnSize,
             bool active,
@@ -535,6 +539,19 @@ namespace VisualTweaks
                 hitHold,
                 style.HexColorFlags);
             float time = ShieldAnimationClock.Time;
+
+            // Same per-shield scan phase as the dome: one shared clock swept every
+            // bubble in the colony in lockstep. The host id is the wearer's, so a
+            // belt's band keeps its phase through a load and does not sit on the same
+            // point of the sweep as the dome standing next to it. A belt also uses t
+            // for its idle alpha pulse, which then breathes out of step as well —
+            // intended, that is the same "two shields are two objects" read.
+            if (hexBubble)
+            {
+                time += ShieldHexBubble.ScanPhase(
+                    hostId,
+                    VisualTweaksSettings.hexBubbleScanPeriod);
+            }
 
             if (breaking && dissolve != null)
             {

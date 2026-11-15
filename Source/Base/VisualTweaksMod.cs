@@ -1443,6 +1443,11 @@ namespace VisualTweaks
                 VisualTweaksSettings.hexBubbleScanDown ? 0 : 1);
             VisualTweaksSettings.hexBubbleScanDown = direction == 0;
 
+            listing.CheckboxLabeled(
+                "VisualTweaks_ShieldDome_HexBubbleStagger".Translate(),
+                ref VisualTweaksSettings.hexBubblePerShieldScanPhase,
+                "VisualTweaks_ShieldDome_HexBubbleStaggerTip".Translate());
+
             VisualTweaksSettings.hexBubbleFeather = SettingsLayout.Slider(
                 listing,
                 "VisualTweaks_ShieldDome_HexBubbleFeather".Translate(),

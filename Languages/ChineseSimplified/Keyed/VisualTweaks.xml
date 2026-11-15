@@ -216,6 +216,8 @@
   <VisualTweaks_ShieldDome_HexBubbleScanDirection>扫描方向</VisualTweaks_ShieldDome_HexBubbleScanDirection>
   <VisualTweaks_ShieldDome_HexBubbleDirDown>上 → 下</VisualTweaks_ShieldDome_HexBubbleDirDown>
   <VisualTweaks_ShieldDome_HexBubbleDirUp>下 → 上</VisualTweaks_ShieldDome_HexBubbleDirUp>
+  <VisualTweaks_ShieldDome_HexBubbleStagger>扫描线错相</VisualTweaks_ShieldDome_HexBubbleStagger>
+  <VisualTweaks_ShieldDome_HexBubbleStaggerTip>开启后每面护盾的扫描条纹各走各的相位（按物体 ID 固定，读档后不变），一片基里的泡泡不会齐步扫。关闭则回到共用一个时钟的同步扫描。大型护盾与个人护盾共用。</VisualTweaks_ShieldDome_HexBubbleStaggerTip>
   <VisualTweaks_ShieldDome_HexBubbleFeather>过渡宽度</VisualTweaks_ShieldDome_HexBubbleFeather>
   <VisualTweaks_ShieldDome_HexBubbleFeatherTip>扫描带两侧的柔化宽度。带宽固定 0.06、扫描亮边固定 0，只有过渡可调。</VisualTweaks_ShieldDome_HexBubbleFeatherTip>
   <VisualTweaks_ShieldDome_HexBubbleStripes>条纹数</VisualTweaks_ShieldDome_HexBubbleStripes>

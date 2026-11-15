@@ -546,6 +546,19 @@ namespace VisualTweaks
         /// <summary>True = top to bottom, false = bottom to top.</summary>
         public static bool hexBubbleScanDown = true;
 
+        /// <summary>
+        /// On by default. Every bubble's scan band runs on its own phase, taken from
+        /// the host's thing id (see ShieldHexBubble.ScanPhase), so a base full of
+        /// shields does not sweep in lockstep. Off puts them all back on the one
+        /// shared clock: a single synchronised sweep, which is what vanilla does and
+        /// what a screenshot of a shield array sometimes wants.
+        ///
+        /// Global rather than per shield on purpose. A per-shield switch would need
+        /// save data for a value nobody tunes one shield at a time, and the offsets
+        /// are already per shield.
+        /// </summary>
+        public static bool hexBubblePerShieldScanPhase = true;
+
         public const float MinHexBubbleFeather = 0.02f;
         public const float MaxHexBubbleFeather = 0.5f;
         public static float hexBubbleFeather = 0.20f;
@@ -1136,6 +1149,10 @@ namespace VisualTweaks
                 "hexBubbleScanPeriod",
                 2.4f);
             Scribe_Values.Look(ref hexBubbleScanDown, "hexBubbleScanDown", true);
+            Scribe_Values.Look(
+                ref hexBubblePerShieldScanPhase,
+                "hexBubblePerShieldScanPhase",
+                true);
             Scribe_Values.Look(ref hexBubbleFeather, "hexBubbleFeather", 0.20f);
             Scribe_Values.Look(ref hexBubbleStripes, "hexBubbleStripes", 1);
             Scribe_Values.Look(ref hexBubbleBaseline, "hexBubbleBaseline", 0.12f);
