@@ -17,37 +17,24 @@ namespace VisualTweaks
     /// patch covers every gizmo-producing host without replacing the eager pawn
     /// gizmo lists other mods may build.
     ///
-    /// Only the first caller of a frame answers. Vanilla asks every selected object
-    /// for its gizmos once per frame and then merges the identical commands back
-    /// into one button, so every later answer was built only to be discarded -- and
-    /// each one cost a full shield scan. One frame stamp makes the first caller
-    /// answer for the whole selection, which keeps that scan at a single object per
-    /// frame however large the selection is. A selection whose first object has no
-    /// shield shows no gizmo; the player selects a shielded object directly.
+    /// The gizmo only exists for a single selection, and only on the object that is
+    /// selected. A multi-selection shows nothing: the bar is already crowded with
+    /// the pawns' own commands and the player opens this window to style one shield,
+    /// not to bulk-edit a drag box.
     ///
-    /// Two things about that stamp are load-bearing. Callers that cannot own a
-    /// shield are rejected before it, because anything that asks first would
-    /// otherwise take the frame's single answer (a corpse's inner pawn is the
-    /// vanilla case). And a repeat caller of the same object in the same frame
-    /// replays the stored answer, because the gizmo bar can rebuild its list more
-    /// than once per frame and a dropped second answer is a button that blinks.
+    /// That decision is made per call from the live selector and never cached. A
+    /// frame stamp that let only the first caller of a frame answer was tried and
+    /// taken back out: the gizmo bar rebuilds its list more than once inside one
+    /// frame (a layout pass with the old selection, then another once the click has
+    /// changed it), so the rebuild that gets drawn found the frame's answer already
+    /// spent -- the button arrived a frame late, or blinked when another caller had
+    /// taken the slot. One selector read is a few nanoseconds and removes both.
     /// </summary>
     internal static class ShieldOverridePatches
     {
         private const string GizmoIconPath = "UI/Commands/ChangeColor";
         private static Texture2D? gizmoIcon;
         private static bool gizmoIconResolved;
-
-        /// <summary>
-        /// The frame this postfix last answered, and the answer itself. Same clock
-        /// <c>GizmoGridDrawer</c> caches on. Everything after the first call in a
-        /// frame costs an int compare plus, for the same object, one reference
-        /// compare.
-        /// </summary>
-        private static int answeredFrame = -1;
-        private static ThingWithComps? answeredThing;
-        private static ShieldHexTarget answeredTarget;
-        private static bool answeredShielded;
 
         internal static void Apply(Harmony harmony)
         {
@@ -118,55 +105,21 @@ namespace VisualTweaks
                 return;
             }
 
-            // Cheapest rejection first, and ahead of the frame stamp: an object that
-            // is neither a pawn nor a building can never own a shield, so it must not
-            // consume the frame's single answer. A corpse's inner pawn is the vanilla
-            // case -- Corpse.GetGizmos forwards to it -- and without this it takes the
-            // slot from the thing the player actually selected, which reads as a
-            // blinking button.
-            if (__instance is not Pawn && __instance is not Building)
+            // Single selection only, and only on the selected object itself. This is
+            // one selector read plus a reference compare per call -- cheaper than the
+            // scan it skips, and stateless, so every rebuild of the gizmo bar in a
+            // frame gets the same answer. It also drops the forwarded asks for free:
+            // Corpse.GetGizmos hands its inner pawn to this method, and that pawn is
+            // not what the player selected.
+            if (!ReferenceEquals(Find.Selector?.SingleSelectedThing, __instance))
             {
                 return;
             }
-
-            if (__instance is Pawn { Dead: true })
-            {
-                return;
-            }
-
-            // Every selected object is asked once per frame. Answering them all
-            // means one shield scan each -- the VEF hediff walk is the expensive
-            // one -- for commands vanilla then merges down to a single button. One
-            // frame stamp replaces that with an int compare for every caller after
-            // the first, and the stamp is taken before the scan so a first object
-            // without a shield stops the rest of the frame too.
-            int frame = Time.frameCount;
-            if (frame == answeredFrame)
-            {
-                // The gizmo bar may ask about the same object again in the same frame
-                // (it rebuilds when the selection changes between OnGUI passes, and a
-                // mod can select something while another pane draws). Replaying the
-                // stored answer keeps the button steady without a second scan; the
-                // command is rebuilt rather than shared because vanilla's merge mutates
-                // the commands it is given.
-                if (answeredShielded && ReferenceEquals(answeredThing, __instance))
-                {
-                    __result = Append(__result, CreateGizmo(__instance, answeredTarget));
-                }
-
-                return;
-            }
-
-            answeredFrame = frame;
-            answeredThing = __instance;
-            answeredShielded = false;
 
             try
             {
                 if (TryGetShieldTarget(__instance, out ShieldHexTarget target))
                 {
-                    answeredTarget = target;
-                    answeredShielded = true;
                     __result = Append(__result, CreateGizmo(__instance, target));
                 }
             }
@@ -227,52 +180,16 @@ namespace VisualTweaks
                 defaultLabel = "VisualTweaks_ShieldOverride_GizmoLabel".Translate(),
                 defaultDesc = "VisualTweaks_ShieldOverride_GizmoTip".Translate(),
                 icon = GizmoIcon(),
-                // The action reads the live selection rather than the captured
-                // thing: the gizmo is only ever built for the first selected object,
-                // but every selected shield is edited together by the one window
-                // that opens.
-                action = delegate { OpenForSelection(thing, target); },
+                // The captured thing is the only thing this gizmo can ever belong to,
+                // because it is only created for the current single selection.
+                action = delegate { OpenFor(thing, target); },
             };
         }
 
-        private static void OpenForSelection(
-            ThingWithComps fallback,
-            ShieldHexTarget fallbackTarget)
+        private static void OpenFor(ThingWithComps thing, ShieldHexTarget target)
         {
-            List<ShieldHost> hosts = CollectSelectedShieldHosts();
-
-            if (hosts.Count == 0)
-            {
-                // Selection changed between drawing the gizmo and clicking it.
-                hosts.Add(new ShieldHost(fallback, fallbackTarget));
-            }
-
-            Find.WindowStack?.Add(new Window_ShieldStyleOverride(hosts));
-        }
-
-        private static List<ShieldHost> CollectSelectedShieldHosts()
-        {
-            List<ShieldHost> hosts = new List<ShieldHost>();
-            List<object>? selected = Find.Selector?.SelectedObjects;
-            if (selected == null)
-            {
-                return hosts;
-            }
-
-            for (int i = 0; i < selected.Count; i++)
-            {
-                if (selected[i] is not ThingWithComps candidate)
-                {
-                    continue;
-                }
-
-                if (TryGetShieldTarget(candidate, out ShieldHexTarget target))
-                {
-                    hosts.Add(new ShieldHost(candidate, target));
-                }
-            }
-
-            return hosts;
+            Find.WindowStack?.Add(new Window_ShieldStyleOverride(
+                new List<ShieldHost> { new ShieldHost(thing, target) }));
         }
 
         /// <summary>
@@ -282,8 +199,10 @@ namespace VisualTweaks
         /// on a pawn, so the family that owns the drawn surface wins in the rare
         /// case an object has both.
         ///
-        /// Runs for at most one object per frame, so the scans below are a
-        /// per-frame cost of one object and not a per-selection cost.
+        /// Reached at most once per frame, but the order of the branches is still the
+        /// cost: the worn-apparel loop is a handful of comp lookups, and the VEF
+        /// hediff walk is the expensive one, so it stays last and only runs for a
+        /// pawn that has neither a belt nor a bubble.
         /// </summary>
         private static bool TryGetShieldTarget(
             ThingWithComps thing,
