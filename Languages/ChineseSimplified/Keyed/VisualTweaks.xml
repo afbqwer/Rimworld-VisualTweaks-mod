@@ -92,8 +92,8 @@
   <VisualTweaks_Gas_Diagnostics>气体层闪烁诊断（临时排查用）</VisualTweaks_Gas_Diagnostics>
   <VisualTweaks_Gas_DiagnosticsTip>开启时每帧采集气体层全部状态，写入系统临时目录的 VisualTweaks_GasField_Flash.log，会明显影响性能。排查镜头移动时整层闪动：先开启复现，再关闭做对照。关闭后完全不采集数据。测完请保持关闭。</VisualTweaks_Gas_DiagnosticsTip>
   <VisualTweaks_QueueProbe_Enable>渲染队列冲突探针</VisualTweaks_QueueProbe_Enable>
-  <VisualTweaks_QueueProbe_EnableTip>开启后会扫描本 mod 占用的渲染队列（2991 气体/风线、3174 冷雾/热浪、3179 真空泄漏/冲击波）。如果其它 mod 或 DLC 在同一队列上声明了 scene grab 或材质，就写入警告。同队列的绘制按镜头深度排序，外来的 scene grab 还会多一次全屏拷贝，效果重叠时可能闪烁或前后翻转。探针只读，不会修改任何队列。默认关闭：开启后每 30 秒会遍历一次所有存活材质。</VisualTweaks_QueueProbe_EnableTip>
-  <VisualTweaks_QueueProbe_Note>结果只写日志。每次开启期间，同一个冲突只报一次；探针保持开启时每 30 秒重扫一次。</VisualTweaks_QueueProbe_Note>
+  <VisualTweaks_QueueProbe_EnableTip>开启后会扫描本 mod 占用的渲染队列（2991 气体/风线、3174 冷雾/热浪、3179 真空泄漏/冲击波）。如果其它 mod 或 DLC 在同一队列上声明了 scene grab 或材质，就写入警告。同队列的绘制按镜头深度排序，外来的 scene grab 还会多一次全屏拷贝，效果重叠时可能闪烁或前后翻转。探针只读，不会修改任何队列。它同时会记录引擎丢弃的绘制——角括号、进度条这类“某个东西没画出来”的情况：引擎本来会写明原因，但所有原版 pass 都不带诊断前缀，那条说明在任何日志级别下都写不出来，只有这里能拿到。默认关闭：开启后每 30 秒会遍历一次所有存活材质。</VisualTweaks_QueueProbe_EnableTip>
+  <VisualTweaks_QueueProbe_Note>结果只写日志。每次开启期间，同一个冲突只报一次；探针保持开启时每 30 秒重扫一次。丢弃的绘制按消息去重（去掉每帧都变的排序键），每次会话最多记录 64 条，超出的只计数。</VisualTweaks_QueueProbe_Note>
 
   <!-- 爆炸冲击波 -->
   <VisualTweaks_Ripple_GroupSwitch>总开关</VisualTweaks_Ripple_GroupSwitch>

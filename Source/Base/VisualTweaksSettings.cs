@@ -154,10 +154,13 @@ namespace VisualTweaks
         public static bool gasFieldDiagnostics = false;
 
         // Reports other content sources that declare or create draws on the queues this
-        // mod reserves (2991 gas/wind, 3174 mist/haze, 3179 leak/shockwave). Off by
-        // default: the probe walks every live material every 30 s and logs warnings,
-        // which is cheap but has no reason to run for players who are not diagnosing a
-        // visual overlap. Enabling it triggers a scan on the next drawn frame.
+        // mod reserves (2991 gas/wind, 3174 mist/haze, 3179 leak/shockwave), and the
+        // draws the engine dropped while it was on (its own explanation for those is
+        // unreachable — every vanilla pass calls the diagnostic with a null prefix).
+        // Off by default: the probe walks every live material every 30 s and logs
+        // warnings, which is cheap but has no reason to run for players who are not
+        // diagnosing a visual overlap. Enabling it triggers a scan on the next drawn
+        // frame.
         public static bool renderQueueProbe = false;
         public static float gasFieldOpacity = 1f;
         public static float gasFieldScale = 1f;

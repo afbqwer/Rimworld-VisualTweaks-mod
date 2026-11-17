@@ -34,6 +34,12 @@ namespace VisualTweaks
     /// once per enable rather than once per scan. The probe only reads: it never changes
     /// a queue or a draw.
     ///
+    /// The same switch also reports draws the engine dropped, through
+    /// <see cref="RenderDrawDiagnostics"/>. That belongs here rather than behind a second
+    /// checkbox: "these overlays are not drawn on my screen" is answered either by a
+    /// queue conflict or by a skipped draw, the two are indistinguishable from the
+    /// player's report, and both are gated on the same session and the same cadence.
+    ///
     /// Gated by <see cref="VisualTweaksSettings.renderQueueProbe"/>, off by default.
     ///
     /// The static half cannot see a material that a mod creates only when a rare event
@@ -135,10 +141,26 @@ namespace VisualTweaks
             ScanRegisteredShaders(findings);
             ScanLiveMaterials(findings);
 
+            // Draws the engine dropped since the previous scan. Gated on the same
+            // setting, reported in the same tick, kept in a separate warning because a
+            // dropped draw and a queue clash need different fixes.
+            List<string> dropped = new List<string>();
+            RenderDrawDiagnostics.Drain(dropped);
+
             if (findings.Count > 0)
             {
                 conflictReported = true;
                 Log.Warning(BuildReport(findings));
+            }
+
+            if (dropped.Count > 0)
+            {
+                conflictReported = true;
+                Log.Warning(BuildDrawReport(dropped));
+            }
+
+            if (findings.Count > 0 || dropped.Count > 0)
+            {
                 return;
             }
 
@@ -463,6 +485,46 @@ namespace VisualTweaks
                 builder.Append("  ... and ");
                 builder.Append(findings.Count - shown);
                 builder.Append(" more.\n");
+            }
+
+            return builder.ToString();
+        }
+
+        /// <summary>
+        /// The other half of the support picture: draws the engine refused to submit.
+        /// Worth its own paragraph because the fix is not a queue change — it is the
+        /// material, the shader or the mesh named in the line.
+        /// </summary>
+        private static string BuildDrawReport(List<string> dropped)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.Append("[Visual Tweaks] Draw diagnostics ("
+                + RenderDrawDiagnostics.Hooked + "/3 engine log paths hooked): the engine "
+                + "dropped one or more draws since the last scan. Waylith explains every "
+                + "drop, but only when the caller passes a diagnostic prefix — every "
+                + "vanilla pass passes null — so without this probe these lines never "
+                + "reach the log at any log level. A dropped draw means that thing is "
+                + "simply missing on screen: selection brackets, progress bars and any "
+                + "other overlay that names a mesh, material or shader below.\n");
+
+            int shown = Math.Min(dropped.Count, MaxFindingsPerReport);
+            for (int i = 0; i < shown; i++)
+            {
+                builder.Append("  ").Append(dropped[i]).Append('\n');
+            }
+
+            if (dropped.Count > shown)
+            {
+                builder.Append("  ... and ").Append(dropped.Count - shown)
+                    .Append(" more this scan.\n");
+            }
+
+            int suppressed = RenderDrawDiagnostics.Suppressed;
+            if (suppressed > 0)
+            {
+                builder.Append("  (").Append(suppressed)
+                    .Append(" further distinct messages were not captured; the per-session "
+                        + "cap is 64. The first ones are usually the ones that matter.)\n");
             }
 
             return builder.ToString();

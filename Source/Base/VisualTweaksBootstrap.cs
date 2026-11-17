@@ -35,6 +35,7 @@ namespace VisualTweaks
                 ShieldOverridePatches.Apply(harmony);
                 ShieldRestorePatches.Apply(harmony);
                 VacuumBreachPatches.Apply(harmony);
+                RenderDrawDiagnostics.Apply(harmony);
 
                 // The hex lattice is baked HERE, not on the first shield that gets
                 // drawn. Mod settings are read in the Mod constructor (CreateModClasses,
