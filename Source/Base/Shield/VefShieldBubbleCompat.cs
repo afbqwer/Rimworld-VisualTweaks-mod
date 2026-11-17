@@ -49,6 +49,7 @@ namespace VisualTweaks
         private static Type? compType;
         private static PropertyInfo? shieldState;
         private static PropertyInfo? energy;
+        private static PropertyInfo? energyMax;
         private static PropertyInfo? pawnProperty;
         private static MethodInfo? inCombat;
         private static FieldInfo? shieldColor;
@@ -65,6 +66,7 @@ namespace VisualTweaks
         // binding and type checking. See <see cref="VefMemberAccess"/>.
         private static Func<object, ShieldState>? shieldStateOf;
         private static Func<object, float>? energyOf;
+        private static Func<object, float>? energyMaxOf;
         private static Func<object, Pawn>? pawnOf;
         private static Func<object, Color>? shieldColorOf;
         private static Func<object, float>? minShieldSizeOf;
@@ -78,6 +80,7 @@ namespace VisualTweaks
         private static bool fatal;
         private static bool signalsBroken;
         private static bool inCombatBroken;
+        private static bool capacityBroken;
         private static bool patched;
 
         // Reused across frames: MethodInfo.Invoke needs an object[] for the single
@@ -94,6 +97,53 @@ namespace VisualTweaks
         /// <summary>True when this comp is VEF's personal shield bubble.</summary>
         internal static bool IsBubble(ThingComp? comp) =>
             comp != null && compType != null && compType.IsInstanceOfType(comp);
+
+        /// <summary>
+        /// True when this comp carries a shield, as opposed to merely being an
+        /// instance of the bubble class.
+        ///
+        /// The distinction exists because VEF's <c>CompAbilities</c> derives from
+        /// <c>CompShieldBubble</c> to reuse its charge and break machinery for
+        /// ability-granted barriers, and keeps its capacity at zero whenever no
+        /// barrier is running. A plain type check therefore reports a shield on
+        /// every pawn that has learned an ability -- which is what made the
+        /// per-shield style gizmo sit on pawns with no shield at all, and what put
+        /// a bogus "personal shield" row in the style window's type list.
+        ///
+        /// Capacity is what separates the two: a real bubble's capacity comes from
+        /// its def or the host's stats and is never zero, while the ability carrier
+        /// only raises its own for as long as its barrier lasts. When VEF's capacity
+        /// member cannot be bound the type check stands alone, so a framework update
+        /// can never silently remove the gizmo from a real bubble.
+        /// </summary>
+        internal static bool IsShieldBubble(ThingComp? comp) =>
+            IsBubble(comp) && HasCapacity(comp!);
+
+        private static bool HasCapacity(ThingComp comp)
+        {
+            Func<object, float>? readCapacity = energyMaxOf;
+            if (readCapacity == null || capacityBroken)
+            {
+                return true;
+            }
+
+            // Same rule as the neutral-in-combat arm below: a failing read must not
+            // hide a real shield, so the capacity test goes dark rather than the
+            // family.
+            try
+            {
+                return readCapacity(comp) > 0f;
+            }
+            catch (Exception ex)
+            {
+                capacityBroken = true;
+                Log.ErrorOnce(
+                    "[Visual Tweaks] VEF bubble capacity read failed; the shield check"
+                        + " falls back to the comp type: " + ex,
+                    typeof(VefShieldBubbleCompat).GetHashCode() ^ 0x5A3);
+                return true;
+            }
+        }
 
         internal static void Apply(Harmony harmony)
         {
@@ -158,6 +208,7 @@ namespace VisualTweaks
 
             shieldState = AccessTools.Property(type, "ShieldState");
             energy = AccessTools.Property(type, "Energy");
+            energyMax = AccessTools.Property(type, "EnergyMax");
             pawnProperty = AccessTools.Property(type, "Pawn");
             inCombat = AccessTools.Method(type, "InCombat", new[] { typeof(Pawn) });
             shieldColor = AccessTools.Field(propsType, "shieldColor");
@@ -236,6 +287,24 @@ namespace VisualTweaks
                 Log.Warning("[Visual Tweaks] VEF CompShieldBubble members could not be"
                     + " compiled; bubble shields keep the stock drawing.");
                 return false;
+            }
+
+            // Capacity is optional on purpose: it only sharpens the "is this comp a
+            // shield" answer used by the gizmo and the type list, and losing it must
+            // not cost the whole family its replacement drawing. It is not silent
+            // either -- without it the shield check is back to a plain type test, so
+            // the gizmo returns to VEF's ability carrier and nothing else would
+            // explain why.
+            if (energyMax != null && energyMax.PropertyType == typeof(float))
+            {
+                energyMaxOf = VefMemberAccess.CompileProperty<float>(energyMax);
+            }
+
+            if (energyMaxOf == null)
+            {
+                Log.Warning("[Visual Tweaks] VEF CompShieldBubble.EnergyMax is not"
+                    + " readable; the per-shield gizmo falls back to a type check and"
+                    + " will also appear on pawns that only carry VEF abilities.");
             }
 
             return true;

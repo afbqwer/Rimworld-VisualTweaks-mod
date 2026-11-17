@@ -87,7 +87,9 @@ namespace VisualTweaks
                 List<ThingComp> comps = thing.AllComps;
                 for (int i = 0; i < comps.Count; i++)
                 {
-                    if (VefShieldBubbleCompat.IsBubble(comps[i]))
+                    // A comp that merely derives from the bubble class is not a
+                    // shield; see VefShieldBubbleCompat.IsShieldBubble.
+                    if (VefShieldBubbleCompat.IsShieldBubble(comps[i]))
                     {
                         Add(into, ShieldHexTarget.Personal, thing.def, comps[i].GetType());
                         break;
@@ -154,7 +156,7 @@ namespace VisualTweaks
                         List<ThingComp> comps = apparel.AllComps;
                         for (int j = 0; j < comps.Count; j++)
                         {
-                            if (VefShieldBubbleCompat.IsBubble(comps[j]))
+                            if (VefShieldBubbleCompat.IsShieldBubble(comps[j]))
                             {
                                 Add(
                                     into,

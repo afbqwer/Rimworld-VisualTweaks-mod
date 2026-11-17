@@ -202,7 +202,10 @@ namespace VisualTweaks
         /// Reached at most once per frame, but the order of the branches is still the
         /// cost: the worn-apparel loop is a handful of comp lookups, and the VEF
         /// hediff walk is the expensive one, so it stays last and only runs for a
-        /// pawn that has neither a belt nor a bubble.
+        /// pawn that has neither a belt nor a bubble. A pawn with VEF abilities and
+        /// nothing else now reaches that walk instead of short-circuiting on the
+        /// ability carrier's bubble base class, which is the price of not offering
+        /// the gizmo where there is no shield -- one hediff scan per gizmo rebuild.
         /// </summary>
         private static bool TryGetShieldTarget(
             ThingWithComps thing,
@@ -282,7 +285,11 @@ namespace VisualTweaks
                 List<ThingComp> comps = thing.AllComps;
                 for (int i = 0; i < comps.Count; i++)
                 {
-                    if (VefShieldBubbleCompat.IsBubble(comps[i]))
+                    // IsShieldBubble, not IsBubble: VEF's CompAbilities derives from
+                    // CompShieldBubble to reuse its charge machinery for ability
+                    // barriers, so a type check alone would offer this gizmo on every
+                    // pawn that has learned an ability.
+                    if (VefShieldBubbleCompat.IsShieldBubble(comps[i]))
                     {
                         return true;
                     }
@@ -307,7 +314,7 @@ namespace VisualTweaks
                             List<ThingComp> comps = apparel.AllComps;
                             for (int j = 0; j < comps.Count; j++)
                             {
-                                if (VefShieldBubbleCompat.IsBubble(comps[j]))
+                                if (VefShieldBubbleCompat.IsShieldBubble(comps[j]))
                                 {
                                     return true;
                                 }
