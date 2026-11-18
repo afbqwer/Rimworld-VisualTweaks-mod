@@ -135,7 +135,7 @@
   <VisualTweaks_BuildingImpact_Intensity>浓度 / 强度</VisualTweaks_BuildingImpact_Intensity>
   <VisualTweaks_BuildingImpact_IntensityTip>碎片与烟尘的整体强度。1 为默认效果。伤害不影响强度——它影响下方的碎片数量。</VisualTweaks_BuildingImpact_IntensityTip>
   <VisualTweaks_BuildingImpact_Duration>基础持续时间</VisualTweaks_BuildingImpact_Duration>
-  <VisualTweaks_BuildingImpact_DurationTip>一次迸发的总时长（含烟尘），默认 1.6 秒：碎片在前约 40% 的时间内飞散，烟尘则持续到结束。每次有 ±15% 的随机浮动。特效跟随游戏速度，暂停时冻结。</VisualTweaks_BuildingImpact_DurationTip>
+  <VisualTweaks_BuildingImpact_DurationTip>一次迸发的总时长（含烟尘），默认 1.6 秒：碎片在前约 70% 的时间内飞散并落地，烟尘则持续到结束。每次有 ±15% 的随机浮动。特效跟随游戏速度，暂停时冻结。</VisualTweaks_BuildingImpact_DurationTip>
   <VisualTweaks_BuildingImpact_Size>迸发大小（格直径）</VisualTweaks_BuildingImpact_Size>
   <VisualTweaks_BuildingImpact_SizeTip>碎片迸发的直径（格）。碎片最大行程约为直径的 0.35 倍。默认 2.2 让特效集中在受击面附近；想要更夸张的飞溅可调大。范围 1–5。</VisualTweaks_BuildingImpact_SizeTip>
   <VisualTweaks_BuildingImpact_CountMin>碎片数量 · 下限</VisualTweaks_BuildingImpact_CountMin>

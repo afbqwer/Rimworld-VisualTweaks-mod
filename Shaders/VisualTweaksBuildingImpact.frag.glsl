@@ -24,10 +24,11 @@ layout(std430, set = 2, binding = 3) readonly buffer _ImpactParams
 //       ranged hits, outward for explosions) and decelerate on the GROUND
 //       PLANE. There is deliberately no screen-space gravity: the game is
 //       top-down, so "down" on screen is south in the world, not towards the
-//       ground. Chips arc a little via a per-chip lateral curl and then stop
-//       and fade where they land. Each chip is a small box SDF spinning around
-//       its own centre; a facet term darkens and brightens it as it tumbles,
-//       which reads as 3D without any lighting.
+//       ground. Height is expressed as SIZE instead — a chip pops slightly
+//       larger when thrown up, then shrinks steadily as it falls back to the
+//       ground, and only fades once it has settled small. Each chip is a small
+//       box SDF spinning around its own centre; a facet term darkens and
+//       brightens it as it tumbles, which reads as 3D without any lighting.
 //   Smoke — spans the whole t. A few fbm puffs expand from the impact point,
 //       drift in their own random horizontal direction (no up-screen rise: a
 //       top-down dust cloud blooms outward) and erode away as the noise
@@ -85,7 +86,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
 {
     vec4 _Params;  // @default = vec4(0.0, 1.0, 0.0, 10.0)
     vec4 _Params2; // @default = vec4(0.0, 0.0, 0.0, 1.0)
-    vec4 _Params3; // @default = vec4(0.06, 0.75, 0.40, 0.18)
+    vec4 _Params3; // @default = vec4(0.06, 0.75, 0.70, 0.18)
     vec4 _Params4; // @default = vec4(0.55, 0.53, 0.50, 0.0)
     vec4 _Params5; // @default = vec4(0.0, -1.0, 0.0, 0.0)
 } u;
@@ -251,8 +252,10 @@ void main()
             float h6 = hash21(hb + vec2(6.6, 4.3));
 
             // Staggered launch and per-chip lifetime inside the debris phase.
+            // Chips live most of the phase (they now settle visibly instead of
+            // blinking out), so the end times cluster near the phase's end.
             float start = 0.08 * h4;
-            float end = mix(0.6, 1.0, h5);
+            float end = mix(0.75, 1.0, h5);
             if (dt < start || dt >= end)
             {
                 continue;
@@ -293,9 +296,13 @@ void main()
                 rel.x * sin(spin) + rel.y * cos(spin));
 
             // Irregular box: per-chip aspect keeps the fragments from reading
-            // as a cloud of identical squares. Chips shrink slightly as they
-            // "fall away" from the camera at the end of their life.
-            float halfSize = mix(0.03, 0.075, h2) * (1.0 - 0.3 * uu);
+            // as a cloud of identical squares. Height in top-down is SIZE: the
+            // chip pops out slightly at launch, then shrinks steadily as it
+            // falls back to the ground — the "landing" is the shrink, and the
+            // alpha fade only kicks in once it is already small.
+            float pop = mix(0.65, 1.0, smoothstep(0.0, 0.10, uu));
+            float fall = mix(1.0, 0.25, smoothstep(0.12, 1.0, uu));
+            float halfSize = mix(0.028, 0.065, h2) * pop * fall;
             vec2 halfVec = halfSize * vec2(1.0, mix(0.45, 1.0, h4));
             vec2 dq = abs(q) - halfVec;
             float sd = length(max(dq, 0.0)) + min(max(dq.x, dq.y), 0.0);
@@ -312,7 +319,7 @@ void main()
             float facet = 0.5 + 0.5 * sin(spin * 2.0 + h3 * 6.2831853);
             vec3 chipCol = mix(matColor * mix(0.45, 1.2, facet), dustColor, 0.22);
 
-            float fade = smoothstep(0.0, 0.04, uu) * (1.0 - smoothstep(0.75, 1.0, uu));
+            float fade = smoothstep(0.0, 0.05, uu) * (1.0 - smoothstep(0.85, 1.0, uu));
             float a = cov * fade * clamp(intensity, 0.0, 1.0) * faceClipChip;
             over(col, alpha, chipCol, a);
         }

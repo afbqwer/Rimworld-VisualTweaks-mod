@@ -135,7 +135,7 @@
   <VisualTweaks_BuildingImpact_Intensity>Opacity / strength</VisualTweaks_BuildingImpact_Intensity>
   <VisualTweaks_BuildingImpact_IntensityTip>Overall strength of the debris and dust. 1 is the default look. Damage does not change strength — it changes the debris count below.</VisualTweaks_BuildingImpact_IntensityTip>
   <VisualTweaks_BuildingImpact_Duration>Base duration</VisualTweaks_BuildingImpact_Duration>
-  <VisualTweaks_BuildingImpact_DurationTip>How long a burst lasts, smoke included. The default is 1.6 s; debris flies in the first ~40% of it while the dust lingers to the end. Each burst varies by ±15%. The effect follows game speed and freezes while paused.</VisualTweaks_BuildingImpact_DurationTip>
+  <VisualTweaks_BuildingImpact_DurationTip>How long a burst lasts, smoke included. The default is 1.6 s; chips fly and settle over the first ~70% of it while the dust lingers to the end. Each burst varies by ±15%. The effect follows game speed and freezes while paused.</VisualTweaks_BuildingImpact_DurationTip>
   <VisualTweaks_BuildingImpact_Size>Burst size (cell diameter)</VisualTweaks_BuildingImpact_Size>
   <VisualTweaks_BuildingImpact_SizeTip>Diameter of the debris burst in cells. Debris travels about 0.35x this distance. The default 2.2 keeps the effect around the struck face; raise it for a more dramatic spray. Range 1–5.</VisualTweaks_BuildingImpact_SizeTip>
   <VisualTweaks_BuildingImpact_CountMin>Debris count · lower bound</VisualTweaks_BuildingImpact_CountMin>
