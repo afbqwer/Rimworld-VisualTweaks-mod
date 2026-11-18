@@ -8,106 +8,94 @@ using Verse;
 namespace VisualTweaks
 {
     /// <summary>
-    /// Hooks Bullet.Impact to spray procedural sparks when a shot lands on a
-    /// mechanoid. The base Projectile.Impact cannot be patched instead: Harmony
-    /// does not propagate a base-method patch into overrides, and Bullet.Impact
-    /// is where every vanilla and most modded firearms end up.
+    /// Sparks when damage is absorbed by metal — metal apparel (useDeflectMetalEffect
+    /// or a metal stuff) or a mechanoid's natural metal body. This replaces the old
+    /// Bullet.Impact hook: ArmorUtility is the shared armor step every damage type
+    /// flows through, so melee and explosions spark too, and the judgment is the
+    /// vanilla metalArmor flag rather than IsMechanoid alone.
     ///
-    /// The capture happens in the prefix because Impact destroys the projectile:
-    /// after Destroy, Map is null and the exact position is no longer reachable
-    /// through the spawned-thing lists. The postfix only forwards the captured
-    /// state, so a prefix from another mod that skips the original also skips
-    /// the sparks.
+    /// Two cooperating hooks:
+    ///   GetPostArmorDamage prefix — opens a "damage event", captures the incoming
+    ///                               amount and resets the once-per-event guard.
+    ///   ApplyArmor postfix        — reads the real out metalArmor flag; the first
+    ///                               metal layer of the event spawns one burst.
+    ///
+    /// Why read ApplyArmor's flag instead of GetPostArmorDamage's out flags: those
+    /// (deflected/diminishedByMetalArmor) are only set when the armor actually reduced
+    /// this hit. A zero-armor mechanoid, or a high-AP round that punches straight
+    /// through, leaves them false even though metalArmor was true. ApplyArmor's flag
+    /// is the honest "this layer is metal" signal regardless of the armor roll.
+    ///
+    /// ApplyArmor is private and only ever called from GetPostArmorDamage (once per
+    /// covering apparel plus once for natural armor), all synchronously on the main
+    /// thread, so the bracket yields exactly one burst per damage event. The static
+    /// event state is safe because the apparel.TakeDamage inside ApplyArmor cannot
+    /// reenter GetPostArmorDamage — apparel is not a Pawn.
+    ///
+    /// Position is the pawn's centre and the spray is isotropic: the armor step has
+    /// neither an exact impact point nor a travel direction to hand over.
     /// </summary>
     internal static class MechSparkPatches
     {
+        // Per damage-event context, opened by the GetPostArmorDamage prefix and
+        // consumed by the first metal ApplyArmor postfix. Main-thread only.
+        private static float eventAmount;
+        private static bool sparked;
+
         internal static void Apply(Harmony harmony)
         {
-            MethodInfo target = AccessTools.Method(typeof(Bullet), "Impact");
-            MethodInfo prefix = AccessTools.Method(
+            MethodInfo armorEntry = AccessTools.Method(
+                typeof(ArmorUtility),
+                nameof(ArmorUtility.GetPostArmorDamage));
+            MethodInfo applyArmor = AccessTools.Method(typeof(ArmorUtility), "ApplyArmor");
+            MethodInfo entryPrefix = AccessTools.Method(
                 typeof(MechSparkPatches),
-                nameof(ImpactPrefix));
-            MethodInfo postfix = AccessTools.Method(
+                nameof(GetPostArmorDamagePrefix));
+            MethodInfo armorPostfix = AccessTools.Method(
                 typeof(MechSparkPatches),
-                nameof(ImpactPostfix));
+                nameof(ApplyArmorPostfix));
 
-            if (target == null || prefix == null || postfix == null)
+            if (armorEntry == null || applyArmor == null
+                || entryPrefix == null || armorPostfix == null)
             {
-                Log.Warning("[Visual Tweaks] Cannot patch Bullet.Impact.");
+                Log.Warning("[Visual Tweaks] Cannot patch ArmorUtility for metal sparks.");
                 return;
             }
 
             try
             {
-                harmony.Patch(
-                    target,
-                    prefix: new HarmonyMethod(prefix),
-                    postfix: new HarmonyMethod(postfix));
-                VisualTweaksLog.Info("Patched Bullet.Impact.");
+                harmony.Patch(armorEntry, prefix: new HarmonyMethod(entryPrefix));
+                harmony.Patch(applyArmor, postfix: new HarmonyMethod(armorPostfix));
+                VisualTweaksLog.Info("Patched ArmorUtility.GetPostArmorDamage + ApplyArmor.");
             }
             catch (Exception ex)
             {
-                Log.Error("[Visual Tweaks] Failed to patch Bullet.Impact: " + ex);
+                Log.Error("[Visual Tweaks] Failed to patch ArmorUtility: " + ex);
             }
         }
 
-        private static void ImpactPrefix(
-            Bullet __instance,
-            Thing hitThing,
-            bool blockedByShield,
-            out SparkHitState __state)
+        private static void GetPostArmorDamagePrefix(float amount)
         {
-            __state = default;
-
-            if (!MechSparkBridge.Active || blockedByShield || __instance == null)
-            {
-                return;
-            }
-
-            // Living mechanoids only: a corpse or a mechanoid building has no
-            // race props, and a shot stopped by a shield never touched metal.
-            if (hitThing?.def?.race?.IsMechanoid != true)
-            {
-                return;
-            }
-
-            Map? map = __instance.Map;
-            if (map == null)
-            {
-                return;
-            }
-
-            __state = new SparkHitState
-            {
-                Map = map,
-                Position = __instance.ExactPosition,
-                // ExactRotation looks along (destination - origin), so its forward
-                // is the shot's horizontal travel direction.
-                TravelDir = __instance.ExactRotation * Vector3.forward,
-                Damage = __instance.DamageAmount,
-                Valid = true,
-            };
+            eventAmount = amount;
+            sparked = false;
         }
 
-        private static void ImpactPostfix(SparkHitState __state)
+        private static void ApplyArmorPostfix(Pawn pawn, bool metalArmor)
         {
-            if (!__state.Valid || __state.Map == null)
+            if (!MechSparkBridge.Active || !metalArmor || sparked)
             {
                 return;
             }
 
-            OverlayMapComponent component =
-                __state.Map.GetComponent<OverlayMapComponent>();
-            component?.NotifyMechSpark(__state.Position, __state.TravelDir, __state.Damage);
-        }
+            if (pawn?.Map == null)
+            {
+                return;
+            }
 
-        private struct SparkHitState
-        {
-            public Map? Map;
-            public Vector3 Position;
-            public Vector3 TravelDir;
-            public float Damage;
-            public bool Valid;
+            sparked = true;
+            OverlayMapComponent component = pawn.Map.GetComponent<OverlayMapComponent>();
+            // Zero travel direction -> the layer emits an isotropic burst.
+            component?.NotifyMechSpark(pawn.TrueCenter(), Vector3.zero, eventAmount);
         }
     }
 }

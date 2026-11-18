@@ -123,7 +123,7 @@ namespace VisualTweaks
                 DrawInstanced(count, material);
             }
 
-            VisualTweaksLog.TraceOnce(ref loggedDraw, "Mechanoid sparks drawing.");
+            VisualTweaksLog.TraceOnce(ref loggedDraw, "Metal-hit sparks drawing.");
         }
 
         private void DrawIndividually(int count, Material material)
@@ -168,7 +168,7 @@ namespace VisualTweaks
 
             VisualTweaksLog.TraceOnce(
                 ref loggedInstanced,
-                "Mechanoid sparks instanced batch active (" + count + " bursts).");
+                "Metal-hit sparks instanced batch active (" + count + " bursts).");
         }
 
         private static bool OutsideView(CellRect view, MechSparkInstance burst)
@@ -192,7 +192,7 @@ namespace VisualTweaks
             if (def == null)
             {
                 throw new InvalidOperationException(
-                    "Mechanoid spark shader def is not available.");
+                    "Metal-hit spark shader def is not available.");
             }
 
             material = new Material((Shader)def)

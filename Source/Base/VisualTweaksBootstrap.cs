@@ -63,7 +63,7 @@ namespace VisualTweaks
                     + (VacuumLeakBridge.ShaderReady ? "ready" : "disabled")
                     + ", shield dome "
                     + (ShieldDomeBridge.ShaderReady ? "ready" : "disabled")
-                    + ", mechanoid sparks "
+                    + ", metal-hit sparks "
                     + (MechSparkBridge.ShaderReady ? "ready" : "disabled")
                     + ", off-screen shield culling fixed on "
                     + culledDefsFixed + " def(s)).");

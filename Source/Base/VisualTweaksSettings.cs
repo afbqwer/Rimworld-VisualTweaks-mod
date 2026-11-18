@@ -201,9 +201,11 @@ namespace VisualTweaks
         // normal play, so this is only a safety bound, not a tuning knob.
         public const int MaxRippleCount = 256;
 
-        // Mechanoid impact sparks. Fully procedural: the shader hashes out every
-        // streak, so these sliders only set the burst look, never particle state.
-        // The default life is short — a spark spray should snap, not linger.
+        // Metal-hit sparks. Triggered by ArmorUtility when damage is absorbed by
+        // metal apparel or a mechanoid body (any damage type, not just bullets).
+        // Fully procedural: the shader hashes out every streak, so these sliders only
+        // set the burst look, never particle state. The default life is short — a
+        // spark spray should snap, not linger.
         public static bool mechSparkEnabled = true;
 
         public const float MinMechSparkIntensity = 0.1f;

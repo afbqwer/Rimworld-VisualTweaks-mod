@@ -1,6 +1,6 @@
 #version 450
 
-// One instanced quad per bullet impact on a mechanoid.
+// One instanced quad per metal-hit spark burst.
 //
 // Mirrors the shockwave layout: the instance matrix carries only the world
 // transform, and the per-burst parameters ride in the _SparkParams storage

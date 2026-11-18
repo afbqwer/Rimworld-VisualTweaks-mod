@@ -14,10 +14,13 @@ layout(std430, set = 2, binding = 3) readonly buffer _SparkParams
 };
 #endif
 
-// Fully procedural bullet-impact sparks for mechanoids. No texture is sampled
-// anywhere: every spark is an analytic streak built in this shader.
+// Fully procedural metal-hit sparks. No texture is sampled anywhere: every spark
+// is an analytic streak built in this shader. Triggered by ArmorUtility when damage
+// is absorbed by metal apparel or a mechanoid body (any damage type). The game feeds
+// a zero travel direction, so the spray is isotropic; the directional bias below is
+// kept as a capability (the preview uses it) but stays inactive in game.
 //
-// One quad per impact, centred on the hit point. The fragment loop walks N
+// One quad per hit, centred on the target. The fragment loop walks N
 // sparks (N arrives per instance); each one derives its own direction, speed,
 // start delay and lifetime from a hash of (burst seed, spark index), so the
 // whole burst is deterministic per hit and costs no CPU particle state.

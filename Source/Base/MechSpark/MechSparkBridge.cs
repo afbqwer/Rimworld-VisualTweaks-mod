@@ -5,7 +5,7 @@ using Waylith.Rendering;
 namespace VisualTweaks
 {
     /// <summary>
-    /// Resolves and validates the mechanoid impact spark shader. Kept separate from
+    /// Resolves and validates the metal-hit spark shader. Kept separate from
     /// the renderer so a missing shader only disables this feature instead of
     /// breaking the shockwave or the shield dome.
     ///
@@ -51,14 +51,14 @@ namespace VisualTweaks
             if (shaderDef == null)
             {
                 Log.Warning("[Visual Tweaks] Shader def '" + ShaderDefName
-                    + "' not found; mechanoid impact sparks disabled.");
+                    + "' not found; metal-hit sparks disabled.");
                 return;
             }
 
             if (!ShaderSourceLoader.TryResolveShaderPath(VertexShaderFile, out _)
                 || !ShaderSourceLoader.TryResolveShaderPath(FragmentShaderFile, out _))
             {
-                Log.Warning("[Visual Tweaks] Mechanoid spark shader sources not found; disabled.");
+                Log.Warning("[Visual Tweaks] Metal-hit spark shader sources not found; disabled.");
                 return;
             }
 
@@ -66,7 +66,7 @@ namespace VisualTweaks
                 || engineShader == null
                 || engineShader.HasErrors)
             {
-                Log.Warning("[Visual Tweaks] Mechanoid spark shader '" + ShaderDefName
+                Log.Warning("[Visual Tweaks] Metal-hit spark shader '" + ShaderDefName
                     + "' failed to compile or parse; disabled.");
                 return;
             }
@@ -82,7 +82,7 @@ namespace VisualTweaks
             }
 
             runtimeDisabled = true;
-            Log.Error("[Visual Tweaks] Mechanoid impact sparks disabled at runtime: " + reason);
+            Log.Error("[Visual Tweaks] Metal-hit sparks disabled at runtime: " + reason);
         }
     }
 }

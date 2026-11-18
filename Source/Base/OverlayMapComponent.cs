@@ -156,10 +156,10 @@ namespace VisualTweaks
         }
 
         /// <summary>
-        /// Called by the bullet impact patch, once per shot that landed on a
-        /// mechanoid. The position is the projectile's exact impact point, captured
-        /// before Bullet.Impact destroys the projectile; the direction is the shot's
-        /// travel direction, which the spark shader uses to fan the spray backward.
+        /// Called by the ArmorUtility patch, once per damage event that struck metal
+        /// (metal apparel or a mechanoid body). The position is the pawn's centre and
+        /// the travel direction is zero — the armor step has no impact point or shot
+        /// direction — so the layer emits an isotropic burst.
         /// </summary>
         internal void NotifyMechSpark(Vector3 position, Vector3 travelDir, float damage)
         {

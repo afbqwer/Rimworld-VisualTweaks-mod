@@ -6,10 +6,10 @@ using Verse;
 namespace VisualTweaks
 {
     /// <summary>
-    /// Active mechanoid impact spark bursts. Bursts are spawned by the Bullet.Impact
-    /// postfix; this layer only ages and draws them. All particle motion lives in
-    /// the fragment shader, so an instance is just a handful of floats — there is
-    /// no per-spark CPU state at all.
+    /// Active metal-hit spark bursts. Bursts are spawned by the ArmorUtility patch
+    /// when damage is absorbed by metal; this layer only ages and draws them. All
+    /// particle motion lives in the fragment shader, so an instance is just a handful
+    /// of floats — there is no per-spark CPU state at all.
     /// </summary>
     internal sealed class MechSparkLayer : IOverlayLayer
     {
@@ -101,7 +101,7 @@ namespace VisualTweaks
                 if (!errorLogged)
                 {
                     errorLogged = true;
-                    Log.Error("[Visual Tweaks] Mechanoid spark draw failed: " + ex);
+                    Log.Error("[Visual Tweaks] Metal-hit spark draw failed: " + ex);
                 }
 
                 MechSparkBridge.DisableRuntime(ex.Message);
@@ -143,8 +143,9 @@ namespace VisualTweaks
         public float Seed;
         public int Count;
 
-        // Bullet travel direction (world xz, unit) and the backward bias share.
-        // Resolved once at spawn; the shader does the rest.
+        // Optional travel direction (world xz, unit) and the backward bias share.
+        // The armor hook passes zero, so bursts are isotropic; the directional path
+        // is kept as a capability (the preview exercises it).
         public float DirX;
         public float DirZ;
         public float Bias;
