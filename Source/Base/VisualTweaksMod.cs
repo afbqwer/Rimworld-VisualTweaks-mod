@@ -807,6 +807,8 @@ namespace VisualTweaks
 
             DoMechSparkSection(listing);
 
+            DoBuildingImpactSection(listing);
+
             SettingsLayout.Finish(listing);
         }
 
@@ -864,6 +866,76 @@ namespace VisualTweaks
                 VisualTweaksSettings.MaxMechSparkCount,
                 "VisualTweaks_MechSpark_CountMaxTip".Translate(),
                 step: 1f));
+        }
+
+        /// <summary>
+        /// Building-impact debris shares the combat tab with the sparks: both are
+        /// hit feedback, one for metal bodies, one for walls and buildings.
+        /// </summary>
+        private static void DoBuildingImpactSection(Listing_Standard listing)
+        {
+            SettingsLayout.Header(listing, "VisualTweaks_BuildingImpact_Group".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_BuildingImpact_Enable".Translate(),
+                ref VisualTweaksSettings.buildingImpactEnabled,
+                "VisualTweaks_BuildingImpact_EnableTip".Translate());
+
+            if (!BuildingImpactBridge.ShaderReady)
+            {
+                SettingsLayout.Warning(listing, "VisualTweaks_BuildingImpact_ShaderMissing".Translate());
+            }
+
+            VisualTweaksSettings.buildingImpactIntensity = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_BuildingImpact_Intensity".Translate(),
+                VisualTweaksSettings.buildingImpactIntensity,
+                VisualTweaksSettings.MinBuildingImpactIntensity,
+                VisualTweaksSettings.MaxBuildingImpactIntensity,
+                "VisualTweaks_BuildingImpact_IntensityTip".Translate());
+            VisualTweaksSettings.buildingImpactDuration = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_BuildingImpact_Duration".Translate(),
+                VisualTweaksSettings.buildingImpactDuration,
+                VisualTweaksSettings.MinBuildingImpactDuration,
+                VisualTweaksSettings.MaxBuildingImpactDuration,
+                "VisualTweaks_BuildingImpact_DurationTip".Translate());
+            VisualTweaksSettings.buildingImpactSize = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_BuildingImpact_Size".Translate(),
+                VisualTweaksSettings.buildingImpactSize,
+                VisualTweaksSettings.MinBuildingImpactSize,
+                VisualTweaksSettings.MaxBuildingImpactSize,
+                "VisualTweaks_BuildingImpact_SizeTip".Translate());
+            VisualTweaksSettings.buildingImpactCountMin = Mathf.RoundToInt(SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_BuildingImpact_CountMin".Translate(),
+                VisualTweaksSettings.buildingImpactCountMin,
+                VisualTweaksSettings.MinBuildingImpactCount,
+                VisualTweaksSettings.MaxBuildingImpactCount,
+                "VisualTweaks_BuildingImpact_CountMinTip".Translate(),
+                step: 1f));
+            VisualTweaksSettings.buildingImpactCountMax = Mathf.RoundToInt(SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_BuildingImpact_CountMax".Translate(),
+                VisualTweaksSettings.buildingImpactCountMax,
+                VisualTweaksSettings.MinBuildingImpactCount,
+                VisualTweaksSettings.MaxBuildingImpactCount,
+                "VisualTweaks_BuildingImpact_CountMaxTip".Translate(),
+                step: 1f));
+            VisualTweaksSettings.buildingImpactSmoke = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_BuildingImpact_Smoke".Translate(),
+                VisualTweaksSettings.buildingImpactSmoke,
+                VisualTweaksSettings.MinBuildingImpactSmoke,
+                VisualTweaksSettings.MaxBuildingImpactSmoke,
+                "VisualTweaks_BuildingImpact_SmokeTip".Translate());
+            VisualTweaksSettings.buildingImpactMinDamage = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_BuildingImpact_MinDamage".Translate(),
+                VisualTweaksSettings.buildingImpactMinDamage,
+                VisualTweaksSettings.MinBuildingImpactMinDamage,
+                VisualTweaksSettings.MaxBuildingImpactMinDamage,
+                "VisualTweaks_BuildingImpact_MinDamageTip".Translate());
         }
 
         /// <summary>

@@ -127,6 +127,26 @@
   <VisualTweaks_MechSpark_CountMax>火花数量 · 上限</VisualTweaks_MechSpark_CountMax>
   <VisualTweaks_MechSpark_CountMaxTip>重击（约 50 点伤害及以上）溅出的火花数。越多越密集；代价是着色器循环略长，且只在火花出现在画面上时才付出。范围 1–32，自动保持不低于下限。</VisualTweaks_MechSpark_CountMaxTip>
 
+  <!-- 建筑受击：攻击打中墙体/建筑时的飞溅碎片与烟尘 -->
+  <VisualTweaks_BuildingImpact_Group>建筑受击碎片</VisualTweaks_BuildingImpact_Group>
+  <VisualTweaks_BuildingImpact_Enable>攻击打中建筑时飞溅碎片与烟尘</VisualTweaks_BuildingImpact_Enable>
+  <VisualTweaks_BuildingImpact_EnableTip>只要伤害落在建筑上——墙体、门、家具、生产建筑，乃至开采中的岩石——受击面就会溅出材质碎片，并扬起一团逐渐消散的烟尘。不限于子弹：近战、爆炸等任何伤害类型都会触发。碎片与烟尘按建筑材质着色（石灰色、木棕色、钢青灰色）；远程命中朝射手方向溅回，爆炸则向外抛洒。碎片被约束在受击面外侧并沿该平面裁剪，绝不会穿过墙体。一击摧毁建筑时会喷出更大的碎片簇和更浓的烟尘。全部由着色器程序化生成：无贴图、无粒子资源。</VisualTweaks_BuildingImpact_EnableTip></VisualTweaks_BuildingImpact_EnableTip>
+  <VisualTweaks_BuildingImpact_ShaderMissing>碎片着色器编译失败或缺失，该特效已禁用。详情请查看日志。</VisualTweaks_BuildingImpact_ShaderMissing>
+  <VisualTweaks_BuildingImpact_Intensity>浓度 / 强度</VisualTweaks_BuildingImpact_Intensity>
+  <VisualTweaks_BuildingImpact_IntensityTip>碎片与烟尘的整体强度。1 为默认效果。伤害不影响强度——它影响下方的碎片数量。</VisualTweaks_BuildingImpact_IntensityTip>
+  <VisualTweaks_BuildingImpact_Duration>基础持续时间</VisualTweaks_BuildingImpact_Duration>
+  <VisualTweaks_BuildingImpact_DurationTip>一次迸发的总时长（含烟尘），默认 1.6 秒：碎片在前约 40% 的时间内飞散，烟尘则持续到结束。每次有 ±15% 的随机浮动。特效跟随游戏速度，暂停时冻结。</VisualTweaks_BuildingImpact_DurationTip>
+  <VisualTweaks_BuildingImpact_Size>迸发大小（格直径）</VisualTweaks_BuildingImpact_Size>
+  <VisualTweaks_BuildingImpact_SizeTip>碎片迸发的直径（格）。碎片最大行程约为直径的 0.35 倍。默认 2.2 让特效集中在受击面附近；想要更夸张的飞溅可调大。范围 1–5。</VisualTweaks_BuildingImpact_SizeTip>
+  <VisualTweaks_BuildingImpact_CountMin>碎片数量 · 下限</VisualTweaks_BuildingImpact_CountMin>
+  <VisualTweaks_BuildingImpact_CountMinTip>最轻的伤害溅出的碎片数。数量随伤害从下限线性升到上限（约 50 点伤害达到上限）。范围 1–24。</VisualTweaks_BuildingImpact_CountMinTip>
+  <VisualTweaks_BuildingImpact_CountMax>碎片数量 · 上限</VisualTweaks_BuildingImpact_CountMax>
+  <VisualTweaks_BuildingImpact_CountMaxTip>重击（约 50 点伤害及以上）溅出的碎片数。一击摧毁建筑时数量乘以 1.6（仍封顶 24）。越多越密集；代价是着色器循环略长，且只在迸发出现在画面上时才付出。范围 1–24，自动保持不低于下限。</VisualTweaks_BuildingImpact_CountMaxTip>
+  <VisualTweaks_BuildingImpact_Smoke>烟尘量</VisualTweaks_BuildingImpact_Smoke>
+  <VisualTweaks_BuildingImpact_SmokeTip>命中扬起的烟尘多少。0 只显示碎片，1 为默认效果，2 为浓密烟团。一击摧毁建筑时乘以 1.7。</VisualTweaks_BuildingImpact_SmokeTip>
+  <VisualTweaks_BuildingImpact_MinDamage>触发伤害下限</VisualTweaks_BuildingImpact_MinDamage>
+  <VisualTweaks_BuildingImpact_MinDamageTip>低于此伤害的命中会被忽略，可用来过滤轻武器的零星擦伤。摧毁建筑的一击无论如何都会触发。范围 0–20。</VisualTweaks_BuildingImpact_MinDamageTip>
+
   <!-- 护盾：通用开关 → 大型护盾 → 个人护盾 → 受击涟漪 -->
   <VisualTweaks_Shield_GroupCommon>通用</VisualTweaks_Shield_GroupCommon>
   <VisualTweaks_ShieldLarge_Enable>替换大型护盾</VisualTweaks_ShieldLarge_Enable>

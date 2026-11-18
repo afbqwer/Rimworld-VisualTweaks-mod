@@ -237,6 +237,55 @@ namespace VisualTweaks
         // the draw loop, not a tuning knob.
         public const int MaxSparkInstances = 128;
 
+        // Building-impact debris + dust. Triggered by Thing.TakeDamage when damage
+        // lands on a building (walls, doors, furniture, mineable rock). Fully
+        // procedural: chips are rotating box SDFs and smoke is fbm noise in the
+        // shader, tinted by the building's material colour. One lifetime covers
+        // both phases — debris snaps early, smoke lingers to the end — so the
+        // default duration is longer than a spark burst.
+        public static bool buildingImpactEnabled = true;
+
+        public const float MinBuildingImpactIntensity = 0.1f;
+        public const float MaxBuildingImpactIntensity = 2f;
+        public static float buildingImpactIntensity = 1f;
+
+        public const float BuildingImpactDurationBaseline = 1.6f;
+        public const float MinBuildingImpactDuration = 0.5f;
+        public const float MaxBuildingImpactDuration = 4f;
+        public static float buildingImpactDuration = BuildingImpactDurationBaseline;
+
+        // Burst diameter in cells. Debris travel reaches about 0.35x the diameter
+        // and smoke puffs about 0.2x, so the default 2.2 keeps the effect around
+        // the struck face without washing out a whole wall segment.
+        public const float MinBuildingImpactSize = 1f;
+        public const float MaxBuildingImpactSize = 5f;
+        public static float buildingImpactSize = 2.2f;
+
+        // Debris count scales with damage between these user bounds. The slider
+        // range is 1..24 (the shader's hard cap); a hit of
+        // BuildingImpactDamageForMaxCount damage or more reaches the upper bound.
+        // A destroyed building multiplies the result by 1.6 (still capped at 24).
+        public const int MinBuildingImpactCount = 1;
+        public const int MaxBuildingImpactCount = 24;
+        public static int buildingImpactCountMin = 6;
+        public static int buildingImpactCountMax = 18;
+        public const float BuildingImpactDamageForMaxCount = 50f;
+
+        // Smoke amount: 0 disables the smoke phase entirely (chips only), 1 is
+        // the default look, 2 a thick dust cloud. Destruction multiplies by 1.7.
+        public const float MinBuildingImpactSmoke = 0f;
+        public const float MaxBuildingImpactSmoke = 2f;
+        public static float buildingImpactSmoke = 1f;
+
+        // Hits below this damage are ignored, so chip damage from small arms can
+        // be filtered out. A destroying blow always bursts regardless.
+        public const float MinBuildingImpactMinDamage = 0f;
+        public const float MaxBuildingImpactMinDamage = 20f;
+        public static float buildingImpactMinDamage = 1f;
+
+        // Fixed per-map cap, same rationale as MaxSparkInstances.
+        public const int MaxBuildingImpactInstances = 128;
+
         // Shield hit ripples. Separate from the shockwave switches above because the
         // two answer different questions: one is "do explosions distort the air", the
         // other is "do I get feedback that a shield stopped the shot". A player who
@@ -1248,6 +1297,17 @@ namespace VisualTweaks
             Scribe_Values.Look(ref mechSparkSize, "mechSparkSize", 1.6f);
             Scribe_Values.Look(ref mechSparkCountMin, "mechSparkCountMin", 8);
             Scribe_Values.Look(ref mechSparkCountMax, "mechSparkCountMax", 24);
+            Scribe_Values.Look(ref buildingImpactEnabled, "buildingImpactEnabled", true);
+            Scribe_Values.Look(ref buildingImpactIntensity, "buildingImpactIntensity", 1f);
+            Scribe_Values.Look(
+                ref buildingImpactDuration,
+                "buildingImpactDuration",
+                BuildingImpactDurationBaseline);
+            Scribe_Values.Look(ref buildingImpactSize, "buildingImpactSize", 2.2f);
+            Scribe_Values.Look(ref buildingImpactCountMin, "buildingImpactCountMin", 6);
+            Scribe_Values.Look(ref buildingImpactCountMax, "buildingImpactCountMax", 18);
+            Scribe_Values.Look(ref buildingImpactSmoke, "buildingImpactSmoke", 1f);
+            Scribe_Values.Look(ref buildingImpactMinDamage, "buildingImpactMinDamage", 1f);
             Scribe_Values.Look(ref shieldRippleEnabled, "shieldRippleEnabled", true);
             Scribe_Values.Look(ref shieldRippleIntensity, "shieldRippleIntensity", 1f);
             Scribe_Values.Look(ref shieldRippleDuration, "shieldRippleDuration", 0.2f);
@@ -1657,6 +1717,38 @@ namespace VisualTweaks
             {
                 mechSparkCountMax = mechSparkCountMin;
             }
+            buildingImpactIntensity = Mathf.Clamp(
+                buildingImpactIntensity,
+                MinBuildingImpactIntensity,
+                MaxBuildingImpactIntensity);
+            buildingImpactDuration = Mathf.Clamp(
+                buildingImpactDuration,
+                MinBuildingImpactDuration,
+                MaxBuildingImpactDuration);
+            buildingImpactSize = Mathf.Clamp(
+                buildingImpactSize,
+                MinBuildingImpactSize,
+                MaxBuildingImpactSize);
+            buildingImpactCountMin = Mathf.Clamp(
+                buildingImpactCountMin,
+                MinBuildingImpactCount,
+                MaxBuildingImpactCount);
+            buildingImpactCountMax = Mathf.Clamp(
+                buildingImpactCountMax,
+                MinBuildingImpactCount,
+                MaxBuildingImpactCount);
+            if (buildingImpactCountMax < buildingImpactCountMin)
+            {
+                buildingImpactCountMax = buildingImpactCountMin;
+            }
+            buildingImpactSmoke = Mathf.Clamp(
+                buildingImpactSmoke,
+                MinBuildingImpactSmoke,
+                MaxBuildingImpactSmoke);
+            buildingImpactMinDamage = Mathf.Clamp(
+                buildingImpactMinDamage,
+                MinBuildingImpactMinDamage,
+                MaxBuildingImpactMinDamage);
             shieldRippleIntensity = Mathf.Clamp(
                 shieldRippleIntensity,
                 MinShieldRippleIntensity,

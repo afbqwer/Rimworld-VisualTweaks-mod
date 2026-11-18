@@ -18,6 +18,7 @@ namespace VisualTweaks
                 VacuumLeakBridge.Initialize();
                 ShieldDomeBridge.Initialize();
                 MechSparkBridge.Initialize();
+                BuildingImpactBridge.Initialize();
 
                 int culledDefsFixed = ShieldCullFix.Apply();
 
@@ -37,6 +38,7 @@ namespace VisualTweaks
                 ShieldRestorePatches.Apply(harmony);
                 VacuumBreachPatches.Apply(harmony);
                 MechSparkPatches.Apply(harmony);
+                BuildingImpactPatches.Apply(harmony);
                 RenderDrawDiagnostics.Apply(harmony);
 
                 // The hex lattice is baked HERE, not on the first shield that gets
@@ -65,6 +67,8 @@ namespace VisualTweaks
                     + (ShieldDomeBridge.ShaderReady ? "ready" : "disabled")
                     + ", metal-hit sparks "
                     + (MechSparkBridge.ShaderReady ? "ready" : "disabled")
+                    + ", building impact debris "
+                    + (BuildingImpactBridge.ShaderReady ? "ready" : "disabled")
                     + ", off-screen shield culling fixed on "
                     + culledDefsFixed + " def(s)).");
             }

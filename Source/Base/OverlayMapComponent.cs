@@ -29,6 +29,7 @@ namespace VisualTweaks
         private readonly ShieldBreakLayer shieldBreaks;
         private readonly VacuumLeakLayer vacuumLeak;
         private readonly MechSparkLayer mechSparks;
+        private readonly BuildingImpactLayer buildingImpacts;
 
         // Structural events that refresh the port table early. Doors go through the
         // per-cell path, everything else through the throttled full scan. Stored as
@@ -60,6 +61,7 @@ namespace VisualTweaks
             shieldBreaks = new ShieldBreakLayer();
             vacuumLeak = new VacuumLeakLayer();
             mechSparks = new MechSparkLayer();
+            buildingImpacts = new BuildingImpactLayer();
 
             structureChangedHandler = vacuumLeak.MarkStructureDirty;
             doorChangedHandler = OnDoorChanged;
@@ -165,6 +167,28 @@ namespace VisualTweaks
         internal void NotifyMechSpark(Vector3 position, Vector3 travelDir, float bias, float damage)
         {
             mechSparks.Spawn(position, travelDir, bias, damage);
+        }
+
+        /// <summary>
+        /// Called by the Thing.TakeDamage patch, once per damage event that landed
+        /// on a building. The position is on the struck face (closest footprint
+        /// point to the attacker, pushed onto the face plane); the normal is that
+        /// face's outward direction, which the shader uses to keep debris outside
+        /// the wall and to clip anything crossing it. The travel direction follows
+        /// the spark contract (debris fans toward its negation); the colour is the
+        /// building's material tint and destruction scales the burst up.
+        /// </summary>
+        internal void NotifyBuildingImpact(
+            Vector3 position,
+            Vector3 faceNormal,
+            Vector3 travelDir,
+            float bias,
+            float damage,
+            Color materialColor,
+            bool destroyed)
+        {
+            buildingImpacts.Spawn(
+                position, faceNormal, travelDir, bias, damage, materialColor, destroyed);
         }
 
         /// <summary>
@@ -277,6 +301,10 @@ namespace VisualTweaks
             // Sparks live in the vanilla mote queue (3151), so the queue, not this
             // call order, puts them under the shockwave's refraction band.
             DrawLayer(mechSparks, in frame);
+
+            // Impact debris shares the mote queue but sits one AltInc above the
+            // sparks, so chips read on top of any spark flash on the same hit.
+            DrawLayer(buildingImpacts, in frame);
         }
 
         /// <summary>
@@ -346,6 +374,7 @@ namespace VisualTweaks
             explosions.Dispose();
             vacuumLeak.Dispose();
             mechSparks.Dispose();
+            buildingImpacts.Dispose();
             wind?.Dispose();
             wind = null;
         }

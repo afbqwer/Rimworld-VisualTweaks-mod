@@ -277,4 +277,31 @@
       <renderQueue>3151</renderQueue>
     </shaderProgram>
   </ShaderDef>
+
+  <!--
+    Building-impact debris and dust, fully procedural: chips are rotating box
+    SDFs, smoke is hash-based fbm noise — no texture is sampled and no scene
+    grab is needed.
+
+    Queue 3151 is vanilla's Map/Mote slot (under fog of war and darkness, like
+    the sparks), but the blend is Alpha, not Additive: debris and dust are
+    matter that occludes what is behind it, not light. Within the queue the
+    bursts sit one AltInc above the sparks, so a metal wall hit shows chips on
+    top of any spark flash.
+  -->
+  <ShaderDef>
+    <defName>VisualTweaksBuildingImpact</defName>
+    <shaderProgram>
+      <vertexShaderFileName>VisualTweaksBuildingImpact.vert.glsl</vertexShaderFileName>
+      <fragmentShaderFileName>VisualTweaksBuildingImpact.frag.glsl</fragmentShaderFileName>
+      <useTexture>false</useTexture>
+      <flipTextureST>false</flipTextureST>
+      <transparent>true</transparent>
+      <depthTest>true</depthTest>
+      <depthWrite>false</depthWrite>
+      <cullMode>None</cullMode>
+      <blendMode>Alpha</blendMode>
+      <renderQueue>3151</renderQueue>
+    </shaderProgram>
+  </ShaderDef>
 </Defs>
