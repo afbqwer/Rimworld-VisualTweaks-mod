@@ -805,7 +805,50 @@ namespace VisualTweaks
                 VisualTweaksSettings.MaxRippleDuration,
                 "VisualTweaks_Ripple_DurationTip".Translate());
 
+            DoMechSparkSection(listing);
+
             SettingsLayout.Finish(listing);
+        }
+
+        /// <summary>
+        /// Mechanoid impact sparks share the shockwave tab: both are combat hit
+        /// feedback, and a player tuning one is usually tuning the other.
+        /// </summary>
+        private static void DoMechSparkSection(Listing_Standard listing)
+        {
+            SettingsLayout.Header(listing, "VisualTweaks_MechSpark_Group".Translate());
+            listing.CheckboxLabeled(
+                "VisualTweaks_MechSpark_Enable".Translate(),
+                ref VisualTweaksSettings.mechSparkEnabled,
+                "VisualTweaks_MechSpark_EnableTip".Translate());
+
+            if (!MechSparkBridge.ShaderReady)
+            {
+                SettingsLayout.Warning(listing, "VisualTweaks_MechSpark_ShaderMissing".Translate());
+            }
+
+            VisualTweaksSettings.mechSparkIntensity = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_MechSpark_Intensity".Translate(),
+                VisualTweaksSettings.mechSparkIntensity,
+                VisualTweaksSettings.MinMechSparkIntensity,
+                VisualTweaksSettings.MaxMechSparkIntensity,
+                "VisualTweaks_MechSpark_IntensityTip".Translate());
+            VisualTweaksSettings.mechSparkDuration = SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_MechSpark_Duration".Translate(),
+                VisualTweaksSettings.mechSparkDuration,
+                VisualTweaksSettings.MinMechSparkDuration,
+                VisualTweaksSettings.MaxMechSparkDuration,
+                "VisualTweaks_MechSpark_DurationTip".Translate());
+            VisualTweaksSettings.mechSparkCount = Mathf.RoundToInt(SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_MechSpark_Count".Translate(),
+                VisualTweaksSettings.mechSparkCount,
+                VisualTweaksSettings.MinMechSparkCount,
+                VisualTweaksSettings.MaxMechSparkCount,
+                "VisualTweaks_MechSpark_CountTip".Translate(),
+                step: 1f));
         }
 
         /// <summary>

@@ -28,6 +28,7 @@ namespace VisualTweaks
         private readonly ShieldRippleLayer shieldRipples;
         private readonly ShieldBreakLayer shieldBreaks;
         private readonly VacuumLeakLayer vacuumLeak;
+        private readonly MechSparkLayer mechSparks;
 
         // Structural events that refresh the port table early. Doors go through the
         // per-cell path, everything else through the throttled full scan. Stored as
@@ -58,6 +59,7 @@ namespace VisualTweaks
             shieldRipples = new ShieldRippleLayer();
             shieldBreaks = new ShieldBreakLayer();
             vacuumLeak = new VacuumLeakLayer();
+            mechSparks = new MechSparkLayer();
 
             structureChangedHandler = vacuumLeak.MarkStructureDirty;
             doorChangedHandler = OnDoorChanged;
@@ -151,6 +153,17 @@ namespace VisualTweaks
             float damage)
         {
             shieldRipples.Spawn(host, shieldRadius, hitPos, damage);
+        }
+
+        /// <summary>
+        /// Called by the bullet impact patch, once per shot that landed on a
+        /// mechanoid. The position is the projectile's exact impact point, captured
+        /// before Bullet.Impact destroys the projectile; the direction is the shot's
+        /// travel direction, which the spark shader uses to fan the spray backward.
+        /// </summary>
+        internal void NotifyMechSpark(Vector3 position, Vector3 travelDir, float damage)
+        {
+            mechSparks.Spawn(position, travelDir, damage);
         }
 
         /// <summary>
@@ -259,6 +272,10 @@ namespace VisualTweaks
             // draws are ordered by depth inside the queue.
             DrawLayer(shieldRipples, in frame);
             DrawLayer(explosions, in frame);
+
+            // Sparks live in the vanilla mote queue (3151), so the queue, not this
+            // call order, puts them under the shockwave's refraction band.
+            DrawLayer(mechSparks, in frame);
         }
 
         /// <summary>
@@ -327,6 +344,7 @@ namespace VisualTweaks
             shieldBreaks.Dispose();
             explosions.Dispose();
             vacuumLeak.Dispose();
+            mechSparks.Dispose();
             wind?.Dispose();
             wind = null;
         }

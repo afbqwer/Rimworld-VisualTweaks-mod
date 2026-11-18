@@ -250,4 +250,31 @@
       </textureWrapOverrides>
     </shaderProgram>
   </ShaderDef>
+
+  <!--
+    Bullet-impact sparks on mechanoids, fully procedural: the fragment shader
+    hashes out every spark streak, no texture is sampled and no scene grab is
+    needed (additive light, not refraction).
+
+    Queue 3151 and Additive are copied verbatim from vanilla's Map/MoteGlow,
+    the same slot the shield dome uses: sparks are motes in everything but
+    name, so they stay under fog of war and darkness exactly like vanilla's
+    own impact flecks. Within the queue they sit above the shield dome by
+    altitude (MoteOverhead), so a hit on a shielded mech still shows its spray.
+  -->
+  <ShaderDef>
+    <defName>VisualTweaksMechSpark</defName>
+    <shaderProgram>
+      <vertexShaderFileName>VisualTweaksMechSpark.vert.glsl</vertexShaderFileName>
+      <fragmentShaderFileName>VisualTweaksMechSpark.frag.glsl</fragmentShaderFileName>
+      <useTexture>false</useTexture>
+      <flipTextureST>false</flipTextureST>
+      <transparent>true</transparent>
+      <depthTest>true</depthTest>
+      <depthWrite>false</depthWrite>
+      <cullMode>None</cullMode>
+      <blendMode>Additive</blendMode>
+      <renderQueue>3151</renderQueue>
+    </shaderProgram>
+  </ShaderDef>
 </Defs>

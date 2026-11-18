@@ -17,6 +17,7 @@ namespace VisualTweaks
                 ColdMistBridge.Initialize();
                 VacuumLeakBridge.Initialize();
                 ShieldDomeBridge.Initialize();
+                MechSparkBridge.Initialize();
 
                 int culledDefsFixed = ShieldCullFix.Apply();
 
@@ -35,6 +36,7 @@ namespace VisualTweaks
                 ShieldOverridePatches.Apply(harmony);
                 ShieldRestorePatches.Apply(harmony);
                 VacuumBreachPatches.Apply(harmony);
+                MechSparkPatches.Apply(harmony);
                 RenderDrawDiagnostics.Apply(harmony);
 
                 // The hex lattice is baked HERE, not on the first shield that gets
@@ -61,6 +63,8 @@ namespace VisualTweaks
                     + (VacuumLeakBridge.ShaderReady ? "ready" : "disabled")
                     + ", shield dome "
                     + (ShieldDomeBridge.ShaderReady ? "ready" : "disabled")
+                    + ", mechanoid sparks "
+                    + (MechSparkBridge.ShaderReady ? "ready" : "disabled")
                     + ", off-screen shield culling fixed on "
                     + culledDefsFixed + " def(s)).");
             }

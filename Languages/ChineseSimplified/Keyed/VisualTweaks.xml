@@ -111,6 +111,18 @@
   <VisualTweaks_Ripple_Duration>基础持续时间</VisualTweaks_Ripple_Duration>
   <VisualTweaks_Ripple_DurationTip>冲击波的基础存活时间，默认 0.5 秒，范围约 0.05 秒到 2 秒。爆炸越大持续越久，最多约 1.5 倍；游戏加速时也会相应更快结束。</VisualTweaks_Ripple_DurationTip>
 
+  <!-- 机械族命中火花 -->
+  <VisualTweaks_MechSpark_Group>机械族命中火花</VisualTweaks_MechSpark_Group>
+  <VisualTweaks_MechSpark_Enable>子弹命中机械族时迸发火花</VisualTweaks_MechSpark_Enable>
+  <VisualTweaks_MechSpark_EnableTip>每发命中机械族的子弹都会溅出一簇炽热的金属火花，朝背离射手的方向放射，并伴随一次短暂的命中闪光。全部由着色器程序化生成：无贴图、无粒子资源。伤害越高的子弹火花略亮一些。</VisualTweaks_MechSpark_EnableTip>
+  <VisualTweaks_MechSpark_ShaderMissing>火花着色器编译失败或缺失，该特效已禁用。详情请查看日志。</VisualTweaks_MechSpark_ShaderMissing>
+  <VisualTweaks_MechSpark_Intensity>亮度</VisualTweaks_MechSpark_Intensity>
+  <VisualTweaks_MechSpark_IntensityTip>火花与命中闪光的整体亮度。1 为默认效果。</VisualTweaks_MechSpark_IntensityTip>
+  <VisualTweaks_MechSpark_Duration>基础持续时间</VisualTweaks_MechSpark_Duration>
+  <VisualTweaks_MechSpark_DurationTip>一簇火花的存活时间，默认 0.45 秒，每簇有 ±15% 的随机浮动。特效跟随游戏速度，暂停时冻结。</VisualTweaks_MechSpark_DurationTip>
+  <VisualTweaks_MechSpark_Count>每次命中火花数</VisualTweaks_MechSpark_Count>
+  <VisualTweaks_MechSpark_CountTip>每次命中产生的火花轨迹数量。越多越密集；代价是着色器循环略长，且只在火花出现在画面上时才付出。</VisualTweaks_MechSpark_CountTip>
+
   <!-- 护盾：通用开关 → 大型护盾 → 个人护盾 → 受击涟漪 -->
   <VisualTweaks_Shield_GroupCommon>通用</VisualTweaks_Shield_GroupCommon>
   <VisualTweaks_ShieldLarge_Enable>替换大型护盾</VisualTweaks_ShieldLarge_Enable>

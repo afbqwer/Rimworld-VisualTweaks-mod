@@ -201,6 +201,28 @@ namespace VisualTweaks
         // normal play, so this is only a safety bound, not a tuning knob.
         public const int MaxRippleCount = 256;
 
+        // Mechanoid impact sparks. Fully procedural: the shader hashes out every
+        // streak, so these sliders only set the burst look, never particle state.
+        // The default life is short — a spark spray should snap, not linger.
+        public static bool mechSparkEnabled = true;
+
+        public const float MinMechSparkIntensity = 0.1f;
+        public const float MaxMechSparkIntensity = 2f;
+        public static float mechSparkIntensity = 1f;
+
+        public const float MechSparkDurationBaseline = 0.45f;
+        public const float MinMechSparkDuration = 0.15f;
+        public const float MaxMechSparkDuration = 1.2f;
+        public static float mechSparkDuration = MechSparkDurationBaseline;
+
+        public const int MinMechSparkCount = 6;
+        public const int MaxMechSparkCount = 32;
+        public static int mechSparkCount = 16;
+
+        // Fixed per-map cap, same rationale as MaxRippleCount: a safety bound on
+        // the draw loop, not a tuning knob.
+        public const int MaxSparkInstances = 128;
+
         // Shield hit ripples. Separate from the shockwave switches above because the
         // two answer different questions: one is "do explosions distort the air", the
         // other is "do I get feedback that a shield stopped the shot". A player who
@@ -1203,6 +1225,13 @@ namespace VisualTweaks
                 ref explosionRippleDuration,
                 "explosionRippleDuration",
                 RippleDurationBaseline);
+            Scribe_Values.Look(ref mechSparkEnabled, "mechSparkEnabled", true);
+            Scribe_Values.Look(ref mechSparkIntensity, "mechSparkIntensity", 1f);
+            Scribe_Values.Look(
+                ref mechSparkDuration,
+                "mechSparkDuration",
+                MechSparkDurationBaseline);
+            Scribe_Values.Look(ref mechSparkCount, "mechSparkCount", 16);
             Scribe_Values.Look(ref shieldRippleEnabled, "shieldRippleEnabled", true);
             Scribe_Values.Look(ref shieldRippleIntensity, "shieldRippleIntensity", 1f);
             Scribe_Values.Look(ref shieldRippleDuration, "shieldRippleDuration", 0.2f);
@@ -1588,6 +1617,18 @@ namespace VisualTweaks
                 explosionRippleDuration,
                 MinRippleDuration,
                 MaxRippleDuration);
+            mechSparkIntensity = Mathf.Clamp(
+                mechSparkIntensity,
+                MinMechSparkIntensity,
+                MaxMechSparkIntensity);
+            mechSparkDuration = Mathf.Clamp(
+                mechSparkDuration,
+                MinMechSparkDuration,
+                MaxMechSparkDuration);
+            mechSparkCount = Mathf.Clamp(
+                mechSparkCount,
+                MinMechSparkCount,
+                MaxMechSparkCount);
             shieldRippleIntensity = Mathf.Clamp(
                 shieldRippleIntensity,
                 MinShieldRippleIntensity,
