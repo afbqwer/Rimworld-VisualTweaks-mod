@@ -20,11 +20,15 @@ namespace VisualTweaks
         private readonly List<MechSparkInstance> bursts =
             new List<MechSparkInstance>();
 
-        // Burst diameter scales linearly with the pawn's BodySize, so the spray
-        // stays proportional to the body it came off: 1.0 (a human, most mechs)
-        // leaves the user's diameter untouched. The clamp keeps a body-size 0.2
-        // baby from collapsing to a dot and a body-size 20 modded monster from
-        // throwing sparks across half the map.
+        // Burst diameter follows the pawn's DRAWN size, which is not linear in
+        // BodySize: BodySize behaves like a mass/volume scalar while a top-down
+        // sprite is 2D, so its linear size tracks bodySize^(2/3). A BodySize-4
+        // pawn therefore reads about 2.5x a BodySize-1 sprite, not 4x; vanilla
+        // art follows the same curve (centipede BodySize 3 -> 3-cell sprite,
+        // scyther 1 -> 1.5). BodySize 1 leaves the user's diameter untouched.
+        // The clamp keeps a tiny baby from collapsing to a dot and a BodySize-20
+        // modded monster from throwing sparks across half the map.
+        private const float BodySizeToSpriteExponent = 2f / 3f;
         private const float MinBodySizeScale = 0.6f;
         private const float MaxBodySizeScale = 4f;
 
@@ -34,6 +38,7 @@ namespace VisualTweaks
         internal void Spawn(
             Vector3 position,
             Vector3 travelDir,
+            Vector3 impactDir,
             float bias,
             float damage,
             float bodySize)
@@ -66,24 +71,50 @@ namespace VisualTweaks
 
             // The transform never changes during the burst's lifetime; identity
             // rotation means the matrix is just scale + translation. The diameter is
-            // the user's size setting (cells) times the pawn's body size; the shader
-            // is scale-invariant, so this sizes the streaks' world length too.
-            float sizeScale = Mathf.Clamp(bodySize, MinBodySizeScale, MaxBodySizeScale);
+            // the user's size setting (cells) times the pawn's drawn-size scale; the
+            // shader is scale-invariant, so this sizes the streaks' world length too.
+            float sizeScale = Mathf.Clamp(
+                Mathf.Pow(bodySize, BodySizeToSpriteExponent),
+                MinBodySizeScale,
+                MaxBodySizeScale);
             float diameter = VisualTweaksSettings.mechSparkSize * sizeScale;
+
+            // Fire from the hit side of the body instead of its exact centre: shift
+            // the quad toward the attack source by half the body radius, with a
+            // little lateral scatter so repeated hits do not stack on one dot. With
+            // no resolved source, seed the origin inside the silhouette instead, so
+            // the burst never starts from a dead-centre pinpoint.
+            Vector3 center = position;
+            Vector3 flatImpact = impactDir.Yto0();
+            float radius = diameter * 0.5f;
+            if (flatImpact.sqrMagnitude > 1e-4f)
+            {
+                flatImpact = flatImpact.normalized;
+                Vector3 lateral = new Vector3(-flatImpact.z, 0f, flatImpact.x);
+                center += (flatImpact + lateral * Rand.Range(-0.3f, 0.3f))
+                    * (radius * 0.5f);
+            }
+            else
+            {
+                Vector2 scatter = Rand.InsideUnitCircle * (radius * 0.35f);
+                center.x += scatter.x;
+                center.z += scatter.y;
+            }
+
             Matrix4x4 matrix = default;
             matrix.m00 = diameter;
             matrix.m11 = 1f;
             matrix.m22 = diameter;
             matrix.m33 = 1f;
-            matrix.m03 = position.x;
+            matrix.m03 = center.x;
             matrix.m13 = MechSparkRenderer.Altitude;
-            matrix.m23 = position.z;
+            matrix.m23 = center.z;
 
             TrimToCap();
             bursts.Add(new MechSparkInstance
             {
-                X = position.x,
-                Z = position.z,
+                X = center.x,
+                Z = center.z,
                 Life = life,
                 InvLife = 1f / life,
                 Intensity = intensity,

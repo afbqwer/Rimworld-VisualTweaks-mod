@@ -121,7 +121,7 @@
   <VisualTweaks_MechSpark_Duration>基础持续时间</VisualTweaks_MechSpark_Duration>
   <VisualTweaks_MechSpark_DurationTip>一簇火花的存活时间，默认 0.45 秒，每簇有 ±15% 的随机浮动。特效跟随游戏速度，暂停时冻结。</VisualTweaks_MechSpark_DurationTip>
   <VisualTweaks_MechSpark_Size>火花大小（格直径）</VisualTweaks_MechSpark_Size>
-  <VisualTweaks_MechSpark_SizeTip>火花簇的直径（格）。默认 1.6 适合 1x1 的机械族，让火花紧贴躯体；火花最大行程约为直径的 0.4 倍。爆发还会按受击者的体型（BodySize）缩放，巨型 pawn 会得到相应更大的火花簇。范围 0.8–3.5。</VisualTweaks_MechSpark_SizeTip>
+  <VisualTweaks_MechSpark_SizeTip>火花簇的直径（格）。默认 1.6 适合 1x1 的机械族，让火花紧贴躯体；火花最大行程约为直径的 0.4 倍。爆发还会按受击者的体型换算（绘制尺寸约随体型呈 2/3 次方增长，体型 4 ≈ 普通体的 2.5 倍），巨型 pawn 会得到相应更大的火花簇。范围 0.8–3.5。</VisualTweaks_MechSpark_SizeTip>
   <VisualTweaks_MechSpark_Direction>受击方向影响</VisualTweaks_MechSpark_Direction>
   <VisualTweaks_MechSpark_DirectionTip>命中方向把火花朝来弹方向推回的力度。0 = 向四周均匀飞溅；1 = 默认值，按护甲结果分级（被弹开时火花大多朝攻击者飞回，被挡下一部分时少一些）；2 = 大部分火花被压进朝攻击者飞回的锥形内。只对有方向的命中有作用——完全打穿金属（零护甲或高穿甲）在任何数值下都是均匀四溅。远程与爆炸本来就带方向；近战会从攻击者位置推算方向。</VisualTweaks_MechSpark_DirectionTip>
   <VisualTweaks_MechSpark_CountMin>火花数量 · 下限</VisualTweaks_MechSpark_CountMin>

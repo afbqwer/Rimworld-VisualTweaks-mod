@@ -164,9 +164,37 @@ namespace VisualTweaks
 
             Vector3 travelDir = ResolveTravelDir(pawn);
 
+            // The burst is spawned on the side of the body that faced the attack,
+            // not at the corpse's exact centre (see MechSparkLayer.Spawn).
+            Vector3 impactDir = ResolveImpactDir(travelDir);
+
             OverlayMapComponent component = pawn.Map.GetComponent<OverlayMapComponent>();
             component?.NotifyMechSpark(
-                pawn.TrueCenter(), travelDir, bias, __state.Amount, pawn.BodySize);
+                pawn.DrawPos,
+                travelDir,
+                impactDir,
+                bias,
+                __state.Amount,
+                pawn.BodySize);
+        }
+
+        /// <summary>
+        /// Direction from the pawn toward the attack source, used only to place the
+        /// burst on the hit side of the body. <see cref="ResolveTravelDir"/> points
+        /// AWAY from the source for ranged and melee (the fan axis is the incoming
+        /// shot) but TOWARD the blast centre for explosions (sparks fan outward), so
+        /// only the explosive case needs the same vector.
+        /// </summary>
+        private static Vector3 ResolveImpactDir(Vector3 travelDir)
+        {
+            if (travelDir.sqrMagnitude < 1e-6f)
+            {
+                return Vector3.zero;
+            }
+
+            return s_damageDef != null && s_damageDef.isExplosive
+                ? travelDir
+                : -travelDir;
         }
 
         /// <summary>

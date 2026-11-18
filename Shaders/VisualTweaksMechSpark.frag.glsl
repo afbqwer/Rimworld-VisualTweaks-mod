@@ -20,7 +20,9 @@ layout(std430, set = 2, binding = 3) readonly buffer _SparkParams
 // a zero travel direction, so the spray is isotropic; the directional bias below is
 // kept as a capability (the preview uses it) but stays inactive in game.
 //
-// One quad per hit, centred on the target. The fragment loop walks N
+// One quad per hit, placed on the side of the target that faced the attack
+// (the layer offsets it; the shader's local origin is just the quad centre).
+// The fragment loop walks N
 // sparks (N arrives per instance); each one derives its own direction, speed,
 // start delay and lifetime from a hash of (burst seed, spark index), so the
 // whole burst is deterministic per hit and costs no CPU particle state.

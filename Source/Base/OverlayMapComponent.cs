@@ -159,20 +159,23 @@ namespace VisualTweaks
 
         /// <summary>
         /// Called by the ArmorUtility patch, once per damage event that struck metal
-        /// (metal apparel or a mechanoid body). The position is the pawn's centre; the
-        /// travel direction is the best-effort attacker-&gt;target vector (zero when no
-        /// instigator was available, giving an isotropic burst); the bias is graded by
-        /// the armor outcome and the damage drives the spark count; bodySize scales the
-        /// burst so a huge pawn does not get a human-sized spray.
+        /// (metal apparel or a mechanoid body). The position is the pawn's draw
+        /// position; travelDir is the shader's fan axis (zero when no instigator was
+        /// available, giving an isotropic burst); impactDir points from the pawn
+        /// toward the attack source so the burst starts on the hit side of the body;
+        /// the bias is graded by the armor outcome and the damage drives the spark
+        /// count; bodySize scales the burst so a huge pawn does not get a
+        /// human-sized spray.
         /// </summary>
         internal void NotifyMechSpark(
             Vector3 position,
             Vector3 travelDir,
+            Vector3 impactDir,
             float bias,
             float damage,
             float bodySize)
         {
-            mechSparks.Spawn(position, travelDir, bias, damage, bodySize);
+            mechSparks.Spawn(position, travelDir, impactDir, bias, damage, bodySize);
         }
 
         /// <summary>
