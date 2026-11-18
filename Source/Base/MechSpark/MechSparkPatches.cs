@@ -165,7 +165,8 @@ namespace VisualTweaks
             Vector3 travelDir = ResolveTravelDir(pawn);
 
             OverlayMapComponent component = pawn.Map.GetComponent<OverlayMapComponent>();
-            component?.NotifyMechSpark(pawn.TrueCenter(), travelDir, bias, __state.Amount);
+            component?.NotifyMechSpark(
+                pawn.TrueCenter(), travelDir, bias, __state.Amount, pawn.BodySize);
         }
 
         /// <summary>

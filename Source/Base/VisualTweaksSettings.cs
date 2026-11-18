@@ -217,12 +217,25 @@ namespace VisualTweaks
         public const float MaxMechSparkDuration = 1.2f;
         public static float mechSparkDuration = MechSparkDurationBaseline;
 
-        // Spark burst diameter in cells. Most mechanoids are 1x1, so the default keeps
-        // the spray close to the body; the shader is scale-invariant, so this only
-        // sizes the world quad. Spark travel reaches about 0.4x the diameter.
+        // Base spark burst diameter in cells for a BodySize-1 pawn (a human, most
+        // mechanoids). The layer multiplies this by the struck pawn's BodySize
+        // (clamped 0.6..4), so huge pawns get a proportionally larger spray. The
+        // shader is scale-invariant, so this only sizes the world quad. Spark travel
+        // reaches about 0.4x the diameter.
         public const float MinMechSparkSize = 0.8f;
         public const float MaxMechSparkSize = 3.5f;
         public static float mechSparkSize = 1.6f;
+
+        // Multiplier on the directional bias the armor outcome produces (see the
+        // MechSparkPatches bias constants). 0 sprays evenly in every direction, 1
+        // keeps the graded default, and higher values pull the whole burst harder
+        // back along the shot (the shader clamps each spark's share at 1, so the
+        // top of the range pins most sparks to the backward cone). Applies only
+        // when the hit has a resolved direction; a clean punch-through (zero armor
+        // / high AP) is isotropic by design and stays unaffected at any value.
+        public const float MinMechSparkDirection = 0f;
+        public const float MaxMechSparkDirection = 2f;
+        public static float mechSparkDirection = 1f;
 
         // Spark count scales with damage between these user bounds. The slider range
         // is 1..32 (the shader's hard cap); a hit of MechSparkDamageForMaxCount damage
@@ -1295,6 +1308,7 @@ namespace VisualTweaks
                 "mechSparkDuration",
                 MechSparkDurationBaseline);
             Scribe_Values.Look(ref mechSparkSize, "mechSparkSize", 1.6f);
+            Scribe_Values.Look(ref mechSparkDirection, "mechSparkDirection", 1f);
             Scribe_Values.Look(ref mechSparkCountMin, "mechSparkCountMin", 8);
             Scribe_Values.Look(ref mechSparkCountMax, "mechSparkCountMax", 24);
             Scribe_Values.Look(ref buildingImpactEnabled, "buildingImpactEnabled", true);
@@ -1705,6 +1719,10 @@ namespace VisualTweaks
                 mechSparkSize,
                 MinMechSparkSize,
                 MaxMechSparkSize);
+            mechSparkDirection = Mathf.Clamp(
+                mechSparkDirection,
+                MinMechSparkDirection,
+                MaxMechSparkDirection);
             mechSparkCountMin = Mathf.Clamp(
                 mechSparkCountMin,
                 MinMechSparkCount,

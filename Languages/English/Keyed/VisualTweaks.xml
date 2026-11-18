@@ -121,7 +121,9 @@
   <VisualTweaks_MechSpark_Duration>Base duration</VisualTweaks_MechSpark_Duration>
   <VisualTweaks_MechSpark_DurationTip>How long a spark burst lasts. The default is 0.45 s; each burst varies by ±15%. The effect follows game speed and freezes while paused.</VisualTweaks_MechSpark_DurationTip>
   <VisualTweaks_MechSpark_Size>Spark size (cell diameter)</VisualTweaks_MechSpark_Size>
-  <VisualTweaks_MechSpark_SizeTip>Diameter of the spark burst in cells. The default 1.6 suits 1x1 mechanoids, keeping the spray close to the body; sparks travel about 0.4x this distance. Raise it for larger mechs or a more dramatic spray. Range 0.8–3.5.</VisualTweaks_MechSpark_SizeTip>
+  <VisualTweaks_MechSpark_SizeTip>Diameter of the spark burst in cells. The default 1.6 suits 1x1 mechanoids, keeping the spray close to the body; sparks travel about 0.4x this distance. The burst also scales with the hit pawn's body size, so huge pawns get a proportionally larger spray. Range 0.8–3.5.</VisualTweaks_MechSpark_SizeTip>
+  <VisualTweaks_MechSpark_Direction>Hit-direction influence</VisualTweaks_MechSpark_Direction>
+  <VisualTweaks_MechSpark_DirectionTip>How hard the impact pulls the spray back along the shot. 0 sprays evenly in every direction; 1 is the default, graded by the armor result (a deflect throws sparks back toward the attacker, a partial stop fewer); 2 pins most of the burst to the backward cone. Only hits with a real direction respond — a clean punch-through (zero armor or high AP) sprays evenly at any value. Ranged shots and explosions already have a direction; melee gains one from the attacker's position.</VisualTweaks_MechSpark_DirectionTip>
   <VisualTweaks_MechSpark_CountMin>Spark count · lower bound</VisualTweaks_MechSpark_CountMin>
   <VisualTweaks_MechSpark_CountMinTip>Sparks thrown by the lightest hits. The count scales with damage from this lower bound up to the upper bound (reached at about 50 damage). Range 1–32.</VisualTweaks_MechSpark_CountMinTip>
   <VisualTweaks_MechSpark_CountMax>Spark count · upper bound</VisualTweaks_MechSpark_CountMax>

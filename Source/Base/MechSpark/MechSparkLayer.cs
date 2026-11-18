@@ -20,10 +20,23 @@ namespace VisualTweaks
         private readonly List<MechSparkInstance> bursts =
             new List<MechSparkInstance>();
 
+        // Burst diameter scales linearly with the pawn's BodySize, so the spray
+        // stays proportional to the body it came off: 1.0 (a human, most mechs)
+        // leaves the user's diameter untouched. The clamp keeps a body-size 0.2
+        // baby from collapsing to a dot and a body-size 20 modded monster from
+        // throwing sparks across half the map.
+        private const float MinBodySizeScale = 0.6f;
+        private const float MaxBodySizeScale = 4f;
+
         private MechSparkRenderer? renderer;
         private bool errorLogged;
 
-        internal void Spawn(Vector3 position, Vector3 travelDir, float bias, float damage)
+        internal void Spawn(
+            Vector3 position,
+            Vector3 travelDir,
+            float bias,
+            float damage,
+            float bodySize)
         {
             TickManager? tickManager = Find.TickManager;
             bool useTicks = tickManager != null;
@@ -53,9 +66,10 @@ namespace VisualTweaks
 
             // The transform never changes during the burst's lifetime; identity
             // rotation means the matrix is just scale + translation. The diameter is
-            // the user's size setting (cells); most mechanoids are 1x1, so the default
-            // keeps the spray close to the body.
-            float diameter = VisualTweaksSettings.mechSparkSize;
+            // the user's size setting (cells) times the pawn's body size; the shader
+            // is scale-invariant, so this sizes the streaks' world length too.
+            float sizeScale = Mathf.Clamp(bodySize, MinBodySizeScale, MaxBodySizeScale);
+            float diameter = VisualTweaksSettings.mechSparkSize * sizeScale;
             Matrix4x4 matrix = default;
             matrix.m00 = diameter;
             matrix.m11 = 1f;
@@ -77,7 +91,7 @@ namespace VisualTweaks
                 Count = count,
                 DirX = dir.x,
                 DirZ = dir.z,
-                Bias = hasDir ? bias : 0f,
+                Bias = hasDir ? bias * VisualTweaksSettings.mechSparkDirection : 0f,
                 Matrix = matrix,
                 StartTick = startTick,
                 StartRealtime = Time.realtimeSinceStartup,

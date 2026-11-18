@@ -44,7 +44,8 @@ layout(std430, set = 2, binding = 3) readonly buffer _SparkParams
 //   vParams.w   spark count (clamped to 1..32 here)
 //   vParams2.x  bullet travel direction x (world x, unit)
 //   vParams2.y  bullet travel direction z (world z, unit)
-//   vParams2.z  backward bias share 0..1; 0 leaves the spray isotropic
+//   vParams2.z  backward bias weight; 0 leaves the spray isotropic, >1 pins
+//               more sparks to the backward cone (each spark clamps at 1)
 //
 // Material constants (shared by every burst, set once on the material):
 //   _Params3.x  gravity drift (local units over the full life)
@@ -134,8 +135,10 @@ void main()
         float angle = 6.2831853 * h1;
         vec2 radial = vec2(cos(angle), sin(angle));
         // Pull toward the backward shot direction; vParams2.xy is zero when no
-        // direction was captured, which leaves the spray isotropic.
-        float bias = vParams2.z * h2;
+        // direction was captured, which leaves the spray isotropic. The share is
+        // clamped per spark: the user's direction slider may push vParams2.z above
+        // 1 to pin more sparks onto the backward cone without flipping them past it.
+        float bias = min(vParams2.z * h2, 1.0);
         vec2 dir = normalize(radial * (1.0 - bias) - vParams2.xy * bias);
 
         float speed = mix(0.45, 1.0, h3) * maxTravel;

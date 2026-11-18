@@ -162,11 +162,17 @@ namespace VisualTweaks
         /// (metal apparel or a mechanoid body). The position is the pawn's centre; the
         /// travel direction is the best-effort attacker-&gt;target vector (zero when no
         /// instigator was available, giving an isotropic burst); the bias is graded by
-        /// the armor outcome and the damage drives the spark count.
+        /// the armor outcome and the damage drives the spark count; bodySize scales the
+        /// burst so a huge pawn does not get a human-sized spray.
         /// </summary>
-        internal void NotifyMechSpark(Vector3 position, Vector3 travelDir, float bias, float damage)
+        internal void NotifyMechSpark(
+            Vector3 position,
+            Vector3 travelDir,
+            float bias,
+            float damage,
+            float bodySize)
         {
-            mechSparks.Spawn(position, travelDir, bias, damage);
+            mechSparks.Spawn(position, travelDir, bias, damage, bodySize);
         }
 
         /// <summary>
