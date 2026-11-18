@@ -63,10 +63,8 @@ namespace VisualTweaks
 
             try
             {
-                GameObject host = new GameObject("VisualTweaksGasScreenProbe")
-                {
-                    hideFlags = HideFlags.HideAndDontSave,
-                };
+                // No hideFlags: the runtime's setter is a stub that only logs a warning.
+                GameObject host = new GameObject("VisualTweaksGasScreenProbe");
                 UnityEngine.Object.DontDestroyOnLoad(host);
                 host.AddComponent<GasScreenProbeBehaviour>();
                 installed = true;

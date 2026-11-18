@@ -442,12 +442,16 @@ namespace VisualTweaks
                 // disc, and without mips that is a scattered cache-line stream over
                 // 32 MiB on every draw. A magnified dome keeps reading level 0, so
                 // the close-up appearance is exactly what it was.
+                // No hideFlags: the runtime's Object.hideFlags setter is a no-op stub that
+                // only logs a warning, so asking for HideAndDontSave hides nothing and
+                // just writes noise to the log on every bake. Lifetime is owned here
+                // instead — a rebake destroys the previous texture, and the catch below
+                // destroys this one if the fill fails.
                 created = new Texture2D(size, size, TextureFormat.RGBAHalf, true)
                 {
                     name = "VisualTweaksShieldHexMap_" + surface.Target + "_" + size,
                     filterMode = FilterMode.Bilinear,
                     wrapMode = TextureWrapMode.Clamp,
-                    hideFlags = HideFlags.HideAndDontSave,
                 };
 
                 Color[] strip = new Color[size * RowsPerBlock];
