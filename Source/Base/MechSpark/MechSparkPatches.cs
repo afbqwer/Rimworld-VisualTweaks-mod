@@ -40,10 +40,13 @@ namespace VisualTweaks
     /// only ever called from GetPostArmorDamage, and the apparel.TakeDamage inside it
     /// cannot reenter the armor step (apparel is not a Pawn), so the bridges are safe.
     ///
-    /// Direction is best-effort: the attacker->target vector from the instigator's
-    /// position (meaningful for bullets and melee). DamageInfo.Angle is deliberately
-    /// NOT used here — it defaults to a random 0..359 for any damage that never calls
-    /// SetAngle. When no usable instigator exists the burst is isotropic.
+    /// Direction is resolved per damage source in <see cref="ResolveTravelDir"/>:
+    /// explosions use dinfo.Angle (blast centre -> target) to spray outward, ranged
+    /// projectiles use dinfo.Angle (exact travel direction) to deflect backward, and
+    /// everything else falls back to the instigator's attacker -> target position
+    /// vector (isotropic when none is usable). Angle is only trusted for isRanged /
+    /// isExplosive defs, which set it explicitly; other damage defaults it to a random
+    /// 0..359 and must not use it.
     /// </summary>
     internal static class MechSparkPatches
     {
@@ -59,6 +62,8 @@ namespace VisualTweaks
         // Cross-method bridges (see class remarks). Main-thread only.
         private static SparkEvent? s_current;
         private static Thing? s_instigator;
+        private static DamageDef? s_damageDef;
+        private static float s_angle;
 
         // Backward bias by armor outcome. A full deflect throws most sparks back
         // along the attack (toward the attacker), a partial diminish fewer, and metal
@@ -113,6 +118,11 @@ namespace VisualTweaks
         private static void ApplyDamageToPartPrefix(DamageInfo dinfo)
         {
             s_instigator = dinfo.Instigator;
+            // Capture the ORIGINAL def and angle here: GetPostArmorDamage may convert
+            // Sharp -> Blunt afterwards, but isRanged/isExplosive live on the source
+            // def (Bullet, Bomb, ...), and the angle is the source's travel direction.
+            s_damageDef = dinfo.Def;
+            s_angle = dinfo.Angle;
         }
 
         private static void GetPostArmorDamagePrefix(float amount, ref SparkEvent __state)
@@ -152,10 +162,50 @@ namespace VisualTweaks
                 : diminishedByMetalArmor ? BiasDiminished
                 : BiasPlainMetal;
 
-            // Best-effort attack direction: attacker -> target. Falls back to zero
-            // (isotropic) when the instigator is missing, unspawned, off-map, or the
-            // target itself.
-            Vector3 travelDir = Vector3.zero;
+            Vector3 travelDir = ResolveTravelDir(pawn);
+
+            OverlayMapComponent component = pawn.Map.GetComponent<OverlayMapComponent>();
+            component?.NotifyMechSpark(pawn.TrueCenter(), travelDir, bias, __state.Amount);
+        }
+
+        /// <summary>
+        /// Resolves the spark travel direction by damage source. The shader always
+        /// fans sparks toward -travelDir, so each branch hands it the vector whose
+        /// negation is the desired spray:
+        ///   Explosive — dinfo.Angle points from the blast centre to the target
+        ///       (outward, set explicitly in DamageWorker.ExplosionDamageThing). Sparks
+        ///       should fly outward, away from the blast, so travelDir is the INWARD
+        ///       vector (-outward). The instigator is the launcher, NOT the blast
+        ///       centre, so position derivation would be wrong here.
+        ///   Ranged — dinfo.Angle is the projectile's travel direction (shooter ->
+        ///       target, set in Bullet.Impact). Sparks deflect back along it, so
+        ///       travelDir is the travel direction itself. Verified: every actively
+        ///       used vanilla isRanged def (Bullet/Arrow/ArrowHighVelocity/RangedStab)
+        ///       is a Bullet projectile that sets a real angle; the Beam def is unused.
+        ///   Other (melee etc.) — best-effort attacker -> target from the instigator
+        ///       position; zero (isotropic) when no usable instigator exists.
+        /// Angle is deliberately not trusted for non-ranged/non-explosive damage: it
+        /// defaults to a random 0..359 whenever a source never calls SetAngle.
+        /// </summary>
+        private static Vector3 ResolveTravelDir(Pawn pawn)
+        {
+            DamageDef? def = s_damageDef;
+            if (def != null)
+            {
+                // AngleFlat / ExactRotation.eulerAngles.y are Unity yaw (0 = +z, 90 =
+                // +x); Euler(0, angle, 0) * forward is their exact inverse.
+                if (def.isExplosive)
+                {
+                    Vector3 outward = Quaternion.Euler(0f, s_angle, 0f) * Vector3.forward;
+                    return -outward;
+                }
+
+                if (def.isRanged)
+                {
+                    return Quaternion.Euler(0f, s_angle, 0f) * Vector3.forward;
+                }
+            }
+
             Thing? instigator = s_instigator;
             if (instigator != null && instigator != pawn
                 && instigator.Spawned && instigator.Map == pawn.Map)
@@ -163,12 +213,11 @@ namespace VisualTweaks
                 Vector3 flat = (pawn.TrueCenter() - instigator.TrueCenter()).Yto0();
                 if (flat.sqrMagnitude > 0.01f)
                 {
-                    travelDir = flat.normalized;
+                    return flat.normalized;
                 }
             }
 
-            OverlayMapComponent component = pawn.Map.GetComponent<OverlayMapComponent>();
-            component?.NotifyMechSpark(pawn.TrueCenter(), travelDir, bias, __state.Amount);
+            return Vector3.zero;
         }
     }
 }

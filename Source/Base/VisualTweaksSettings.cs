@@ -217,6 +217,13 @@ namespace VisualTweaks
         public const float MaxMechSparkDuration = 1.2f;
         public static float mechSparkDuration = MechSparkDurationBaseline;
 
+        // Spark burst diameter in cells. Most mechanoids are 1x1, so the default keeps
+        // the spray close to the body; the shader is scale-invariant, so this only
+        // sizes the world quad. Spark travel reaches about 0.4x the diameter.
+        public const float MinMechSparkSize = 0.8f;
+        public const float MaxMechSparkSize = 3.5f;
+        public static float mechSparkSize = 1.6f;
+
         // Spark count scales with damage between these user bounds. The slider range
         // is 1..32 (the shader's hard cap); a hit of MechSparkDamageForMaxCount damage
         // or more reaches the upper bound, lighter hits interpolate down to the lower.
@@ -1238,6 +1245,7 @@ namespace VisualTweaks
                 ref mechSparkDuration,
                 "mechSparkDuration",
                 MechSparkDurationBaseline);
+            Scribe_Values.Look(ref mechSparkSize, "mechSparkSize", 1.6f);
             Scribe_Values.Look(ref mechSparkCountMin, "mechSparkCountMin", 8);
             Scribe_Values.Look(ref mechSparkCountMax, "mechSparkCountMax", 24);
             Scribe_Values.Look(ref shieldRippleEnabled, "shieldRippleEnabled", true);
@@ -1633,6 +1641,10 @@ namespace VisualTweaks
                 mechSparkDuration,
                 MinMechSparkDuration,
                 MaxMechSparkDuration);
+            mechSparkSize = Mathf.Clamp(
+                mechSparkSize,
+                MinMechSparkSize,
+                MaxMechSparkSize);
             mechSparkCountMin = Mathf.Clamp(
                 mechSparkCountMin,
                 MinMechSparkCount,

@@ -52,8 +52,10 @@ namespace VisualTweaks
             Vector3 dir = hasDir ? flatDir.normalized : Vector3.zero;
 
             // The transform never changes during the burst's lifetime; identity
-            // rotation means the matrix is just scale + translation.
-            float diameter = MechSparkRenderer.QuadSize;
+            // rotation means the matrix is just scale + translation. The diameter is
+            // the user's size setting (cells); most mechanoids are 1x1, so the default
+            // keeps the spray close to the body.
+            float diameter = VisualTweaksSettings.mechSparkSize;
             Matrix4x4 matrix = default;
             matrix.m00 = diameter;
             matrix.m11 = 1f;

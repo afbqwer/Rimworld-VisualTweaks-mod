@@ -28,10 +28,11 @@ namespace VisualTweaks
         // in the low microsecond range, a single burst is cheaper with DrawMesh.
         private const int InstancedThreshold = 8;
 
-        // Quad diameter in cells. The shader's maximum spark travel (0.8 local
-        // units) plus gravity drift stays inside r == 1 with room for the edge
-        // fade, so 1.3 cells of spray radius fits a 2.6-cell quad.
-        internal const float QuadSize = 2.6f;
+        // The quad diameter is user-configurable (VisualTweaksSettings.mechSparkSize,
+        // in cells) and rides in each instance's matrix. The shader is scale-invariant
+        // in local units — maximum spark travel (0.8) plus gravity drift stays inside
+        // r == 1 with room for the edge fade at any world size — so sizing the quad
+        // needs no shader change.
 
         // One AltInc above the vanilla overhead motes keeps the spray on top of
         // any fleck the impact itself spawned. Waylith orders transparent draws
@@ -173,7 +174,7 @@ namespace VisualTweaks
 
         private static bool OutsideView(CellRect view, MechSparkInstance burst)
         {
-            float pad = QuadSize * 0.5f;
+            float pad = burst.Matrix.m00 * 0.5f;
             return burst.X + pad < view.minX
                 || burst.X - pad > view.maxX
                 || burst.Z + pad < view.minZ
