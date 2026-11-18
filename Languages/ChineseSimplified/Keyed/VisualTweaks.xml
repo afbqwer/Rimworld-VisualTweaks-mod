@@ -121,9 +121,9 @@
   <VisualTweaks_MechSpark_Duration>基础持续时间</VisualTweaks_MechSpark_Duration>
   <VisualTweaks_MechSpark_DurationTip>一簇火花的存活时间，默认 0.45 秒，每簇有 ±15% 的随机浮动。特效跟随游戏速度，暂停时冻结。</VisualTweaks_MechSpark_DurationTip>
   <VisualTweaks_MechSpark_CountMin>火花数量 · 下限</VisualTweaks_MechSpark_CountMin>
-  <VisualTweaks_MechSpark_CountMinTip>最轻的伤害溅出的火花数。数量随伤害从下限线性升到上限（约 40 点伤害达到上限）。范围 1–32。</VisualTweaks_MechSpark_CountMinTip>
+  <VisualTweaks_MechSpark_CountMinTip>最轻的伤害溅出的火花数。数量随伤害从下限线性升到上限（约 50 点伤害达到上限）。范围 1–32。</VisualTweaks_MechSpark_CountMinTip>
   <VisualTweaks_MechSpark_CountMax>火花数量 · 上限</VisualTweaks_MechSpark_CountMax>
-  <VisualTweaks_MechSpark_CountMaxTip>重击（约 40 点伤害及以上）溅出的火花数。越多越密集；代价是着色器循环略长，且只在火花出现在画面上时才付出。范围 1–32，自动保持不低于下限。</VisualTweaks_MechSpark_CountMaxTip>
+  <VisualTweaks_MechSpark_CountMaxTip>重击（约 50 点伤害及以上）溅出的火花数。越多越密集；代价是着色器循环略长，且只在火花出现在画面上时才付出。范围 1–32，自动保持不低于下限。</VisualTweaks_MechSpark_CountMaxTip>
 
   <!-- 护盾：通用开关 → 大型护盾 → 个人护盾 → 受击涟漪 -->
   <VisualTweaks_Shield_GroupCommon>通用</VisualTweaks_Shield_GroupCommon>

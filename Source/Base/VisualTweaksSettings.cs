@@ -224,7 +224,7 @@ namespace VisualTweaks
         public const int MaxMechSparkCount = 32;
         public static int mechSparkCountMin = 8;
         public static int mechSparkCountMax = 24;
-        public const float MechSparkDamageForMaxCount = 40f;
+        public const float MechSparkDamageForMaxCount = 50f;
 
         // Fixed per-map cap, same rationale as MaxRippleCount: a safety bound on
         // the draw loop, not a tuning knob.

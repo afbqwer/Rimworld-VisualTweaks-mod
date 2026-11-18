@@ -18,36 +18,47 @@ namespace VisualTweaks
     ///   DamageWorker_AddInjury.ApplyDamageToPart prefix — captures dinfo.Instigator
     ///       (the shooter / attacker) for a best-effort attack direction. This is the
     ///       only place upstream of the armor step that still holds the DamageInfo.
-    ///   GetPostArmorDamage prefix — opens a damage event: captures the ORIGINAL
-    ///       incoming amount (the body mutates it by ref afterwards) and resets the
-    ///       metal / once-per-event guards.
+    ///   GetPostArmorDamage prefix — opens a damage event as a <see cref="SparkEvent"/>
+    ///       passed to its own postfix through Harmony's ref __state, capturing the
+    ///       ORIGINAL incoming amount (the body mutates it by ref afterwards).
     ///   ApplyArmor postfix — reads the real out metalArmor flag and latches
-    ///       metalPresent. Reading this flag (not the entry's deflected/diminished
-    ///       outs) is what catches zero-armor mechanoids and high-AP punch-through:
-    ///       those leave the entry outs false even though a metal layer was struck.
+    ///       MetalPresent on the current event. Reading this flag (not the entry's
+    ///       deflected/diminished outs) is what catches zero-armor mechanoids and
+    ///       high-AP punch-through: those leave the entry outs false even though a
+    ///       metal layer was struck.
     ///   GetPostArmorDamage postfix — the spawn point. By now the deflected /
-    ///       diminished outs are final, so the backward bias can be graded by the
-    ///       armor outcome, and the event is emitted exactly once.
+    ///       diminished outs are final, so the backward bias is graded by the armor
+    ///       outcome, and the event is emitted exactly once (a postfix runs once per
+    ///       call, so no separate once-guard is needed).
+    ///
+    /// On __state: Harmony's __state only travels between a prefix and postfix of the
+    /// SAME method. It carries the GetPostArmorDamage event (amount + metal flag)
+    /// cleanly, fresh per call with no manual reset. It cannot cross methods, so the
+    /// two nested bridges stay static: s_instigator feeds in from the OUTER
+    /// ApplyDamageToPart, and s_current lets the INNER ApplyArmor reach the event
+    /// object that __state also references. Both are main-thread only; ApplyArmor is
+    /// only ever called from GetPostArmorDamage, and the apparel.TakeDamage inside it
+    /// cannot reenter the armor step (apparel is not a Pawn), so the bridges are safe.
     ///
     /// Direction is best-effort: the attacker->target vector from the instigator's
-    /// position (meaningful for bullets and melee, which both set a real instigator).
-    /// DamageInfo.Angle is deliberately NOT used — it defaults to a random 0..359 for
-    /// any damage that never calls SetAngle, so it cannot be trusted blindly. When no
-    /// usable instigator exists (environmental damage, some explosions) the burst is
-    /// isotropic.
-    ///
-    /// All hooks run synchronously on the main thread; ApplyArmor is only ever called
-    /// from GetPostArmorDamage, and the apparel.TakeDamage inside it cannot reenter
-    /// the armor step (apparel is not a Pawn), so the static event state is safe.
+    /// position (meaningful for bullets and melee). DamageInfo.Angle is deliberately
+    /// NOT used here — it defaults to a random 0..359 for any damage that never calls
+    /// SetAngle. When no usable instigator exists the burst is isotropic.
     /// </summary>
     internal static class MechSparkPatches
     {
-        // Per damage-event context, opened by the prefixes and consumed by the
-        // GetPostArmorDamage postfix. Main-thread only.
-        private static Thing? eventInstigator;
-        private static float eventAmount;
-        private static bool metalPresent;
-        private static bool sparked;
+        // Per damage-event data, created by the GetPostArmorDamage prefix and handed
+        // to its postfix via ref __state. A reference type so the inner ApplyArmor
+        // hook can latch MetalPresent on the same instance through s_current.
+        private sealed class SparkEvent
+        {
+            public float Amount;
+            public bool MetalPresent;
+        }
+
+        // Cross-method bridges (see class remarks). Main-thread only.
+        private static SparkEvent? s_current;
+        private static Thing? s_instigator;
 
         // Backward bias by armor outcome. A full deflect throws most sparks back
         // along the attack (toward the attacker), a partial diminish fewer, and metal
@@ -101,30 +112,33 @@ namespace VisualTweaks
 
         private static void ApplyDamageToPartPrefix(DamageInfo dinfo)
         {
-            eventInstigator = dinfo.Instigator;
+            s_instigator = dinfo.Instigator;
         }
 
-        private static void GetPostArmorDamagePrefix(float amount)
+        private static void GetPostArmorDamagePrefix(float amount, ref SparkEvent __state)
         {
-            eventAmount = amount;
-            metalPresent = false;
-            sparked = false;
+            __state = new SparkEvent { Amount = amount };
+            s_current = __state;
         }
 
         private static void ApplyArmorPostfix(bool metalArmor)
         {
-            if (metalArmor)
+            if (metalArmor && s_current != null)
             {
-                metalPresent = true;
+                s_current.MetalPresent = true;
             }
         }
 
         private static void GetPostArmorDamagePostfix(
             Pawn pawn,
             bool deflectedByMetalArmor,
-            bool diminishedByMetalArmor)
+            bool diminishedByMetalArmor,
+            SparkEvent __state)
         {
-            if (!MechSparkBridge.Active || !metalPresent || sparked)
+            // The event is over; __state still holds its data independently.
+            s_current = null;
+
+            if (!MechSparkBridge.Active || !__state.MetalPresent)
             {
                 return;
             }
@@ -134,8 +148,6 @@ namespace VisualTweaks
                 return;
             }
 
-            sparked = true;
-
             float bias = deflectedByMetalArmor ? BiasDeflected
                 : diminishedByMetalArmor ? BiasDiminished
                 : BiasPlainMetal;
@@ -144,7 +156,7 @@ namespace VisualTweaks
             // (isotropic) when the instigator is missing, unspawned, off-map, or the
             // target itself.
             Vector3 travelDir = Vector3.zero;
-            Thing? instigator = eventInstigator;
+            Thing? instigator = s_instigator;
             if (instigator != null && instigator != pawn
                 && instigator.Spawned && instigator.Map == pawn.Map)
             {
@@ -156,7 +168,7 @@ namespace VisualTweaks
             }
 
             OverlayMapComponent component = pawn.Map.GetComponent<OverlayMapComponent>();
-            component?.NotifyMechSpark(pawn.TrueCenter(), travelDir, bias, eventAmount);
+            component?.NotifyMechSpark(pawn.TrueCenter(), travelDir, bias, __state.Amount);
         }
     }
 }

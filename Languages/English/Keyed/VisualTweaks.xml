@@ -121,9 +121,9 @@
   <VisualTweaks_MechSpark_Duration>Base duration</VisualTweaks_MechSpark_Duration>
   <VisualTweaks_MechSpark_DurationTip>How long a spark burst lasts. The default is 0.45 s; each burst varies by ±15%. The effect follows game speed and freezes while paused.</VisualTweaks_MechSpark_DurationTip>
   <VisualTweaks_MechSpark_CountMin>Spark count · lower bound</VisualTweaks_MechSpark_CountMin>
-  <VisualTweaks_MechSpark_CountMinTip>Sparks thrown by the lightest hits. The count scales with damage from this lower bound up to the upper bound (reached at about 40 damage). Range 1–32.</VisualTweaks_MechSpark_CountMinTip>
+  <VisualTweaks_MechSpark_CountMinTip>Sparks thrown by the lightest hits. The count scales with damage from this lower bound up to the upper bound (reached at about 50 damage). Range 1–32.</VisualTweaks_MechSpark_CountMinTip>
   <VisualTweaks_MechSpark_CountMax>Spark count · upper bound</VisualTweaks_MechSpark_CountMax>
-  <VisualTweaks_MechSpark_CountMaxTip>Sparks thrown by heavy hits (about 40 damage or more). More sparks read as a denser spray; the cost is a slightly longer shader loop, paid only while bursts are on screen. Range 1–32; kept at or above the lower bound.</VisualTweaks_MechSpark_CountMaxTip>
+  <VisualTweaks_MechSpark_CountMaxTip>Sparks thrown by heavy hits (about 50 damage or more). More sparks read as a denser spray; the cost is a slightly longer shader loop, paid only while bursts are on screen. Range 1–32; kept at or above the lower bound.</VisualTweaks_MechSpark_CountMaxTip>
 
   <!-- Shields: common switches, large shields, personal belts, then hit ripple -->
   <VisualTweaks_Shield_GroupCommon>General</VisualTweaks_Shield_GroupCommon>
