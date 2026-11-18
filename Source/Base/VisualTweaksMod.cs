@@ -841,13 +841,21 @@ namespace VisualTweaks
                 VisualTweaksSettings.MinMechSparkDuration,
                 VisualTweaksSettings.MaxMechSparkDuration,
                 "VisualTweaks_MechSpark_DurationTip".Translate());
-            VisualTweaksSettings.mechSparkCount = Mathf.RoundToInt(SettingsLayout.Slider(
+            VisualTweaksSettings.mechSparkCountMin = Mathf.RoundToInt(SettingsLayout.Slider(
                 listing,
-                "VisualTweaks_MechSpark_Count".Translate(),
-                VisualTweaksSettings.mechSparkCount,
+                "VisualTweaks_MechSpark_CountMin".Translate(),
+                VisualTweaksSettings.mechSparkCountMin,
                 VisualTweaksSettings.MinMechSparkCount,
                 VisualTweaksSettings.MaxMechSparkCount,
-                "VisualTweaks_MechSpark_CountTip".Translate(),
+                "VisualTweaks_MechSpark_CountMinTip".Translate(),
+                step: 1f));
+            VisualTweaksSettings.mechSparkCountMax = Mathf.RoundToInt(SettingsLayout.Slider(
+                listing,
+                "VisualTweaks_MechSpark_CountMax".Translate(),
+                VisualTweaksSettings.mechSparkCountMax,
+                VisualTweaksSettings.MinMechSparkCount,
+                VisualTweaksSettings.MaxMechSparkCount,
+                "VisualTweaks_MechSpark_CountMaxTip".Translate(),
                 step: 1f));
         }
 

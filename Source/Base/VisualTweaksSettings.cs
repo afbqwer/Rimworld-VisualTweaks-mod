@@ -217,9 +217,14 @@ namespace VisualTweaks
         public const float MaxMechSparkDuration = 1.2f;
         public static float mechSparkDuration = MechSparkDurationBaseline;
 
-        public const int MinMechSparkCount = 6;
+        // Spark count scales with damage between these user bounds. The slider range
+        // is 1..32 (the shader's hard cap); a hit of MechSparkDamageForMaxCount damage
+        // or more reaches the upper bound, lighter hits interpolate down to the lower.
+        public const int MinMechSparkCount = 1;
         public const int MaxMechSparkCount = 32;
-        public static int mechSparkCount = 16;
+        public static int mechSparkCountMin = 8;
+        public static int mechSparkCountMax = 24;
+        public const float MechSparkDamageForMaxCount = 40f;
 
         // Fixed per-map cap, same rationale as MaxRippleCount: a safety bound on
         // the draw loop, not a tuning knob.
@@ -1233,7 +1238,8 @@ namespace VisualTweaks
                 ref mechSparkDuration,
                 "mechSparkDuration",
                 MechSparkDurationBaseline);
-            Scribe_Values.Look(ref mechSparkCount, "mechSparkCount", 16);
+            Scribe_Values.Look(ref mechSparkCountMin, "mechSparkCountMin", 8);
+            Scribe_Values.Look(ref mechSparkCountMax, "mechSparkCountMax", 24);
             Scribe_Values.Look(ref shieldRippleEnabled, "shieldRippleEnabled", true);
             Scribe_Values.Look(ref shieldRippleIntensity, "shieldRippleIntensity", 1f);
             Scribe_Values.Look(ref shieldRippleDuration, "shieldRippleDuration", 0.2f);
@@ -1627,10 +1633,18 @@ namespace VisualTweaks
                 mechSparkDuration,
                 MinMechSparkDuration,
                 MaxMechSparkDuration);
-            mechSparkCount = Mathf.Clamp(
-                mechSparkCount,
+            mechSparkCountMin = Mathf.Clamp(
+                mechSparkCountMin,
                 MinMechSparkCount,
                 MaxMechSparkCount);
+            mechSparkCountMax = Mathf.Clamp(
+                mechSparkCountMax,
+                MinMechSparkCount,
+                MaxMechSparkCount);
+            if (mechSparkCountMax < mechSparkCountMin)
+            {
+                mechSparkCountMax = mechSparkCountMin;
+            }
             shieldRippleIntensity = Mathf.Clamp(
                 shieldRippleIntensity,
                 MinShieldRippleIntensity,

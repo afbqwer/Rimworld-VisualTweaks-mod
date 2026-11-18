@@ -157,13 +157,14 @@ namespace VisualTweaks
 
         /// <summary>
         /// Called by the ArmorUtility patch, once per damage event that struck metal
-        /// (metal apparel or a mechanoid body). The position is the pawn's centre and
-        /// the travel direction is zero — the armor step has no impact point or shot
-        /// direction — so the layer emits an isotropic burst.
+        /// (metal apparel or a mechanoid body). The position is the pawn's centre; the
+        /// travel direction is the best-effort attacker-&gt;target vector (zero when no
+        /// instigator was available, giving an isotropic burst); the bias is graded by
+        /// the armor outcome and the damage drives the spark count.
         /// </summary>
-        internal void NotifyMechSpark(Vector3 position, Vector3 travelDir, float damage)
+        internal void NotifyMechSpark(Vector3 position, Vector3 travelDir, float bias, float damage)
         {
-            mechSparks.Spawn(position, travelDir, damage);
+            mechSparks.Spawn(position, travelDir, bias, damage);
         }
 
         /// <summary>

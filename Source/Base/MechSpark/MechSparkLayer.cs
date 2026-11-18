@@ -23,23 +23,30 @@ namespace VisualTweaks
         private MechSparkRenderer? renderer;
         private bool errorLogged;
 
-        internal void Spawn(Vector3 position, Vector3 travelDir, float damage)
+        internal void Spawn(Vector3 position, Vector3 travelDir, float bias, float damage)
         {
             TickManager? tickManager = Find.TickManager;
             bool useTicks = tickManager != null;
             int startTick = tickManager?.TicksGame ?? 0;
 
-            // Heavier rounds throw a little more light, but the slider stays the
-            // main control: the damage factor only spans 0.7x..1.6x.
-            float intensity = VisualTweaksSettings.mechSparkIntensity
-                * Mathf.Clamp(0.7f + damage / 60f, 0.7f, 1.6f);
+            // Brightness is the global slider only. Damage drives the spark COUNT,
+            // not the brightness: heavier hits throw more sparks, interpolated
+            // between the user's lower and upper bounds.
+            float intensity = VisualTweaksSettings.mechSparkIntensity;
+            float countT = Mathf.Clamp01(
+                damage / VisualTweaksSettings.MechSparkDamageForMaxCount);
+            int count = Mathf.RoundToInt(Mathf.Lerp(
+                VisualTweaksSettings.mechSparkCountMin,
+                VisualTweaksSettings.mechSparkCountMax,
+                countT));
 
             float life = Mathf.Max(
                 0.05f,
                 VisualTweaksSettings.mechSparkDuration * Rand.Range(0.85f, 1.15f));
 
-            // The spray fans away from the shooter. A zero direction (no launch
-            // origin captured) leaves the burst isotropic via a zero bias.
+            // Best-effort attack direction from the armor hook (attacker -> target).
+            // A zero direction leaves the burst isotropic via a zero bias; the bias
+            // itself is graded by the armor outcome (deflect / diminish / plain).
             Vector3 flatDir = travelDir.Yto0();
             bool hasDir = flatDir.sqrMagnitude > 1e-4f;
             Vector3 dir = hasDir ? flatDir.normalized : Vector3.zero;
@@ -65,10 +72,10 @@ namespace VisualTweaks
                 InvLife = 1f / life,
                 Intensity = intensity,
                 Seed = Rand.Value,
-                Count = VisualTweaksSettings.mechSparkCount,
+                Count = count,
                 DirX = dir.x,
                 DirZ = dir.z,
-                Bias = hasDir ? 0.5f : 0f,
+                Bias = hasDir ? bias : 0f,
                 Matrix = matrix,
                 StartTick = startTick,
                 StartRealtime = Time.realtimeSinceStartup,
