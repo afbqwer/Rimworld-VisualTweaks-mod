@@ -171,12 +171,17 @@ namespace VisualTweaks
 
         /// <summary>
         /// Called by the Thing.TakeDamage patch, once per damage event that landed
-        /// on a building. The position is on the struck face (closest footprint
-        /// point to the attacker, pushed onto the face plane); the normal is that
-        /// face's outward direction, which the shader uses to keep debris outside
-        /// the wall and to clip anything crossing it. The travel direction follows
-        /// the spark contract (debris fans toward its negation); the colour is the
-        /// building's material tint and destruction scales the burst up.
+        /// on a building. For full-cell solids the position is on the struck face
+        /// (closest footprint point to the attacker, pushed onto the face plane)
+        /// and the normal is that face's outward direction, which the shader uses
+        /// to keep debris outside the wall and to clip anything crossing it.
+        /// Furniture passes a zero normal and the actual hit point instead (exact
+        /// bullet position or the footprint point facing the attacker): its
+        /// graphic does not match the footprint, so the burst must not be clipped
+        /// to an invisible cell edge, but it must still appear where the hit
+        /// landed rather than at a distant centre. The travel direction follows
+        /// the spark contract (debris fans toward its negation); the colour is
+        /// the building's material tint and destruction scales the burst up.
         /// </summary>
         internal void NotifyBuildingImpact(
             Vector3 position,

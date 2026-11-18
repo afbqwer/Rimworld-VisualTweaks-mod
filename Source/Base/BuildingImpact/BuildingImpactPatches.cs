@@ -36,11 +36,16 @@ namespace VisualTweaks
     /// melee falls back to the attacker -> target vector. Angle is only trusted
     /// for isRanged / isExplosive defs; other damage randomises it.
     ///
-    /// The burst is anchored on the struck FACE: the closest footprint point to
-    /// the attacker, pushed exactly onto that face plane, plus the face's
-    /// outward normal. The shader constrains every chip to the outside of that
-    /// plane and clips fragments crossing it, because a wall is solid and any
-    /// debris drawn on the far side would read as passing through it.
+    /// The burst is anchored on the struck FACE for full-cell solids (Fillage
+    /// Full: walls, doors, natural rock): the closest footprint point to the
+    /// attacker, pushed exactly onto that face plane, plus the face's outward
+    /// normal. The shader constrains every chip to the outside of that plane
+    /// and clips fragments crossing it, because a wall is solid and any debris
+    /// drawn on the far side would read as passing through it. Furniture and
+    /// other partial-fill buildings draw graphics that do not match their
+    /// footprint, so they are not clipped; their burst sits at the actual hit
+    /// point (exact bullet position, else the footprint point facing the
+    /// attacker), not at the building centre.
     ///
     /// The prefix runs for EVERY Thing.TakeDamage in the game, so the non-building
     /// path is a single type check before anything else.
@@ -180,12 +185,30 @@ namespace VisualTweaks
             ResolveDirection(__state, hasBulletPos, bulletPos,
                 out Vector3 sourcePos, out Vector3 travelDir, out float bias);
 
-            // The quad is centred on the struck FACE, not in the building, and
-            // carries that face's outward normal. The shader uses the normal to
-            // keep debris on the outside and to clip anything that would sweep
-            // across the wall — the wall is solid, so a chip drawn over it would
-            // read as passing through.
-            Vector3 impactPos = ClosestPointOnRect(__state.Rect, sourcePos, out Vector3 faceNormal);
+            // Full-cell solids (walls, doors, natural rock — anything with
+            // fillPercent > 0.99) have a graphic that matches the footprint, so
+            // they get the strike-face anchor and the plane clip. Furniture and
+            // production buildings draw inside or beyond their cells; clipping
+            // those would cut the burst along an invisible edge, so they are not
+            // clipped. They still burst at the real hit point — the exact bullet
+            // position when available, else the footprint point nearest the
+            // attacker — never at the TrueCenter, which can be many cells away
+            // on a long building.
+            bool solidFootprint = __instance.def.Fillage == FillCategory.Full;
+            Vector3 impactPos;
+            Vector3 faceNormal;
+            if (solidFootprint)
+            {
+                impactPos = ClosestPointOnRect(__state.Rect, sourcePos, out faceNormal);
+            }
+            else
+            {
+                impactPos = hasBulletPos
+                    ? bulletPos
+                    : ClosestPointOnRect(__state.Rect, sourcePos, out _);
+                faceNormal = Vector3.zero;
+            }
+
             impactPos.y = __state.Center.y;
 
             OverlayMapComponent component = __state.Map.GetComponent<OverlayMapComponent>();

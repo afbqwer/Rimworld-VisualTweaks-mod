@@ -130,12 +130,12 @@
   <!-- 建筑受击：攻击打中墙体/建筑时的飞溅碎片与烟尘 -->
   <VisualTweaks_BuildingImpact_Group>建筑受击碎片</VisualTweaks_BuildingImpact_Group>
   <VisualTweaks_BuildingImpact_Enable>攻击打中建筑时飞溅碎片与烟尘</VisualTweaks_BuildingImpact_Enable>
-  <VisualTweaks_BuildingImpact_EnableTip>只要伤害落在建筑上——墙体、门、家具、生产建筑，乃至开采中的岩石——受击面就会溅出材质碎片，并扬起一团逐渐消散的烟尘。不限于子弹：近战、爆炸等任何伤害类型都会触发。碎片与烟尘按建筑材质着色（石灰色、木棕色、钢青灰色）；远程命中朝射手方向溅回，爆炸则向外抛洒。碎片被约束在受击面外侧并沿该平面裁剪，绝不会穿过墙体。一击摧毁建筑时会喷出更大的碎片簇和更浓的烟尘。全部由着色器程序化生成：无贴图、无粒子资源。</VisualTweaks_BuildingImpact_EnableTip>
+  <VisualTweaks_BuildingImpact_EnableTip>只要伤害落在建筑上——墙体、门、家具、生产建筑，乃至开采中的岩石——受击处就会溅出材质碎片，并扬起一团逐渐消散的烟尘。不限于子弹：近战、爆炸等任何伤害类型都会触发。碎片与烟尘按建筑材质着色（石灰色、木棕色、钢青灰色）；远程命中朝射手方向溅回，爆炸则向外抛洒。占满整格的实体建筑（墙体、门、可开采岩石）会把迸发锚定在受击面上并沿该平面裁剪，绝不会穿过墙体；桌子、工作台等家具的图案不占满格子，则从视觉中心迸发、不做裁剪，避免在空气中被看不见的边界切开。一击摧毁建筑时会喷出更大的碎片簇和更浓的烟尘。全部由着色器程序化生成：无贴图、无粒子资源。</VisualTweaks_BuildingImpact_EnableTip>
   <VisualTweaks_BuildingImpact_ShaderMissing>碎片着色器编译失败或缺失，该特效已禁用。详情请查看日志。</VisualTweaks_BuildingImpact_ShaderMissing>
   <VisualTweaks_BuildingImpact_Intensity>浓度 / 强度</VisualTweaks_BuildingImpact_Intensity>
   <VisualTweaks_BuildingImpact_IntensityTip>碎片与烟尘的整体强度。1 为默认效果。伤害不影响强度——它影响下方的碎片数量。</VisualTweaks_BuildingImpact_IntensityTip>
   <VisualTweaks_BuildingImpact_Duration>基础持续时间</VisualTweaks_BuildingImpact_Duration>
-  <VisualTweaks_BuildingImpact_DurationTip>一次迸发的总时长（含烟尘），默认 1.6 秒：碎片在前约 70% 的时间内飞散并落地，烟尘则持续到结束。每次有 ±15% 的随机浮动。特效跟随游戏速度，暂停时冻结。</VisualTweaks_BuildingImpact_DurationTip>
+  <VisualTweaks_BuildingImpact_DurationTip>一次迸发的总时长（含烟尘），默认 1 秒：碎片在前约 70% 的时间内飞散并落地，烟尘则持续到结束。每次有 ±15% 的随机浮动。特效跟随游戏速度，暂停时冻结。</VisualTweaks_BuildingImpact_DurationTip>
   <VisualTweaks_BuildingImpact_Size>迸发大小（格直径）</VisualTweaks_BuildingImpact_Size>
   <VisualTweaks_BuildingImpact_SizeTip>碎片迸发的直径（格）。碎片最大行程约为直径的 0.35 倍。默认 2.2 让特效集中在受击面附近；想要更夸张的飞溅可调大。范围 1–5。</VisualTweaks_BuildingImpact_SizeTip>
   <VisualTweaks_BuildingImpact_CountMin>碎片数量 · 下限</VisualTweaks_BuildingImpact_CountMin>

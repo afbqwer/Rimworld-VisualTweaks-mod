@@ -249,7 +249,7 @@ namespace VisualTweaks
         public const float MaxBuildingImpactIntensity = 2f;
         public static float buildingImpactIntensity = 1f;
 
-        public const float BuildingImpactDurationBaseline = 1.6f;
+        public const float BuildingImpactDurationBaseline = 1f;
         public const float MinBuildingImpactDuration = 0.5f;
         public const float MaxBuildingImpactDuration = 4f;
         public static float buildingImpactDuration = BuildingImpactDurationBaseline;
