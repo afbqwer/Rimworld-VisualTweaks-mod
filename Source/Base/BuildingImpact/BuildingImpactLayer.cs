@@ -12,9 +12,9 @@ namespace VisualTweaks
     /// is a handful of floats, no per-chip CPU state.
     ///
     /// One lifetime covers both phases: the shader spends the first fraction of
-    /// it on debris (fast, gravity-driven) and the full span on smoke (slow
-    /// expansion and dissipation), so a single quad per hit carries the whole
-    /// effect.
+    /// it on debris (fast, decelerating on the ground plane) and the full span
+    /// on smoke (slow expansion and dissipation), so a single quad per hit
+    /// carries the whole effect.
     /// </summary>
     internal sealed class BuildingImpactLayer : IOverlayLayer
     {

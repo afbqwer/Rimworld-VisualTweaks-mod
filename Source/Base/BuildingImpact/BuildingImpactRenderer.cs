@@ -217,10 +217,12 @@ namespace VisualTweaks
             };
 
             // Look-only constants, identical for every burst:
-            // (gravity drift, max debris travel, debris life fraction, smoke rise).
-            // The debris phase occupies the first 0.4 of the burst life; smoke
-            // spans the whole of it, so the dust lingers after the chips land.
-            material.SetVector(Params3Id, new Vector4(0.30f, 0.75f, 0.40f, 0.18f));
+            // (chip path curl, max debris travel, debris life fraction, smoke
+            // drift). The debris phase occupies the first 0.4 of the burst life;
+            // smoke spans the whole of it, so the dust lingers after the chips
+            // land. No screen-space gravity: the view is top-down, so chips
+            // decelerate on the ground plane instead of drifting down-screen.
+            material.SetVector(Params3Id, new Vector4(0.06f, 0.75f, 0.40f, 0.18f));
         }
 
         public void Dispose()

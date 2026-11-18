@@ -21,14 +21,20 @@ layout(std430, set = 2, binding = 3) readonly buffer _ImpactParams
 // One quad per hit. Two phases share the burst life t (0..1):
 //   Debris — the first _Params3.z fraction of t. N chips (N arrives per
 //       instance) fan out toward -travelDir (back toward the shooter for
-//       ranged hits, outward for explosions), ease-out launch plus a downward
-//       screen drift that reads as gravity in top-down view. Each chip is a
-//       small box SDF spinning around its own centre; a facet term darkens and
-//       brightens it as it tumbles, which reads as 3D without any lighting.
+//       ranged hits, outward for explosions) and decelerate on the GROUND
+//       PLANE. There is deliberately no screen-space gravity: the game is
+//       top-down, so "down" on screen is south in the world, not towards the
+//       ground. Chips arc a little via a per-chip lateral curl and then stop
+//       and fade where they land. Each chip is a small box SDF spinning around
+//       its own centre; a facet term darkens and brightens it as it tumbles,
+//       which reads as 3D without any lighting.
 //   Smoke — spans the whole t. A few fbm puffs expand from the impact point,
-//       drift slightly up-screen (buoyancy) and erode away as the noise
+//       drift in their own random horizontal direction (no up-screen rise: a
+//       top-down dust cloud blooms outward) and erode away as the noise
 //       threshold rises with age. A dense central dust kernel covers the first
-//       moments so the impact reads before the puffs have grown.
+//       moments so the impact reads before the puffs have grown. Default
+//       opacity is about 50% (peak coverage around half), so the impact reads
+//       without washing out the wall.
 //
 // Per-burst data arrives through the vertex stage:
 //   vParams.x   age 0..1 (whole burst, smoke included)
@@ -54,10 +60,10 @@ layout(std430, set = 2, binding = 3) readonly buffer _ImpactParams
 //     smoke (dust clings and fades at the wall).
 //
 // Material constants (shared by every burst, set once on the material):
-//   _Params3.x  gravity drift (local units over the debris phase)
+//   _Params3.x  lateral curl of the chip path (local units)
 //   _Params3.y  maximum debris travel (local units)
 //   _Params3.z  debris life fraction (debris dies at this share of t)
-//   _Params3.w  smoke rise (local units over the whole life)
+//   _Params3.w  smoke drift (local units over the whole life)
 //
 // _Params / _Params2 / _Params4 / _Params5 are only read by the non-instanced
 // small-count fallback path in the vertex shader; the declarations must stay
@@ -79,7 +85,7 @@ layout(set = 2, binding = 0) uniform MaterialUniforms
 {
     vec4 _Params;  // @default = vec4(0.0, 1.0, 0.0, 10.0)
     vec4 _Params2; // @default = vec4(0.0, 0.0, 0.0, 1.0)
-    vec4 _Params3; // @default = vec4(0.30, 0.75, 0.40, 0.18)
+    vec4 _Params3; // @default = vec4(0.06, 0.75, 0.40, 0.18)
     vec4 _Params4; // @default = vec4(0.55, 0.53, 0.50, 0.0)
     vec4 _Params5; // @default = vec4(0.0, -1.0, 0.0, 0.0)
 } u;
@@ -131,10 +137,10 @@ void main()
     float seed = vParams.z;
     int count = clamp(int(vParams.w + 0.5), 1, 24);
 
-    float gravity = u._Params3.x;
+    float curl = u._Params3.x;
     float maxTravel = u._Params3.y;
     float debrisFrac = max(u._Params3.z, 0.05);
-    float smokeRise = u._Params3.w;
+    float smokeDrift = u._Params3.w;
     float smoke = vParams2.w;
 
     vec3 matColor = vParams3.rgb;
@@ -179,12 +185,13 @@ void main()
             }
 
             // Puffs born near the impact, leaning slightly into the spray;
-            // buoyancy lifts them up-screen and a small hash wind adds drift.
+            // each also drifts in its own horizontal direction as it blooms.
             vec2 lean = -vParams2.xy * vParams2.z * 0.12 * h2;
             vec2 wind = vec2(h1 - 0.5, h3 - 0.5) * 0.14;
+            vec2 drift = vec2(h4 - 0.5, h2 - 0.5) * 2.0 * smokeDrift;
             vec2 puffPos = lean
                 + vec2((h1 - 0.5) * 0.16, (h3 - 0.5) * 0.16)
-                + (wind + vec2(0.0, smokeRise)) * us;
+                + (wind + drift) * us;
 
             float radius = mix(0.10, 0.42, 1.0 - (1.0 - us) * (1.0 - us))
                 * mix(0.75, 1.25, h2);
@@ -202,8 +209,10 @@ void main()
             float shape = 1.0 - smoothstep(0.45, 1.0, dist);
             float density = shape * smoothstep(0.32, 0.72, n + 0.28 * (1.0 - us));
 
+            // 0.275 per puff keeps the default peak coverage around half:
+            // dust that reads clearly without hiding the wall behind it.
             float env = smoothstep(0.0, 0.12, us) * (1.0 - smoothstep(0.55, 1.0, us));
-            float a = density * env * 0.55 * smoke * intensity * faceClipSmoke;
+            float a = density * env * 0.275 * smoke * intensity * faceClipSmoke;
             if (a <= 0.003)
             {
                 continue;
@@ -219,7 +228,7 @@ void main()
         float kr = r / kernelSigma;
         float kernel = exp(-kr * kr)
             * (1.0 - smoothstep(0.0, 0.28, t))
-            * 0.5 * smoke * intensity * faceClipSmoke;
+            * 0.25 * smoke * intensity * faceClipSmoke;
         if (kernel > 0.003)
         {
             over(col, alpha, dustColor * 0.8, clamp(kernel, 0.0, 1.0));
@@ -268,7 +277,12 @@ void main()
             float speed = mix(0.5, 1.0, h3) * maxTravel;
             float ease = 1.0 - (1.0 - uu) * (1.0 - uu);
             vec2 pos = dir * speed * ease;
-            pos.y -= gravity * uu * uu;
+
+            // Slight lateral curl so paths arc instead of being straight rays.
+            // No screen-space gravity: top-down means chips stay on the ground
+            // plane and simply run out of speed where they land.
+            vec2 perp = vec2(-dir.y, dir.x);
+            pos += perp * curl * sin(uu * 3.1415927) * (h5 * 2.0 - 1.0);
 
             // Tumbling: the chip spins around its own centre while it flies.
             float spin = 6.2831853 * h6
