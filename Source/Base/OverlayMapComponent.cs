@@ -183,14 +183,15 @@ namespace VisualTweaks
         /// on a building. For full-cell solids the position is on the struck face
         /// (closest footprint point to the attacker, pushed onto the face plane)
         /// and the normal is that face's outward direction, which the shader uses
-        /// to keep debris outside the wall and to clip anything crossing it.
-        /// Furniture passes a zero normal and the actual hit point instead (exact
-        /// bullet position or the footprint point facing the attacker): its
-        /// graphic does not match the footprint, so the burst must not be clipped
-        /// to an invisible cell edge, but it must still appear where the hit
-        /// landed rather than at a distant centre. The travel direction follows
-        /// the spark contract (debris fans toward its negation); the colour is
-        /// the building's material tint and destruction scales the burst up.
+        /// to keep chip directions outside the wall. Wall occlusion itself is
+        /// handled by drawing the burst below the building altitude, so the wall
+        /// covers it per-pixel. Furniture passes a zero normal and the actual hit
+        /// point instead (exact bullet position or the footprint point facing the
+        /// attacker): its graphic does not match the footprint, but the burst
+        /// must still appear where the hit landed rather than at a distant
+        /// centre. The travel direction follows the spark contract (debris fans
+        /// toward its negation); the colour is the building's material tint and
+        /// destruction scales the burst up.
         /// </summary>
         internal void NotifyBuildingImpact(
             Vector3 position,
@@ -316,8 +317,9 @@ namespace VisualTweaks
             // call order, puts them under the shockwave's refraction band.
             DrawLayer(mechSparks, in frame);
 
-            // Impact debris shares the mote queue but sits one AltInc above the
-            // sparks, so chips read on top of any spark flash on the same hit.
+            // Impact debris shares the mote queue but is drawn below the
+            // building altitude, so walls occlude it per-pixel; sparks stay
+            // above it.
             DrawLayer(buildingImpacts, in frame);
         }
 

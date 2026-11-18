@@ -47,18 +47,18 @@ layout(std430, set = 2, binding = 3) readonly buffer _ImpactParams
 //   vParams2.z  backward bias share 0..1; 0 leaves the spray isotropic
 //   vParams2.w  smoke amount (0 disables the smoke phase)
 //   vParams3.rgb material colour (stuff tint of the struck building)
-//   vParams3.w  face clip flag: 1 = the burst sits on a struck face, 0 = no
-//               usable face (skips the wall constraint)
+//   vParams3.w  face constraint flag: 1 = the burst sits on a struck face,
+//               0 = no usable face (skips the outward direction constraint)
 //   vParams4.xy outward normal of the struck face (world xz, unit)
 //
-// The wall is solid, so nothing may be drawn on the far side of the struck
-// face: a chip passing over the wall would read as passing through it. Two
-// guards enforce that:
-//   - chip directions are constrained to the outside half-space
-//     (dot(dir, normal) >= ~0.08), so the fan cannot aim into the wall;
-//   - every fragment is clipped against the face plane, hard for chips
-//     (they are solid and disappear cleanly at the surface) and soft for
-//     smoke (dust clings and fades at the wall).
+// The wall is solid, so chips must not aim into it: directions are constrained
+// to the outside half-space (dot(dir, normal) >= ~0.08), which also prevents a
+// chip crossing to the far side and reappearing there. Everything else is
+// occlusion, not clipping: the effect layer is drawn BELOW the building
+// altitude (see BuildingImpactRenderer.Altitude), so the wall's own depth
+// occludes any fragment that overlaps it, per-pixel and around corners. No
+// geometric plane clip is applied — a hard cut across expanding smoke reads as
+// a straight seam at wall corners.
 //
 // Material constants (shared by every burst, set once on the material):
 //   _Params3.x  lateral curl of the chip path (local units)
@@ -149,18 +149,10 @@ void main()
     // little: pulverised stone/wood reads lighter than the solid surface.
     vec3 dustColor = mix(matColor, vec3(0.66, 0.64, 0.60), 0.6) * 1.05 + 0.06;
 
-    // Wall constraint. The quad centre sits exactly on the struck face, so the
-    // signed distance to that plane is dot(centered, normal): positive outside.
-    // Chips are cut hard at the surface (solid matter), smoke fades softly
-    // (dust clings to the wall).
+    // Struck-face flag + outward normal. They constrain chip directions only;
+    // wall occlusion itself comes from the draw altitude (under the wall).
     vec2 faceNormal = vParams4.xy;
     bool hasFace = vParams3.w > 0.5;
-    float side = dot(centered, faceNormal);
-    // Chips are fully visible right at the surface and hard-cut a hair inside
-    // it (their launch is constrained outward, so this only catches lateral
-    // drift); smoke fades across a wider margin.
-    float faceClipChip = hasFace ? smoothstep(-0.012, 0.0, side) : 1.0;
-    float faceClipSmoke = hasFace ? smoothstep(-0.07, 0.12, side) : 1.0;
 
     vec3 col = vec3(0.0);
     float alpha = 0.0;
@@ -213,7 +205,7 @@ void main()
             // 0.275 per puff keeps the default peak coverage around half:
             // dust that reads clearly without hiding the wall behind it.
             float env = smoothstep(0.0, 0.12, us) * (1.0 - smoothstep(0.55, 1.0, us));
-            float a = density * env * 0.275 * smoke * intensity * faceClipSmoke;
+            float a = density * env * 0.275 * smoke * intensity;
             if (a <= 0.003)
             {
                 continue;
@@ -229,7 +221,7 @@ void main()
         float kr = r / kernelSigma;
         float kernel = exp(-kr * kr)
             * (1.0 - smoothstep(0.0, 0.28, t))
-            * 0.25 * smoke * intensity * faceClipSmoke;
+            * 0.25 * smoke * intensity;
         if (kernel > 0.003)
         {
             over(col, alpha, dustColor * 0.8, clamp(kernel, 0.0, 1.0));
@@ -269,8 +261,9 @@ void main()
             vec2 dir = normalize(radial * (1.0 - bias) - vParams2.xy * bias);
 
             // Never aim into the wall: project any inward component out and
-            // keep a small outward lean. The face clip below is the hard
-            // backstop for lateral drift that still crosses the plane.
+            // keep a small outward lean. Under-wall rendering alone would let
+            // a chip cross the wall and pop out on the far side, so this
+            // constraint (not a fragment clip) is what keeps the spray outside.
             if (hasFace)
             {
                 float dn = dot(dir, faceNormal);
@@ -320,7 +313,7 @@ void main()
             vec3 chipCol = mix(matColor * mix(0.45, 1.2, facet), dustColor, 0.22);
 
             float fade = smoothstep(0.0, 0.05, uu) * (1.0 - smoothstep(0.85, 1.0, uu));
-            float a = cov * fade * clamp(intensity, 0.0, 1.0) * faceClipChip;
+            float a = cov * fade * clamp(intensity, 0.0, 1.0);
             over(col, alpha, chipCol, a);
         }
     }

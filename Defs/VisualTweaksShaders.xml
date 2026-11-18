@@ -285,9 +285,10 @@
 
     Queue 3151 is vanilla's Map/Mote slot (under fog of war and darkness, like
     the sparks), but the blend is Alpha, not Additive: debris and dust are
-    matter that occludes what is behind it, not light. Within the queue the
-    bursts sit one AltInc above the sparks, so a metal wall hit shows chips on
-    top of any spark flash.
+    matter that occludes what is behind it, not light. The quad's altitude is
+    set BELOW the building layer by the renderer: the map mesh writes depth,
+    so the wall's own pixels occlude the burst per-pixel (corners included).
+    That is how the effect stays under the wall without a geometric clip.
   -->
   <ShaderDef>
     <defName>VisualTweaksBuildingImpact</defName>

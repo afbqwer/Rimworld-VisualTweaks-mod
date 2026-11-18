@@ -32,12 +32,15 @@ namespace VisualTweaks
         // the low microsecond range, a single burst is cheaper with DrawMesh.
         private const int InstancedThreshold = 8;
 
-        // One AltInc above the sparks so debris reads on top of any spark burst
-        // sharing the impact (a metal wall hit can produce both). Waylith orders
-        // transparent draws inside a queue by camera depth, so altitude is the
-        // only ordering knob.
+        // Deliberately BELOW the door/building altitude (14) and above the
+        // ground layers: the map mesh writes depth, so at this height the wall's
+        // own pixels occlude the burst per-pixel — corners, silhouettes and
+        // alpha-cutout edges included — instead of a geometric plane clip. This
+        // is why the smoke no longer needs a face clip: it simply draws under
+        // the wall. Higher altitudes would pass the depth test against walls and
+        // paint over them (that is why vanilla motes sit above buildings).
         internal static readonly float Altitude =
-            Altitudes.AltitudeFor(AltitudeLayer.MoteOverhead) + Altitudes.AltInc * 2f;
+            Altitudes.AltitudeFor(AltitudeLayer.DoorMoveable) - Altitudes.AltInc;
 
         private static readonly int ParamsId = Shader.PropertyToID("_Params");
         private static readonly int Params2Id = Shader.PropertyToID("_Params2");

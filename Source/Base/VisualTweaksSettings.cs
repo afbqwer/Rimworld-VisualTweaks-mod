@@ -206,7 +206,7 @@ namespace VisualTweaks
         // Fully procedural: the shader hashes out every streak, so these sliders only
         // set the burst look, never particle state. The default life is short — a
         // spark spray should snap, not linger.
-        public static bool mechSparkEnabled = true;
+        public static bool mechSparkEnabled = false;
 
         public const float MinMechSparkIntensity = 0.1f;
         public const float MaxMechSparkIntensity = 2f;
@@ -256,7 +256,7 @@ namespace VisualTweaks
         // shader, tinted by the building's material colour. One lifetime covers
         // both phases — debris snaps early, smoke lingers to the end — so the
         // default duration is longer than a spark burst.
-        public static bool buildingImpactEnabled = true;
+        public static bool buildingImpactEnabled = false;
 
         public const float MinBuildingImpactIntensity = 0.1f;
         public const float MaxBuildingImpactIntensity = 2f;
@@ -1301,7 +1301,7 @@ namespace VisualTweaks
                 ref explosionRippleDuration,
                 "explosionRippleDuration",
                 RippleDurationBaseline);
-            Scribe_Values.Look(ref mechSparkEnabled, "mechSparkEnabled", true);
+            Scribe_Values.Look(ref mechSparkEnabled, "mechSparkEnabled", false);
             Scribe_Values.Look(ref mechSparkIntensity, "mechSparkIntensity", 1f);
             Scribe_Values.Look(
                 ref mechSparkDuration,
@@ -1311,7 +1311,7 @@ namespace VisualTweaks
             Scribe_Values.Look(ref mechSparkDirection, "mechSparkDirection", 1f);
             Scribe_Values.Look(ref mechSparkCountMin, "mechSparkCountMin", 8);
             Scribe_Values.Look(ref mechSparkCountMax, "mechSparkCountMax", 24);
-            Scribe_Values.Look(ref buildingImpactEnabled, "buildingImpactEnabled", true);
+            Scribe_Values.Look(ref buildingImpactEnabled, "buildingImpactEnabled", false);
             Scribe_Values.Look(ref buildingImpactIntensity, "buildingImpactIntensity", 1f);
             Scribe_Values.Look(
                 ref buildingImpactDuration,

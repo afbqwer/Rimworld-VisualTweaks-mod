@@ -39,13 +39,15 @@ namespace VisualTweaks
     /// The burst is anchored on the struck FACE for full-cell solids (Fillage
     /// Full: walls, doors, natural rock): the closest footprint point to the
     /// attacker, pushed exactly onto that face plane, plus the face's outward
-    /// normal. The shader constrains every chip to the outside of that plane
-    /// and clips fragments crossing it, because a wall is solid and any debris
-    /// drawn on the far side would read as passing through it. Furniture and
-    /// other partial-fill buildings draw graphics that do not match their
-    /// footprint, so they are not clipped; their burst sits at the actual hit
-    /// point (exact bullet position, else the footprint point facing the
-    /// attacker), not at the building centre.
+    /// normal. The normal constrains every chip's direction to the outside
+    /// half-space, so the spray cannot aim into the wall (or cross it and pop
+    /// out on the far side). Occlusion is not done geometrically: the burst is
+    /// drawn below the building altitude, so the wall's own depth covers it
+    /// per-pixel, corners included. Furniture and other partial-fill buildings
+    /// draw graphics that do not match their footprint, so they get no face
+    /// anchor or constraint; their burst sits at the actual hit point (exact
+    /// bullet position, else the footprint point facing the attacker), not at
+    /// the building centre.
     ///
     /// The prefix runs for EVERY Thing.TakeDamage in the game, so the non-building
     /// path is a single type check before anything else.

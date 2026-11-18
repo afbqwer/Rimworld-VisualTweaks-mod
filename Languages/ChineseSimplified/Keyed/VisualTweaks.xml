@@ -132,7 +132,7 @@
   <!-- 建筑受击：攻击打中墙体/建筑时的飞溅碎片与烟尘 -->
   <VisualTweaks_BuildingImpact_Group>建筑受击碎片</VisualTweaks_BuildingImpact_Group>
   <VisualTweaks_BuildingImpact_Enable>攻击打中建筑时飞溅碎片与烟尘</VisualTweaks_BuildingImpact_Enable>
-  <VisualTweaks_BuildingImpact_EnableTip>只要伤害落在建筑上——墙体、门、家具、生产建筑，乃至开采中的岩石——受击处就会溅出材质碎片，并扬起一团逐渐消散的烟尘。不限于子弹：近战、爆炸等任何伤害类型都会触发。碎片与烟尘按建筑材质着色（石灰色、木棕色、钢青灰色）；远程命中朝射手方向溅回，爆炸则向外抛洒。占满整格的实体建筑（墙体、门、可开采岩石）会把迸发锚定在受击面上并沿该平面裁剪，绝不会穿过墙体；桌子、工作台等家具的图案不占满格子，则从视觉中心迸发、不做裁剪，避免在空气中被看不见的边界切开。一击摧毁建筑时会喷出更大的碎片簇和更浓的烟尘。全部由着色器程序化生成：无贴图、无粒子资源。</VisualTweaks_BuildingImpact_EnableTip>
+  <VisualTweaks_BuildingImpact_EnableTip>只要伤害落在建筑上——墙体、门、家具、生产建筑，乃至开采中的岩石——受击处就会溅出材质碎片，并扬起一团逐渐消散的烟尘。不限于子弹：近战、爆炸等任何伤害类型都会触发。碎片与烟尘按建筑材质着色（石灰色、木棕色、钢青灰色）；远程命中朝射手方向溅回，爆炸则向外抛洒。占满整格的实体建筑（墙体、门、可开采岩石）会把迸发锚定在受击面、把碎片方向限制在墙外侧，并将整个特效绘制在墙体之下，由墙体的像素自然遮挡（拐角也一样），绝不会穿过墙体；桌子、工作台等家具的图案不占满格子，则从实际受击点迸发、不做裁剪，避免在空气中被看不见的边界切开。一击摧毁建筑时会喷出更大的碎片簇和更浓的烟尘。全部由着色器程序化生成：无贴图、无粒子资源。</VisualTweaks_BuildingImpact_EnableTip>
   <VisualTweaks_BuildingImpact_ShaderMissing>碎片着色器编译失败或缺失，该特效已禁用。详情请查看日志。</VisualTweaks_BuildingImpact_ShaderMissing>
   <VisualTweaks_BuildingImpact_Intensity>浓度 / 强度</VisualTweaks_BuildingImpact_Intensity>
   <VisualTweaks_BuildingImpact_IntensityTip>碎片与烟尘的整体强度。1 为默认效果。伤害不影响强度——它影响下方的碎片数量。</VisualTweaks_BuildingImpact_IntensityTip>
